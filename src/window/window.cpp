@@ -58,8 +58,6 @@ Window::Window(unsigned int width, unsigned int height, const char* title)
 	screenShader_ = std::make_unique<Shader>("shaders/screen.vert", "shaders/screen.frag");
 	modelShader_ = std::make_unique<Shader>("shaders/model.vert", "shaders/model.frag");
 	camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 3.0f));
-
-	model_ = std::make_unique<Model>("../assets/models/stars/generic_star/star.obj");
     
     glViewport(0, 0, width, height);
     glEnable(GL_DEPTH_TEST);
@@ -116,7 +114,7 @@ Window::Window(unsigned int width, unsigned int height, const char* title)
 	glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
-void Window::draw()
+void Window::draw(Scene scene)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
 	glEnable(GL_DEPTH_TEST);
@@ -131,12 +129,16 @@ void Window::draw()
 	modelShader_->setMat4("projection", projection);
 	modelShader_->setMat4("view", view);
 
-	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-	//model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
-	modelShader_->setMat4("model", model);
-	model_->Draw(*modelShader_);
-
+	auto models = scene.GetModels();
+	for (unsigned int i = 0; i < models.size(); i++)
+	{
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+		modelShader_->setMat4("model", model);
+		models[i].model.Draw(*modelShader_);
+	}
+	
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDisable(GL_DEPTH_TEST);
 

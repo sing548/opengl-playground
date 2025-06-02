@@ -11,6 +11,7 @@
 #include "../shaders/shader.h"
 #include "../camera/camera.h"
 #include "../models/model.h"
+#include "../models/scene.h"
 
 class Window
 {
@@ -20,7 +21,7 @@ public:
     ~Window();
 
     GLFWwindow* get();
-    void draw();
+    void draw(Scene scene);
     void processInput(float deltaTime);
 
 private:
@@ -32,7 +33,8 @@ private:
     float lastX_, lastY_;
     bool firstMouse_;
 
-    
+    unsigned int groundVAO_, groundVBO_;
+
     GLFWwindow* window_;
     glm::vec4 backgroundRGBA_;
     std::unique_ptr<Shader> screenShader_;
@@ -42,8 +44,6 @@ private:
     void setCallbacks();
     void mouse_callback(double xpos, double ypos);
     static void error_callback(int error, const char* description);
-    
-    std::unique_ptr<Model> model_;
 };
 
 #endif

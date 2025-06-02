@@ -12,6 +12,7 @@ add_executable(OpenGLPlayground
     src/camera/camera.cpp
     src/models/mesh.cpp
     src/models/model.cpp
+    src/models/scene.cpp
     src/window/window.cpp
     src/main.cpp
     include/glad/glad.c

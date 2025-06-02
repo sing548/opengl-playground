@@ -150,6 +150,16 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
 			textures.push_back(texture);
 		}
 	}
+
+	if (textures.size() == 0)
+	{
+		Texture dummy;
+        dummy.id = createBlackTexture();  // <-- You define this function below
+        dummy.type = typeName;
+        dummy.path = "dummy_black";
+        textures.push_back(dummy);
+        return textures;
+	}
 	
     return textures;
 }
@@ -188,6 +198,23 @@ unsigned int Model::TextureFromFile(const char* path, const std::string& directo
 		std::cout << "Texture failed to load at path: " << path << std::endl;
 		stbi_image_free(data);
 	}
+
+    return textureID;
+}
+
+unsigned int Model::createBlackTexture()
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    unsigned char black[] = { 0, 0, 0 }; // RGB black pixel
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, black);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     return textureID;
 }

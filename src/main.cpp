@@ -5,6 +5,8 @@
 
 #include "window/window.h"
 #include "shaders/shader.h"
+#include "models/model.h"
+#include "models/scene.h"
 
 // Window size
 const unsigned int WIDTH = 1920;
@@ -25,13 +27,21 @@ int main() {
         return -1;
     }
 
+    //Setup Scene
+
+    Scene scene = Scene();
+
+    Model model = Model("../assets/models/stars/generic_star/star.obj");
+	////model_ = std::make_unique<Model>("../assets/models/landscape/test/default_landscape.obj");
+    scene.AddModel(model);
+
     // Main loop
     while (!glfwWindowShouldClose(window->get())) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
 
         window->processInput(deltaTime);
-        window->draw();
+        window->draw(scene);
     }
 
     delete window;

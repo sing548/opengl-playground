@@ -38,6 +38,7 @@ private:
     Mesh processMesh(aiMesh* mesh, const aiScene* scene);
     std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName);
     unsigned int TextureFromFile(const char* path, const std::string& directory, bool gamma = false);
+    unsigned int createBlackTexture();
 };
 
 #endif
