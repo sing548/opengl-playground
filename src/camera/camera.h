@@ -26,7 +26,7 @@ public:
 
 static constexpr float YAW			= -90.0f;
 static constexpr float PITCH		= 0.0f;
-static constexpr float SPEED		= 0.05f;
+static constexpr float SPEED		= 1.0f;
 static constexpr float SENSITIVITY 	= 0.1f;
 static constexpr float ZOOM			= 45.0f;
 static constexpr bool SPRINTING		= false;
@@ -53,14 +53,14 @@ static constexpr bool CRAWLING		= false;
            glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
            float yaw = YAW, float pitch = PITCH);
 
-    glm::mat4 GetViewMatrix();
+    const glm::mat4 GetViewMatrix() const;
     void ProcessKeyboard(Camera_Input input, float deltaTime);
     void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true);
     void ProcessMouseScroll(float yoffset);
        
 private:
 
-    void updateCameraVectors();
+    void UpdateCameraVectors();
 };
 
 #endif

@@ -13,10 +13,10 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
     WorldUp = up;
     Yaw = yaw;
     Pitch = pitch;
-    updateCameraVectors();
+    UpdateCameraVectors();
 }
 
-glm::mat4 Camera::GetViewMatrix()
+const glm::mat4 Camera::GetViewMatrix() const
 {
 	return glm::lookAt(Position, Position + Front, Up);
 }
@@ -88,7 +88,7 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
 		if (Pitch < -89.0f)
 			Pitch = -89.0f;
 	}
-	updateCameraVectors();
+	UpdateCameraVectors();
 }
 
 void Camera::ProcessMouseScroll(float yoffset)
@@ -100,7 +100,7 @@ void Camera::ProcessMouseScroll(float yoffset)
 		Zoom = 45.0f;
 }
 
-void Camera::updateCameraVectors()
+void Camera::UpdateCameraVectors()
 {
 	glm::vec3 front;
 	front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));

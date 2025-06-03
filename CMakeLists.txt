@@ -13,6 +13,7 @@ add_executable(OpenGLPlayground
     src/models/mesh.cpp
     src/models/model.cpp
     src/models/scene.cpp
+    src/rendering/renderer.cpp
     src/window/window.cpp
     src/main.cpp
     include/glad/glad.c

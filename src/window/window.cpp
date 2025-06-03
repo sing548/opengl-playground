@@ -7,11 +7,11 @@ void Window::error_callback(int error, const char* description)
 
 void Window::mouse_callback(double xpos, double ypos)
 {
-	if (firstMouse_)
+	if (firstMouse_ != 0)
 	{
 		lastX_ = xpos;
 		lastY_ = ypos;
-		firstMouse_ = false;
+		firstMouse_--;
 	}
 
 	float xoffset = xpos - lastX_;
@@ -25,8 +25,8 @@ void Window::mouse_callback(double xpos, double ypos)
 
 Window::Window(unsigned int width, unsigned int height, const char* title)
 {
-	height_ = height;
-    width_ = width;
+	size_.width = width;
+	size_.height = height;
 
 	float lastX = width / 2.0f;
 	float lastY = height / 2.0f;
@@ -55,109 +55,57 @@ Window::Window(unsigned int width, unsigned int height, const char* title)
 		throw std::runtime_error("Failed to initialize GLAD");
     }
 
-	screenShader_ = std::make_unique<Shader>("shaders/screen.vert", "shaders/screen.frag");
-	modelShader_ = std::make_unique<Shader>("shaders/model.vert", "shaders/model.frag");
 	camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 3.0f));
-    
-    glViewport(0, 0, width, height);
-    glEnable(GL_DEPTH_TEST);
-
-    backgroundRGBA_ = glm::vec4(.201f, 0.301f, 0.401f, 1.00f);
-
-    float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
-		// positions   // texCoords
-		-1.0f,  1.0f,  0.0f, 1.0f,
-		-1.0f, -1.0f,  0.0f, 0.0f,
-		 1.0f, -1.0f,  1.0f, 0.0f,
-
-		-1.0f,  1.0f,  0.0f, 1.0f,
-		 1.0f, -1.0f,  1.0f, 0.0f,
-		 1.0f,  1.0f,  1.0f, 1.0f
-	};
-
-	glGenVertexArrays(1, &quadVAO_);
-	glGenBuffers(1, &quadVBO_);
-	glBindVertexArray(quadVAO_);
-	glBindBuffer(GL_ARRAY_BUFFER, quadVBO_);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
-	screenShader_->use();
-	screenShader_->setInt("screenTexture", 0);
-
-	glGenFramebuffers(1, &framebuffer_);
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
-
-	glGenTextures(1, &textureColorbuffer_);
-	glBindTexture(GL_TEXTURE_2D, textureColorbuffer_);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer_, 0);
-
-	glGenRenderbuffers(1, &rbo_);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo_);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height); // use a single renderbuffer object for both a depth AND stencil buffer.
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo_); // now actually attach it
-	// now that we actually created the framebuffer and added all attachments we want to check if it is actually complete now
-
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	setCallbacks();
 	glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
-void Window::draw(Scene scene)
+Camera Window::GetCamera()
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
-	glEnable(GL_DEPTH_TEST);
+	return *camera_;
+}
 
-	glClearColor(backgroundRGBA_.x, backgroundRGBA_.y, backgroundRGBA_.z, backgroundRGBA_.w);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
-	modelShader_->use();
-	
-	glm::mat4 projection = glm::perspective(glm::radians(camera_->Zoom), (float)width_ / (float)height_, 0.1f, 500.0f);
-	glm::mat4 view = camera_->GetViewMatrix();
-	modelShader_->setMat4("projection", projection);
-	modelShader_->setMat4("view", view);
+WindowSize Window::GetSize()
+{
+	return size_;
+}
 
-	auto models = scene.GetModels();
-	for (unsigned int i = 0; i < models.size(); i++)
-	{
-		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
-		modelShader_->setMat4("model", model);
-		models[i].model.Draw(*modelShader_);
-	}
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glDisable(GL_DEPTH_TEST);
-
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	screenShader_->use();
-	
-	//screenShader_->setInt("screenTexture", 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindVertexArray(quadVAO_);
-	glBindTexture(GL_TEXTURE_2D, textureColorbuffer_);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
+void Window::SwapBuffers()
+{
 	glfwSwapBuffers(window_);
 	glfwPollEvents();
 }
 
-void Window::processInput(float deltaTime)
+void Window::setCallbacks()
+{
+	glfwSetWindowUserPointer(window_, this);
+
+	glfwSetFramebufferSizeCallback(window_, [](GLFWwindow* window, int width, int height) {
+        glViewport(0, 0, width, height);
+
+		Window* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
+		if (self) {
+			self->ResizeWindow(width, height);
+		}
+    });
+
+	glfwSetCursorPosCallback(window_, [](GLFWwindow* window, double xPos, double yPos) {
+		Window* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
+
+		if (self) {
+			self->mouse_callback(xPos, yPos);
+		}
+	});
+}
+
+void Window::ResizeWindow(unsigned int width, unsigned int height)
+{
+	size_.width = width;
+	size_.height = height;
+}
+
+void Window::HandleInput(float deltaTime)
 {
 	if (glfwGetKey(window_, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
             glfwSetWindowShouldClose(window_, true);
@@ -187,30 +135,13 @@ void Window::processInput(float deltaTime)
 		camera_->ProcessKeyboard(DOWN, deltaTime);
 }
 
-void Window::setCallbacks()
-{
-	glfwSetWindowUserPointer(window_, this);
-
-	glfwSetFramebufferSizeCallback(window_, [](GLFWwindow* window, int width, int height) {
-        glViewport(0, 0, width, height);
-    });
-
-	glfwSetCursorPosCallback(window_, [](GLFWwindow* window, double xPos, double yPos) {
-		Window* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
-
-		if (self) {
-			self->mouse_callback(xPos, yPos);
-		}
-	});
-}
-
 Window::~Window()
 {
     glfwDestroyWindow(window_);
     glfwTerminate();
 }
 
-GLFWwindow* Window::get()
+GLFWwindow* Window::Get()
 {
     return window_;
 }

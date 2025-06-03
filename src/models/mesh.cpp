@@ -5,7 +5,7 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std:
 	this->vertices = vertices;
 	this->indices = indices;
 	this->textures = textures;
-	setupMesh();
+	SetupMesh();
 }
 
 void Mesh::Draw(Shader &shader)
@@ -39,7 +39,7 @@ void Mesh::Draw(Shader &shader)
 	glBindVertexArray(0);
 }
 
-void Mesh::setupMesh()
+void Mesh::SetupMesh()
 {
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO_);
