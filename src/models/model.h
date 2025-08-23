@@ -28,11 +28,15 @@ public:
     std::string directory;
     bool gammaCorrection;
 
-    Model(std::string const &path, bool gamma = false);
+    Model(std::string const &path, bool gamma = false) ;
 
     void Draw(Shader shader);
+    glm::vec3 GetPosition();
+    void SetPosition(glm::vec3 position);
 
 private:
+    glm::vec3 position_;
+
     void LoadModel(std::string const &path);
     void ProcessNode(aiNode *node, const aiScene *scene);
     Mesh ProcessMesh(aiMesh* mesh, const aiScene* scene);

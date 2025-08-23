@@ -12,6 +12,7 @@
 #include "../camera/camera.h"
 #include "../models/model.h"
 #include "../models/scene.h"
+#include "../input-manager/input-manager.h"
 
 struct WindowSize
 {
@@ -23,7 +24,8 @@ class Window
 {
 
 public:
-    Window(unsigned int width, unsigned int height, const char* title = "Test Window");
+    Window(unsigned int width, unsigned int height, InputManager* inputManager, const char* title = "Test Window");
+    Window(unsigned int width, unsigned int height, std::unique_ptr<Camera> camera, InputManager* inputManager, const char* title = "Test Window");
     ~Window();
 
     GLFWwindow* Get();
@@ -33,6 +35,8 @@ public:
     WindowSize GetSize();
     void HandleInput(float deltaTime);
     void ResizeWindow(unsigned int width, unsigned int height);
+    void setMouseLooking();
+    void setCallbacks();
 
 private:
     float lastX_, lastY_;
@@ -42,8 +46,9 @@ private:
     WindowSize size_;
     glm::vec4 backgroundRGBA_;
     std::unique_ptr<Camera> camera_;
+
+    InputManager* inputManager_;
     
-    void setCallbacks();
     void mouse_callback(double xpos, double ypos);
     static void error_callback(int error, const char* description);
 };

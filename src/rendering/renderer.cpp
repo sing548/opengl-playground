@@ -1,9 +1,18 @@
 #include "renderer.h"
 
+#ifndef SHADER_DIR
+#define SHADER_DIR "./shaders"
+#endif
+
 Renderer::Renderer(unsigned int width, unsigned int height)
 {
-    screenShader_ = std::make_unique<Shader>("shaders/screen.vert", "shaders/screen.frag");
-	modelShader_ = std::make_unique<Shader>("shaders/model.vert", "shaders/model.frag");
+    std::string screenVert = std::string(SHADER_DIR) + "/screen.vert";
+    std::string screenFrag = std::string(SHADER_DIR) + "/screen.frag";
+    std::string modelVert  = std::string(SHADER_DIR) + "/model.vert";
+    std::string modelFrag  = std::string(SHADER_DIR) + "/model.frag";
+
+    screenShader_ = std::make_unique<Shader>(screenVert.c_str(), screenFrag.c_str());
+    modelShader_  = std::make_unique<Shader>(modelVert.c_str(), modelFrag.c_str());
 
 	float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
 		// positions   // texCoords
@@ -62,16 +71,20 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 
     modelShader_->Use();
 	
+	glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+
 	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)width / (float)height, 0.1f, 500.0f);
 	glm::mat4 view = camera.GetViewMatrix();
 	modelShader_->SetMat4("projection", projection);
 	modelShader_->SetMat4("view", view);
+	modelShader_->SetVec3("lightPos", lightPos);
 
 	auto models = scene.GetModels();
 	for (unsigned int i = 0; i < models.size(); i++)
 	{
 		glm::mat4 modelProjection = glm::mat4(1.0f);
-		modelProjection = glm::translate(modelProjection, glm::vec3(0.0f, 0.0f, 0.0f));
+		glm::vec3 position = models.at(i).model.GetPosition();
+		modelProjection = glm::translate(modelProjection, position);
 		modelProjection = glm::scale(modelProjection, glm::vec3(0.5f, 0.5f, 0.5f));
 		modelShader_->SetMat4("model", modelProjection);
 		models[i].model.Draw(*modelShader_);

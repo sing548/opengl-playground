@@ -22,3 +22,12 @@ const std::vector<ModelWithReference>& Scene::GetModels() const
 {
     return models_;
 }
+
+Model& Scene::GetModelByReference(unsigned int id) {
+    for (auto& mw : models_) {
+            if (mw.Id == id) {
+                return mw.model;
+            }
+        }
+        throw std::out_of_range("No model found with given ID");
+}

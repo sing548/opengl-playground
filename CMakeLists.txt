@@ -16,6 +16,8 @@ add_executable(OpenGLPlayground
     src/rendering/renderer.cpp
     src/window/window.cpp
     src/main.cpp
+    src/engine/engine.cpp
+    src/input-manager/input-manager.cpp
     include/glad/glad.c
     include/stb/stb_image.cpp
     )
@@ -38,3 +40,9 @@ foreach(SHADER_FILE ${SHADERS})
     get_filename_component(FILE_NAME ${SHADER_FILE} NAME)
     configure_file(${SHADER_FILE} ${CMAKE_CURRENT_BINARY_DIR}/shaders/${FILE_NAME} COPYONLY)
 endforeach()
+
+# Define SHADER_DIR for your code
+target_compile_definitions(OpenGLPlayground PRIVATE
+    SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/shaders"
+    ASSETS_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/assets\"
+)

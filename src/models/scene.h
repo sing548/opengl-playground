@@ -19,6 +19,7 @@ public:
 
     unsigned int AddModel(Model model);
     const std::vector<ModelWithReference>& GetModels() const;
+    Model& GetModelByReference(unsigned int id);
     void RemoveModel(unsigned int Id);
 
 private:

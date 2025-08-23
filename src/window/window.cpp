@@ -23,17 +23,23 @@ void Window::mouse_callback(double xpos, double ypos)
 	camera_->ProcessMouseMovement(xoffset, yoffset);
 }
 
-Window::Window(unsigned int width, unsigned int height, const char* title)
+Window::Window(unsigned int width, unsigned int height, InputManager* inputManager, const char* title)
+	: Window(width, height, std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 3.0f)), inputManager, title)
+{
+}
+
+Window::Window(unsigned int width, unsigned int height, std::unique_ptr<Camera> camera, InputManager* inputManager, const char* title) 
+	: camera_(std::move(camera)), inputManager_(inputManager)
 {
 	size_.width = width;
 	size_.height = height;
-
+	
 	float lastX = width / 2.0f;
 	float lastY = height / 2.0f;
 	bool firstMouse = true;
-
+	
     if (!glfwInit()) {
-        throw std::runtime_error("Failed to initialize GLFW");
+		throw std::runtime_error("Failed to initialize GLFW");
     }
     
     glfwSetErrorCallback(error_callback);
@@ -45,19 +51,16 @@ Window::Window(unsigned int width, unsigned int height, const char* title)
     window_ = glfwCreateWindow(width, height, title, nullptr, nullptr);
     
     if (!window_) {
-        glfwTerminate();
+		glfwTerminate();
         throw std::runtime_error("Failed to create GLFW window");
     }
-    
+
     glfwMakeContextCurrent(window_);
 	
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 		throw std::runtime_error("Failed to initialize GLAD");
     }
 
-	camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 3.0f));
-
-	setCallbacks();
 	glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
@@ -90,6 +93,14 @@ void Window::setCallbacks()
 		}
     });
 
+	glfwSetKeyCallback(window_, [](GLFWwindow* w, int key, int scancode, int action, int mods) {
+            auto window = static_cast<Window*>(glfwGetWindowUserPointer(w));
+            window->inputManager_->UpdateKey(key, action);
+    });
+}
+
+void Window::setMouseLooking()
+{
 	glfwSetCursorPosCallback(window_, [](GLFWwindow* window, double xPos, double yPos) {
 		Window* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
 

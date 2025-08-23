@@ -26,11 +26,6 @@ public:
 		fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 		try
 		{
-			/*std::ifstream test(vertexPath);
-			if (!test)
-    			std::cerr << "Failed to open: " << vertexPath << std::endl;
-			else
-    			std::cerr << "Successfully opened: " << vertexPath << std::endl;*/
 			vShaderFile.open(vertexPath);
 			fShaderFile.open(fragmentPath);
 			std::stringstream vShaderStream, fShaderStream;

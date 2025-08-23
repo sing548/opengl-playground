@@ -1,6 +1,6 @@
 #include "model.h"
 
-Model::Model(std::string const &path, bool gamma) : gammaCorrection(gamma)
+Model::Model(std::string const &path, bool gamma) : gammaCorrection(gamma), position_(glm::vec3(0.0f, 0.0f, 0.0f))
 {
 	LoadModel(path);
 }
@@ -9,6 +9,16 @@ void Model::Draw(Shader shader)
 {
 	for (unsigned int i = 0; i < meshes.size(); i++)
 		meshes[i].Draw(shader);
+}
+
+glm::vec3 Model::GetPosition()
+{
+	return position_;
+}
+
+void Model::SetPosition(glm::vec3 position)
+{
+	this->position_ = position;
 }
 
 void Model::LoadModel(std::string const &path)

@@ -8,20 +8,17 @@
 #include "models/model.h"
 #include "models/scene.h"
 #include "rendering/renderer.h"
+#include "engine/engine.h"
 
-// Window size
-const unsigned int WIDTH = 1920;
-const unsigned int HEIGHT = 1080;
-
-float deltaTime = 0.0f;
-float lastFrame = 0.0f;
+#ifndef ASSETS_DIR
+#define ASSETS_DIR "./assets"
+#endif
 
 int main() {
-    Window* window = nullptr;
-    Renderer* renderer = nullptr;
+    Engine* engine = nullptr;
 
     try {
-        window = new Window(WIDTH, HEIGHT);
+        engine = new Engine();
     }
     catch (const std::runtime_error e)
     {
@@ -29,36 +26,13 @@ int main() {
         return -1;
     }
 
-    renderer = new Renderer(WIDTH, HEIGHT);
+    std::vector<Model> models = std::vector<Model>();
 
-    //Setup Scene
-    Scene scene = Scene();
-    Model model = Model("../assets/models/stars/generic_star/star.obj");
-	////model_ = std::make_unique<Model>("../assets/models/landscape/test/default_landscape.obj");
-    scene.AddModel(std::move(model));
+    Model model(ASSETS_DIR "/models/tie/tie.obj");
+    models.push_back(model);
 
-    int i = 0;
-    float accTime = 0.0f;
-
-    // Main loop
-    while (!glfwWindowShouldClose(window->Get())) {
-        float currentFrame = glfwGetTime();
-        deltaTime = currentFrame - lastFrame;
-	    lastFrame = currentFrame;
-        accTime += deltaTime;
-
-        window->HandleInput(deltaTime);
-        renderer->Draw(scene, window->GetCamera(), window->GetSize().width, window->GetSize().height);
-        window->SwapBuffers();
-
-        i++;
-        if (i == 10000) {
-            std::cout << "10000 frames done in: " << accTime << std::endl;
-            i = 0;
-            accTime = 0;
-        }
-    }
-
-    delete window;
+    engine->SetupScene(models);
+    engine->Run();
+    
     return 0;
 }
