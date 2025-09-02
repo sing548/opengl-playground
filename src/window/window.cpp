@@ -110,6 +110,26 @@ void Window::setMouseLooking()
 	});
 }
 
+void Window::UpdateCameraPosition(glm::vec3 position)
+{
+	camera_->Position = position;
+}
+
+void Window::UpdateCameraOrientation(glm::vec3 orientation)
+{
+	camera_->Front = orientation;
+}
+
+void Window::UpdateCameraYaw(float yaw)
+{
+	camera_->Yaw = yaw;
+}
+
+void Window::UpdateCameraPitch(float pitch)
+{
+	camera_->Pitch = pitch;
+}
+
 void Window::ResizeWindow(unsigned int width, unsigned int height)
 {
 	size_.width = width;

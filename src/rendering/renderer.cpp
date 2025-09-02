@@ -10,9 +10,12 @@ Renderer::Renderer(unsigned int width, unsigned int height)
     std::string screenFrag = std::string(SHADER_DIR) + "/screen.frag";
     std::string modelVert  = std::string(SHADER_DIR) + "/model.vert";
     std::string modelFrag  = std::string(SHADER_DIR) + "/model.frag";
-
+	std::string hitboxVert = std::string(SHADER_DIR) + "/hitbox.vert";
+	std::string hitboxFrag = std::string(SHADER_DIR) + "/hitbox.frag";
+	
     screenShader_ = std::make_unique<Shader>(screenVert.c_str(), screenFrag.c_str());
     modelShader_  = std::make_unique<Shader>(modelVert.c_str(), modelFrag.c_str());
+	hitboxShader_ = std::make_unique<Shader>(hitboxVert.c_str(), modelFrag.c_str());
 
 	float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
 		// positions   // texCoords
@@ -59,6 +62,12 @@ Renderer::Renderer(unsigned int width, unsigned int height)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	backgroundRGBA_ = glm::vec4(.201f, 0.301f, 0.401f, 1.00f);
+	showHitboxes = false;
+}
+
+void Renderer::ToggleHitboxes()
+{
+	this->showHitboxes = !this->showHitboxes;
 }
 
 void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width, unsigned int height)
@@ -80,14 +89,39 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 	modelShader_->SetVec3("lightPos", lightPos);
 
 	auto models = scene.GetModels();
-	for (unsigned int i = 0; i < models.size(); i++)
+
+	for (auto& it : models)
 	{
 		glm::mat4 modelProjection = glm::mat4(1.0f);
-		glm::vec3 position = models.at(i).model.GetPosition();
-		modelProjection = glm::translate(modelProjection, position);
-		modelProjection = glm::scale(modelProjection, glm::vec3(0.5f, 0.5f, 0.5f));
+		modelProjection = glm::translate(modelProjection, it.model.GetPosition());
+		modelProjection *=  glm::mat4_cast(glm::quat(it.model.GetRotation()));
+		modelProjection = glm::scale(modelProjection, it.model.GetScale());
+
 		modelShader_->SetMat4("model", modelProjection);
-		models[i].model.Draw(*modelShader_);
+		it.model.Draw(*modelShader_);
+	}
+
+	hitboxShader_->Use();
+	hitboxShader_->SetMat4("projection", projection);
+	hitboxShader_->SetMat4("view", view);
+
+	if (this->showHitboxes)
+	for (auto& it : models)
+	{
+		// Construct model matrix (same as your object transform)
+    	glm::mat4 modelMat = glm::mat4(1.0f);
+    	modelMat = glm::translate(modelMat, it.model.GetPosition());
+    	modelMat = glm::scale(modelMat, glm::vec3(it.model.radius));
+
+    	// No hitboxShader.Use() here — renderer already sets it
+    	hitboxShader_->SetMat4("projection", projection);
+    	hitboxShader_->SetMat4("view", view);
+    	hitboxShader_->SetMat4("model", modelMat);
+
+    	// Draw unit sphere as wireframe
+    	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		it.model.DrawHitbox(*hitboxShader_);
+    	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

@@ -7,6 +7,9 @@
 #include "../models/scene.h"
 #include "../models/model.h"
 
+#include <map>
+
+
 class Engine {
 public:
 
@@ -20,8 +23,22 @@ public:
     std::unique_ptr<Window> window_;
     std::unique_ptr<InputManager> inputManager_;
     std::unique_ptr<Camera> camera_;
-    Renderer* renderer_;
+    std::unique_ptr<Renderer> renderer_;
     std::unique_ptr<Scene> scene_;
 
-    void HandleLogic();
+    void ChangeSetting(std::string key, bool value);
+private:
+    glm::vec2 maxScreenSize_;
+    glm::vec3 currentFurthestPosition;
+
+    std::map<std::string, bool> settings_;
+
+    void HandleLogic(float deltaTime);
+    void HandleInput(float deltaTime);
+    void MoveModel(unsigned int id, glm::vec3 change);
+    void RotateModel(glm::vec3 change);
+
+    void MoveModels();
+    void Shoot(Model shooter);
+    void AdjustCamera();
 };

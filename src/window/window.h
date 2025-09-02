@@ -37,6 +37,10 @@ public:
     void ResizeWindow(unsigned int width, unsigned int height);
     void setMouseLooking();
     void setCallbacks();
+    void UpdateCameraPosition(glm::vec3 position);
+    void UpdateCameraOrientation(glm::vec3 orientation);
+    void UpdateCameraYaw(float yaw);
+    void UpdateCameraPitch(float pitch);
 
 private:
     float lastX_, lastY_;
