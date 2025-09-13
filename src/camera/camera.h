@@ -24,14 +24,14 @@ class Camera
 {
 public:
 
-static constexpr float YAW			= -90.0f;
-static constexpr float PITCH		= 0.0f;
-static constexpr float SPEED		= 1.0f;
-static constexpr float SENSITIVITY 	= 0.1f;
-static constexpr float ZOOM			= 45.0f;
-static constexpr bool SPRINTING		= false;
-static constexpr bool JOGGING		= false;
-static constexpr bool CRAWLING		= false;
+static constexpr float DEFAULT_YAW			= -90.0f;
+static constexpr float DEFAULT_PITCH		= 0.0f;
+static constexpr float DEFAULT_SPEED		= 1.0f;
+static constexpr float DEFAULT_SENSITIVITY 	= 0.1f;
+static constexpr float DEFAULT_ZOOM			= 45.0f;
+static constexpr bool DEFAULT_SPRINTING		= false;
+static constexpr bool DEFAULT_JOGGING		= false;
+static constexpr bool DEFAULT_CRAWLING		= false;
 
     glm::vec3 Position;
 	glm::vec3 Front;
@@ -51,16 +51,16 @@ static constexpr bool CRAWLING		= false;
 
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f),
            glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
-           float yaw = YAW, float pitch = PITCH);
+           float yaw = DEFAULT_YAW, float pitch = DEFAULT_PITCH);
 
     const glm::mat4 GetViewMatrix() const;
     void ProcessKeyboard(Camera_Input input, float deltaTime);
     void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true);
     void ProcessMouseScroll(float yoffset);
        
+	void UpdateCameraVectors();
 private:
 
-    void UpdateCameraVectors();
 };
 
 #endif

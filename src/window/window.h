@@ -29,20 +29,20 @@ public:
     ~Window();
 
     GLFWwindow* Get();
-    Camera GetCamera();
+    Camera& GetCamera();
     void SetupFrame();
     void SwapBuffers();
     WindowSize GetSize();
     void HandleInput(float deltaTime);
     void ResizeWindow(unsigned int width, unsigned int height);
-    void setMouseLooking();
     void setCallbacks();
     void UpdateCameraPosition(glm::vec3 position);
     void UpdateCameraOrientation(glm::vec3 orientation);
     void UpdateCameraYaw(float yaw);
     void UpdateCameraPitch(float pitch);
+    void mouse_callback(double xpos, double ypos);
 
-private:
+    private:
     float lastX_, lastY_;
     unsigned int firstMouse_ = 20;
 
@@ -53,7 +53,7 @@ private:
 
     InputManager* inputManager_;
     
-    void mouse_callback(double xpos, double ypos);
+    
     static void error_callback(int error, const char* description);
 };
 

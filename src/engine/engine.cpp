@@ -2,18 +2,34 @@
 
 Engine::Engine()
 {
-    //camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 60.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0F, -90.0F);
-    camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 60.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0F, 0.0F);
+    bool adjust = true;
+    settings_["adjust_camera"] = adjust;
+    bool mouseLooking = false;
+    settings_["mouse_looking"] = mouseLooking;
+    bool thirdPerson = false;
+    settings_["third_person"] = thirdPerson;
+    bool skyBox = false;
+    settings_["sky_box"] = skyBox;
+    bool hitboxes = false;
+    settings_["hitboxes"] = hitboxes;
+
+    camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 60.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0F, -90.0F);
+    
     inputManager_ = std::make_unique<InputManager>();
     window_ = std::make_unique<Window>(WIDTH, HEIGHT, std::move(camera_), inputManager_.get());
     window_->setCallbacks();
+    renderer_ = std::make_unique<Renderer>(WIDTH, HEIGHT, hitboxes, skyBox);
 
-    renderer_ = std::make_unique<Renderer>(WIDTH, HEIGHT);
+    glfwSetWindowUserPointer(window_->Get(), this);
+    glfwSetKeyCallback(window_->Get(), Engine::KeyCallback);
 
-    settings_["adjust_camera"] = true;
+    glfwSetCursorPosCallback(window_->Get(), [](GLFWwindow* window, double xPos, double yPos) {
+        Engine* engine = static_cast<Engine*>(glfwGetWindowUserPointer(window));
 
-    int i = 0;
-    i++;
+        if (engine && engine->settings_["mouse_looking"]) {
+            engine->window_->mouse_callback(xPos, yPos);
+        }
+    });
 }
 
 void Engine::SetupScene(std::vector<Model> models)
@@ -33,16 +49,13 @@ void Engine::Run()
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
 
-    //window_->setMouseLooking();
-
     while (!glfwWindowShouldClose(window_->Get())) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
 	    lastFrame = currentFrame;
         accTime += deltaTime;
-
-        //window_->HandleInput(deltaTime);
         
+        glfwPollEvents();
         HandleInput(deltaTime);
         HandleLogic(deltaTime);
 
@@ -50,8 +63,8 @@ void Engine::Run()
         window_->SwapBuffers();
 
         i++;
-        if (i == 1200) {
-            std::cout << "1200 frames done in: " << accTime << std::endl;
+        if (accTime >= 1) {
+            std::cout << "Current FPS: " << i / accTime << std::endl;
             i = 0;
             accTime = 0;
         }
@@ -65,6 +78,7 @@ void Engine::HandleLogic(float deltaTime)
     MoveModels();
     
     bool adjust = settings_["adjust_camera"];
+
     if (adjust)
         AdjustCamera();
 
@@ -82,70 +96,59 @@ void Engine::HandleLogic(float deltaTime)
            glfwSetWindowShouldClose(window_->Get(), true);
         }
     }
-
 }
 
 void Engine::AdjustCamera()
 {
-    /*auto currentPosition = window_->GetCamera().Position;
-    float minHeight = 20.0f;
-    float maxHeight = 100.0f;
-                               
-    float fovyRadians = glm::radians(window_->GetCamera().Zoom);
-    float aspect = (float) WIDTH/ (float)HEIGHT;
+    if (settings_["third_person"]) {
+        auto model = scene_->GetModelByReference(1);
+        glm::vec3 modelPos = model.GetPosition();
+        
+        // Offset from the model in its local orientation
+        glm::vec3 offset = model.GetOrientation() * glm::vec3(-8.0f, -8.0f, -8.0f);
+        glm::vec3 cameraPos = modelPos + offset + glm::vec3(0.0f, 1.5f, 0.0f);
+    
+        // Update camera position
+        window_->UpdateCameraPosition(cameraPos);
+    
+        // Compute direction from camera to model
+        glm::vec3 front = glm::normalize(modelPos - cameraPos);
+        window_->UpdateCameraOrientation(front);
+    } else {
+        auto currentPosition = window_->GetCamera().Position;
+        float minHeight = 20.0f;
+        float maxHeight = 100.0f;
 
-    float halfFovTan = tanf(fovyRadians * 0.5f);
+        float fovyRadians = glm::radians(window_->GetCamera().Zoom);
+        float aspect = (float) WIDTH/ (float)HEIGHT;
 
-    // Required heights in each axis
-    float requiredX = (abs(currentFurthestPosition.x) + 1.5f) / (halfFovTan * aspect);
-    float requiredZ = (abs(currentFurthestPosition.z) + 1.5f)/ halfFovTan;
+        float halfFovTan = tanf(fovyRadians * 0.5f);
 
-    // Take the larger
-    float h = std::max(requiredX, requiredZ);
+        // Required heights in each axis
+        float requiredX = (abs(currentFurthestPosition.x) + 1.5f) / (halfFovTan * aspect);
+        float requiredZ = (abs(currentFurthestPosition.z) + 1.5f)/ halfFovTan;
 
-    // Clamp
-    h = std::clamp(h, minHeight, maxHeight);
+        // Take the larger
+        float h = std::max(requiredX, requiredZ);
 
-    float oldHeight = window_->GetCamera().Position.y;
+        // Clamp
+        h = std::clamp(h, minHeight, maxHeight);
 
-    float changeRate = 0.25f;
+        float oldHeight = window_->GetCamera().Position.y;
 
-    if (abs(h - oldHeight) > changeRate) {
-        if (h > oldHeight) h = oldHeight + changeRate;
-        if (h < oldHeight) h = oldHeight - changeRate;
+        float changeRate = 0.25f;
+
+        if (abs(h - oldHeight) > changeRate) {
+            if (h > oldHeight) h = oldHeight + changeRate;
+            if (h < oldHeight) h = oldHeight - changeRate;
+        }
+
+        window_->UpdateCameraPosition(glm::vec3(0, h, 0));
     }
-
-    // Update camera position (looking straight down)
-    window_->UpdateCameraPosition(glm::vec3(0, h, 0));*/
-
-    /*auto model = scene_->GetModelByReference(1);
-    auto pos = model.GetPosition();
-
-    window_->UpdateCameraPosition(pos + model.GetOrientation() * glm::vec3(5.0f, 5.0f, 5.0f));
-
-    auto pos2 = model.GetPosition();
-    pos2 -= model.GetOrientation() * glm::vec3(5.0f, 5.0f, 5.0f);
-    window_->UpdateCameraOrientation(pos2);*/
-
-
-    auto model = scene_->GetModelByReference(1);
-    glm::vec3 modelPos = model.GetPosition();
-
-    // Offset from the model in its local orientation
-    glm::vec3 offset = model.GetOrientation() * glm::vec3(-8.0f, -8.0f, -8.0f);
-    glm::vec3 cameraPos = modelPos + offset + glm::vec3(0.0f, 1.5f, 0.0f);
-
-    // Update camera position
-    window_->UpdateCameraPosition(cameraPos);
-
-    // Compute direction from camera to model
-    glm::vec3 front = glm::normalize(modelPos - cameraPos);
-    window_->UpdateCameraOrientation(front);
 }
 
 void Engine::Shoot(Model shooter)
 {
-
     PhysicalInfo pi = PhysicalInfo();
     pi.position_ = shooter.GetPosition();
     pi.rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -178,8 +181,8 @@ void Engine::MoveModel(unsigned int id, glm::vec3 change)
 
     model.SetPosition(position);
 
-    //if (abs(position.x) > this->currentFurthestPosition.x) this->currentFurthestPosition.x = abs(position.x);
-    //if (abs(position.z) > this->currentFurthestPosition.z) this->currentFurthestPosition.z = abs(position.z);
+    if (abs(position.x) > this->currentFurthestPosition.x) this->currentFurthestPosition.x = abs(position.x);
+    if (abs(position.z) > this->currentFurthestPosition.z) this->currentFurthestPosition.z = abs(position.z);
 }
 
 void Engine::MoveModels()
@@ -250,13 +253,47 @@ void Engine::HandleInput(float deltaTime)
         scene_->GetModelByReference(1).SetSpeed(speed);
     }
 
-    // Hitboxes
-    if (glfwGetKey(window_->Get(), GLFW_KEY_F8) == GLFW_PRESS) {
-        renderer_->ToggleHitboxes();
-    }
-
     // Shooting
     if (glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS) {
         Shoot(scene_->GetModelByReference(1));
+    }
+}
+
+void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    Engine* engine = static_cast<Engine*>(glfwGetWindowUserPointer(window));
+
+    if (engine) {
+    // Hitboxes
+        if (key == GLFW_KEY_F8 && action == GLFW_PRESS) {
+            engine->renderer_->ToggleHitboxes();
+        }
+
+        if (key == GLFW_KEY_F9 && action == GLFW_PRESS) {
+            engine->renderer_->ToggleSkyBox();
+        }
+
+        if (key == GLFW_KEY_F10 && action == GLFW_PRESS) {
+            engine->settings_["adjust_camera"] = !engine->settings_["adjust_camera"];
+        }
+
+        if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
+            engine->settings_["third_person"] = !engine->settings_["third_person"];
+
+            if (engine->settings_["third_person"]) {
+                engine->settings_["adjust_camera"] = true;
+                auto& cam = engine->window_->GetCamera();
+                cam.Up = cam.WorldUp;
+                cam.Pitch = 0.0f;
+                cam.UpdateCameraVectors();
+            } else {
+                auto& cam = engine->window_->GetCamera();
+                cam.Up = glm::vec3(0.0f, 0.0f, 1.0f);
+                cam.Front = glm::vec3(0.0f, 0.0f, -1.0f);
+                cam.Pitch = -90.0f;
+                cam.UpdateCameraVectors();
+                cam.Position = glm::vec3(0.0f, 60.0f, 0.0f);
+            }
+        }    
     }
 }

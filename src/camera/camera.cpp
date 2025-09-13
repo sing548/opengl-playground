@@ -2,12 +2,12 @@
 
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
     : Front(glm::vec3(0.0f, 0.0f, -1.0f)),
-      MovementSpeed(SPEED),
-      MouseSensitivity(SENSITIVITY),
-      Zoom(ZOOM),
-      Sprinting(SPRINTING),
-      Jogging(JOGGING),
-      Crawling(CRAWLING)
+      MovementSpeed(DEFAULT_SPEED),
+      MouseSensitivity(DEFAULT_SENSITIVITY),
+      Zoom(DEFAULT_ZOOM),
+      Sprinting(DEFAULT_SPRINTING),
+      Jogging(DEFAULT_JOGGING),
+      Crawling(DEFAULT_CRAWLING)
 {
     Position = position;
     WorldUp = up;

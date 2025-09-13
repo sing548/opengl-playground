@@ -54,6 +54,11 @@ glm::vec3& Model::GetSpeed()
 	return physicalInfo_.speed_;
 }
 
+glm::vec3& Model::GetRotationSpeed()
+{
+	return physicalInfo_.rotationSpeed_;
+}
+
 void Model::SetPosition(glm::vec3 position)
 {
 	this->physicalInfo_.position_ = position;
@@ -84,6 +89,11 @@ void Model::SetBaseOrientation(glm::vec3 orientation)
 void Model::SetSpeed(glm::vec3 speed)
 {
 	this->physicalInfo_.speed_ = speed;
+}
+
+void Model::SetRotationSpeed(glm::vec3 speed)
+{
+	this->physicalInfo_.rotationSpeed_ = speed;
 }
 
 void Model::CreateHitboxSphere()

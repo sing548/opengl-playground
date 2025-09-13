@@ -4,18 +4,32 @@
 #define SHADER_DIR "./shaders"
 #endif
 
+#ifndef ASSETS_DIR
+#define ASSETS_DIR "./assets"
+#endif
+
+
 Renderer::Renderer(unsigned int width, unsigned int height)
+	: Renderer(width, height, false, true)
 {
-    std::string screenVert = std::string(SHADER_DIR) + "/screen.vert";
+    
+}
+
+Renderer::Renderer(unsigned int width, unsigned int height, bool showHitboxes, bool showSkyBox)
+{
+	std::string screenVert = std::string(SHADER_DIR) + "/screen.vert";
     std::string screenFrag = std::string(SHADER_DIR) + "/screen.frag";
     std::string modelVert  = std::string(SHADER_DIR) + "/model.vert";
     std::string modelFrag  = std::string(SHADER_DIR) + "/model.frag";
 	std::string hitboxVert = std::string(SHADER_DIR) + "/hitbox.vert";
 	std::string hitboxFrag = std::string(SHADER_DIR) + "/hitbox.frag";
+	std::string skyboxVert = std::string(SHADER_DIR) + "/skybox.vert";
+	std::string skyboxFrag = std::string(SHADER_DIR) + "/skybox.frag";
 	
     screenShader_ = std::make_unique<Shader>(screenVert.c_str(), screenFrag.c_str());
     modelShader_  = std::make_unique<Shader>(modelVert.c_str(), modelFrag.c_str());
 	hitboxShader_ = std::make_unique<Shader>(hitboxVert.c_str(), modelFrag.c_str());
+	skyboxShader_ = std::make_unique<Shader>(skyboxVert.c_str(), skyboxFrag.c_str());
 
 	float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
 		// positions   // texCoords
@@ -62,17 +76,90 @@ Renderer::Renderer(unsigned int width, unsigned int height)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	backgroundRGBA_ = glm::vec4(.201f, 0.301f, 0.401f, 1.00f);
-	showHitboxes = false;
+	showHitboxes_ = false;
+
+	/// SKYBOX
+
+	float skyboxVertices[] = {
+    // positions          
+    -1.0f,  1.0f, -1.0f,
+    -1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f,
+    -1.0f, -1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f,  1.0f,
+    -1.0f, -1.0f,  1.0f,
+
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f,
+    -1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f, -1.0f,  1.0f,
+    -1.0f, -1.0f,  1.0f,
+
+    -1.0f,  1.0f, -1.0f,
+     1.0f,  1.0f, -1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+    -1.0f,  1.0f,  1.0f,
+    -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f,  1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f,  1.0f,
+     1.0f, -1.0f,  1.0f
+	};
+
+    glGenVertexArrays(1, &skyboxVAO_);
+    glGenBuffers(1, &skyboxVBO_);
+    glBindVertexArray(skyboxVAO_);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO_);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+	std::vector<std::string> faces
+	{
+	    ASSETS_DIR "/skybox/NASA2/posx.png",
+	    ASSETS_DIR "/skybox/NASA2/negx.png",
+	    ASSETS_DIR "/skybox/NASA2/posy.png",
+	    ASSETS_DIR "/skybox/NASA2/negy.png",
+	    ASSETS_DIR "/skybox/NASA2/posz.png",
+	    ASSETS_DIR "/skybox/NASA2/negz.png"
+	};
+	cubemapTexture_ = LoadCubemap(faces);
+
+	this->showHitboxes_ = showHitboxes;
+	this->showSkyBox_ = showSkyBox;
 }
 
 void Renderer::ToggleHitboxes()
 {
-	this->showHitboxes = !this->showHitboxes;
+	this->showHitboxes_ = !this->showHitboxes_;
+}
+
+void Renderer::ToggleSkyBox()
+{
+	this->showSkyBox_ = !this->showSkyBox_;
 }
 
 void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width, unsigned int height)
 {
-	//screenShader_->setInt("screenTexture", 0);
 	glEnable(GL_DEPTH_TEST);
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
 	glClearColor(backgroundRGBA_.x, backgroundRGBA_.y, backgroundRGBA_.z, backgroundRGBA_.w);
@@ -80,7 +167,7 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 
     modelShader_->Use();
 	
-	glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+	glm::vec3 lightPos(120.0f, 0.0f, 2.0f);
 
 	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)width / (float)height, 0.1f, 500.0f);
 	glm::mat4 view = camera.GetViewMatrix();
@@ -105,7 +192,7 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 	hitboxShader_->SetMat4("projection", projection);
 	hitboxShader_->SetMat4("view", view);
 
-	if (this->showHitboxes)
+	if (this->showHitboxes_)
 	for (auto& it : models)
 	{
 		// Construct model matrix (same as your object transform)
@@ -124,16 +211,70 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
     	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 	
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glDisable(GL_DEPTH_TEST);
+	if (this->showSkyBox_) {
+		glDepthFunc(GL_LEQUAL);          // allow skybox depth = 1.0 to pass
+    	glDepthMask(GL_FALSE);           // disable writing to depth buffer
 
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+    	skyboxShader_->Use();
+    	glm::mat4 viewNoTranslation = glm::mat4(glm::mat3(camera.GetViewMatrix())); // remove translation
+    	skyboxShader_->SetMat4("view", viewNoTranslation);
+    	skyboxShader_->SetMat4("projection", projection);
 
-	screenShader_->Use();
+    	glBindVertexArray(skyboxVAO_);
+    	glActiveTexture(GL_TEXTURE0);
+    	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture_);
+    	glDrawArrays(GL_TRIANGLES, 0, 36);
+    	glBindVertexArray(0);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindVertexArray(quadVAO_);
-	glBindTexture(GL_TEXTURE_2D, textureColorbuffer_);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+    	glDepthMask(GL_TRUE);            // restore depth writing
+    	glDepthFunc(GL_LESS);            // restore default depth test
+
+    	
+	}	
+	
+	// ---------- Post-processing / Render to screen ----------
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);  // back to default framebuffer
+    glDisable(GL_DEPTH_TEST);              // no depth for screen quad
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    screenShader_->Use();
+    glActiveTexture(GL_TEXTURE0);
+    glBindVertexArray(quadVAO_);
+    glBindTexture(GL_TEXTURE_2D, textureColorbuffer_);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+}
+
+unsigned int Renderer::LoadCubemap(std::vector<std::string> faces)
+{
+	unsigned int textureID;
+	glGenTextures(1, &textureID);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+	int width, height, nrChannels;
+
+	for (unsigned int i = 0; i < faces.size(); i++)
+	{
+		unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+
+		if (data)
+		{
+			int format = nrChannels == 4 ? GL_RGBA : GL_RGB;
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+			stbi_image_free(data);
+		}
+		else 
+		{
+			std::cout << "Cubemap text failed to load at path: " << faces[i] << std::endl;
+			stbi_image_free(data);
+		}
+	}
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	return textureID;
 }

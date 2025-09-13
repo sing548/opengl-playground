@@ -28,6 +28,7 @@ struct PhysicalInfo {
     glm::vec3 orientation_;
     glm::vec3 baseOrientation_;
     glm::vec3 speed_;
+    glm::vec3 rotationSpeed_;
 };
 
 class Model
@@ -50,12 +51,14 @@ public:
     glm::vec3& GetRotation();
     glm::vec3& GetOrientation();
     glm::vec3& GetSpeed();
+    glm::vec3& GetRotationSpeed();
 
     void SetPosition(glm::vec3 position);
     void SetScale(glm::vec3 scale);
     void SetRotation(glm::vec3 rotation);
     void SetBaseOrientation(glm::vec3 orientation);
     void SetSpeed(glm::vec3 speed);
+    void SetRotationSpeed(glm::vec3 speed);
 
     void CreateHitboxSphere();
 

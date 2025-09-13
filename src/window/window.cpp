@@ -64,7 +64,7 @@ Window::Window(unsigned int width, unsigned int height, std::unique_ptr<Camera> 
 	glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
-Camera Window::GetCamera()
+Camera& Window::GetCamera()
 {
 	return *camera_;
 }
@@ -82,7 +82,7 @@ void Window::SwapBuffers()
 
 void Window::setCallbacks()
 {
-	glfwSetWindowUserPointer(window_, this);
+	/*glfwSetWindowUserPointer(window_, this);
 
 	glfwSetFramebufferSizeCallback(window_, [](GLFWwindow* window, int width, int height) {
         glViewport(0, 0, width, height);
@@ -96,18 +96,7 @@ void Window::setCallbacks()
 	glfwSetKeyCallback(window_, [](GLFWwindow* w, int key, int scancode, int action, int mods) {
             auto window = static_cast<Window*>(glfwGetWindowUserPointer(w));
             window->inputManager_->UpdateKey(key, action);
-    });
-}
-
-void Window::setMouseLooking()
-{
-	glfwSetCursorPosCallback(window_, [](GLFWwindow* window, double xPos, double yPos) {
-		Window* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
-
-		if (self) {
-			self->mouse_callback(xPos, yPos);
-		}
-	});
+    });*/
 }
 
 void Window::UpdateCameraPosition(glm::vec3 position)

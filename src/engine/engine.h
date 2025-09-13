@@ -35,6 +35,7 @@ private:
 
     void HandleLogic(float deltaTime);
     void HandleInput(float deltaTime);
+    static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
     void MoveModel(unsigned int id, glm::vec3 change);
     void RotateModel(glm::vec3 change);
 
