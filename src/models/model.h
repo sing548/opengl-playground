@@ -13,6 +13,7 @@
 
 #include "mesh.h"
 #include "../shaders/shader.h"
+#include "asset-manager.h"
 
 #include <string>
 #include <fstream>
@@ -34,15 +35,13 @@ struct PhysicalInfo {
 class Model
 {
 public:
-    std::vector<Mesh> meshes;
-    std::vector<Texture> textures;
-    std::string directory;
+    std::vector<std::shared_ptr<Mesh>> meshes;
     bool gammaCorrection;
 
     float radius;
 
     Model(float radius, PhysicalInfo pi);
-    Model(std::string const &path, PhysicalInfo pi, bool gamma = false, float radius = 0.7);
+    Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, bool gamma = false, float radius = 0.7);
 
     void Draw(Shader shader);
     void DrawHitbox(Shader shader);
@@ -67,13 +66,6 @@ public:
 
 private:
     PhysicalInfo physicalInfo_;
-
-    void LoadModel(std::string const &path);
-    void ProcessNode(aiNode *node, const aiScene *scene);
-    Mesh ProcessMesh(aiMesh* mesh, const aiScene* scene);
-    std::vector<Texture> LoadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName);
-    unsigned int TextureFromFile(const char* path, const std::string& directory, bool gamma = false);
-    unsigned int CreateBlackTexture();
 };
 
 #endif

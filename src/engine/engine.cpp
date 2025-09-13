@@ -19,6 +19,7 @@ Engine::Engine()
     window_ = std::make_unique<Window>(WIDTH, HEIGHT, std::move(camera_), inputManager_.get());
     window_->setCallbacks();
     renderer_ = std::make_unique<Renderer>(WIDTH, HEIGHT, hitboxes, skyBox);
+    assMan_ = std::make_unique<AssetManager>();
 
     glfwSetWindowUserPointer(window_->Get(), this);
     glfwSetKeyCallback(window_->Get(), Engine::KeyCallback);
@@ -30,6 +31,11 @@ Engine::Engine()
             engine->window_->mouse_callback(xPos, yPos);
         }
     });
+}
+
+AssetManager& Engine::GetAssMan()
+{
+    return *assMan_;
 }
 
 void Engine::SetupScene(std::vector<Model> models)
@@ -199,8 +205,10 @@ void Engine::MoveModels()
             deletes.push_back(it.Id);
     }
 
-    //for (auto id : deletes) 
-    //    scene_->RemoveModel(id);
+    for (auto id : deletes) {
+        if (id != 1 && id != 2)
+            scene_->RemoveModel(id);
+    }
 }
 
 void Engine::RotateModel(glm::vec3 change) 

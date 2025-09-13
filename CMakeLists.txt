@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_executable(OpenGLPlayground
     src/camera/camera.cpp
+    src/models/asset-manager.cpp
     src/models/mesh.cpp
     src/models/model.cpp
     src/models/scene.cpp

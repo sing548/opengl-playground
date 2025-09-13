@@ -6,6 +6,7 @@
 #include "../rendering/renderer.h"
 #include "../models/scene.h"
 #include "../models/model.h"
+#include "../models/asset-manager.h"
 
 #include <map>
 
@@ -16,7 +17,10 @@ public:
     Engine();
     void SetupScene(std::vector<Model>);
     void Run();
-    private:
+    AssetManager& GetAssMan();
+
+
+private:
     const unsigned int WIDTH = 1920;
     const unsigned int HEIGHT = 1080;
     
@@ -25,9 +29,9 @@ public:
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<Renderer> renderer_;
     std::unique_ptr<Scene> scene_;
+    std::unique_ptr<AssetManager> assMan_;
 
     void ChangeSetting(std::string key, bool value);
-private:
     glm::vec2 maxScreenSize_;
     glm::vec3 currentFurthestPosition;
 
