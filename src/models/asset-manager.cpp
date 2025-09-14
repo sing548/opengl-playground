@@ -16,7 +16,7 @@ bool AssetManager::HasModel(const std::string& path) {
     return modelCache_.find(path) != modelCache_.end();
 }
 
-void AssetManager::LoadModelInternal(std::string const &path)
+void AssetManager::LoadModelInternal(const std::string& path)
 {
 	Assimp::Importer import;
 
@@ -32,7 +32,7 @@ void AssetManager::LoadModelInternal(std::string const &path)
 	ProcessNode(scene->mRootNode, scene, directory, path);
 }
 
-void AssetManager::ProcessNode(aiNode *node, const aiScene *scene, std::string& directory, const std::string& path)
+void AssetManager::ProcessNode(aiNode *node, const aiScene *scene, const std::string& directory, const std::string& path)
 {
 	for (unsigned int i = 0; i < node->mNumMeshes; i++)
 	{
@@ -47,7 +47,7 @@ void AssetManager::ProcessNode(aiNode *node, const aiScene *scene, std::string& 
 	}
 }
 
-Mesh AssetManager::ProcessMesh(aiMesh* mesh, const aiScene* scene, std::string& directory)
+Mesh AssetManager::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::string& directory)
 {
 	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
@@ -126,7 +126,7 @@ Mesh AssetManager::ProcessMesh(aiMesh* mesh, const aiScene* scene, std::string& 
     return Mesh(vertices, indices, textures);
 }
 
-std::vector<Texture> AssetManager::LoadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName, std::string& directory)
+std::vector<Texture> AssetManager::LoadMaterialTextures(aiMaterial* mat, aiTextureType type, const std::string& typeName, const std::string& directory)
 {
 	std::vector<Texture> textures;
 	

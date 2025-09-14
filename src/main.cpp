@@ -35,7 +35,7 @@ int main() {
     pi.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
     pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
 
-    Model model(ASSETS_DIR "/models/tie/tie.obj", pi, engine->GetAssMan());
+    Model model(ASSETS_DIR "/models/tie2/bland-tie.obj", pi, engine->GetAssMan());
     models.push_back(model);
 
     PhysicalInfo pi2 = PhysicalInfo();
@@ -45,7 +45,7 @@ int main() {
     pi2.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
     pi2.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
 
-    Model model2(ASSETS_DIR "/models/tie/tie.obj", pi2, engine->GetAssMan());
+    Model model2(ASSETS_DIR "/models/tie2/bland-tie.obj", pi2, engine->GetAssMan());
     models.push_back(model2);
 
     engine->SetupScene(models);

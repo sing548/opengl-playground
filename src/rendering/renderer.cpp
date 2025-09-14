@@ -167,15 +167,23 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 
     modelShader_->Use();
 	
-	glm::vec3 lightPos(120.0f, 0.0f, 2.0f);
+	glm::vec3 dirLight(1.0f, 0.0f, 0.0f);
 
 	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)width / (float)height, 0.1f, 500.0f);
 	glm::mat4 view = camera.GetViewMatrix();
 	modelShader_->SetMat4("projection", projection);
 	modelShader_->SetMat4("view", view);
-	modelShader_->SetVec3("lightPos", lightPos);
+
+
+	modelShader_->SetVec3("dirLight.direction", dirLight);
 
 	auto models = scene.GetModels();
+
+	/*auto lights = 
+	for (auto& it : models)
+	{
+
+	}*/
 
 	for (auto& it : models)
 	{
@@ -185,6 +193,9 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 		modelProjection = glm::scale(modelProjection, it.model.GetScale());
 
 		modelShader_->SetMat4("model", modelProjection);
+
+		glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelProjection)));
+		modelShader_->SetMat3("normalMatrix", normalMatrix);
 		it.model.Draw(*modelShader_);
 	}
 
@@ -228,8 +239,6 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 
     	glDepthMask(GL_TRUE);            // restore depth writing
     	glDepthFunc(GL_LESS);            // restore default depth test
-
-    	
 	}	
 	
 	// ---------- Post-processing / Render to screen ----------

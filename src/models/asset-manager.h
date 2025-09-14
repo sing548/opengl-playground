@@ -20,10 +20,10 @@ private:
     std::unordered_map<std::string, std::vector<std::shared_ptr<Mesh>>> modelCache_;
 
     bool HasModel(const std::string& path);
-    void LoadModelInternal(std::string const &path);
-    void ProcessNode(aiNode *node, const aiScene *scene, std::string& directory, const std::string&  path);
-    Mesh ProcessMesh(aiMesh* mesh, const aiScene* scene, std::string& directory);
-    std::vector<Texture> LoadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName, std::string& directory);
+    void LoadModelInternal(const std::string& path);
+    void ProcessNode(aiNode *node, const aiScene *scene, const std::string& directory, const std::string&  path);
+    Mesh ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::string& directory);
+    std::vector<Texture> LoadMaterialTextures(aiMaterial* mat, aiTextureType type, const std::string& typeName, const std::string& directory);
     unsigned int TextureFromFile(const char* path, const std::string& directory, bool gamma = false);
     unsigned int CreateBlackTexture();
 };
