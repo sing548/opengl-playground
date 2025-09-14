@@ -1,0 +1,12 @@
+# Blender 4.5.2 LTS MTL File: 'tie.blend'
+# www.blender.org
+
+newmtl Tie_Gray
+Ns 250.000000
+Ka 0.392405 0.392405 0.392405
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd BlandTie.jpg
