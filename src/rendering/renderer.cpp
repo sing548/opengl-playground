@@ -167,23 +167,41 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 
     modelShader_->Use();
 	
-	glm::vec3 dirLight(1.0f, 0.0f, 0.0f);
+	glm::vec3 dirLight(-1.0f, 0.0f, 0.0f);
 
 	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)width / (float)height, 0.1f, 500.0f);
 	glm::mat4 view = camera.GetViewMatrix();
+	modelShader_->SetVec3("viewPos", camera.Position);
 	modelShader_->SetMat4("projection", projection);
 	modelShader_->SetMat4("view", view);
 
-
 	modelShader_->SetVec3("dirLight.direction", dirLight);
+	modelShader_->SetVec3("dirLight.ambient", glm::vec3(0.2f, 0.22f, 0.25f));
+	modelShader_->SetVec3("dirLight.diffuse", glm::vec3(0.4f, 0.42f, 0.45f));
 
 	auto models = scene.GetModels();
 
-	/*auto lights = 
+	int i = 0;
 	for (auto& it : models)
 	{
+		if (i > 1) {
+			std::string pos = std::to_string(i - 2);
 
-	}*/
+			modelShader_->SetVec3("pointLights[" + pos + "].position", it.model.GetPosition());
+
+			modelShader_->SetVec3("pointLights[" + pos + "].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+			modelShader_->SetVec3("pointLights[" + pos + "].diffuse", glm::vec3(0.2f, 0.0f, 0.0f));
+			modelShader_->SetVec3("pointLights[" + pos + "].specular", glm::vec3(1.0f, 0.0f, 0.0f));
+
+			modelShader_->SetFloat("pointLights[" + pos + "].constant", 1.0f);
+			modelShader_->SetFloat("pointLights[" + pos + "].linear", 0.09f);
+			modelShader_->SetFloat("pointLights[" + pos + "].quadratic", 0.032f);
+		}
+		i++;
+	}
+	
+	if (i > 128) i = 256;
+	modelShader_->SetInt("numPointLights", i - 2);
 
 	for (auto& it : models)
 	{
