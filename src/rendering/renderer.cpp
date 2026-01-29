@@ -200,7 +200,7 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 		i++;
 	}
 	
-	if (i > 128) i = 256;
+	if (i > 256) i = 256;
 	modelShader_->SetInt("numPointLights", i - 2);
 
 	for (auto& it : models)

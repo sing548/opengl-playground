@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/run/media/dario/Old Synology/src/opengl/opengl-playground/src/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

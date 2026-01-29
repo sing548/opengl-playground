@@ -1,0 +1,3 @@
+/run/media/dario/Old Synology/src/opengl/opengl-playground/src/CMakeFiles/OpenGLPlayground.dir
+/run/media/dario/Old Synology/src/opengl/opengl-playground/src/CMakeFiles/edit_cache.dir
+/run/media/dario/Old Synology/src/opengl/opengl-playground/src/CMakeFiles/rebuild_cache.dir
