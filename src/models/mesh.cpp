@@ -14,6 +14,7 @@ void Mesh::Draw(Shader &shader)
 	unsigned int specularNr = 1;
 	unsigned int normalNr	= 1;
 	unsigned int heightNr	= 1;
+	unsigned int emissiveNr = 1;
 	
 	for (unsigned int i = 0; i < textures.size(); i++)
 	{
@@ -29,6 +30,8 @@ void Mesh::Draw(Shader &shader)
 			number = std::to_string(normalNr++);
 		else if (name == "texture_height")
 			number = std::to_string(heightNr++);
+		else if (name == "texture_emissive")
+			number = std::to_string(emissiveNr++);
             
 		glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
 		//shader.setFloat(("material." + name + number).c_str(), i);

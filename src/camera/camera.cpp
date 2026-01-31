@@ -23,7 +23,6 @@ const glm::mat4 Camera::GetViewMatrix() const
 
 void Camera::ProcessKeyboard(Camera_Input input, float deltaTime)
 {
-	
 	glm::vec3 oldPos = Position;
 	if (input == SPRINT)
 	{
@@ -81,6 +80,7 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
 	yoffset *= MouseSensitivity;
 	Yaw   += xoffset;
 	Pitch += yoffset;
+	
 	if (constrainPitch)
 	{
 		if (Pitch > 89.0f)
@@ -88,14 +88,17 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
 		if (Pitch < -89.0f)
 			Pitch = -89.0f;
 	}
+
 	UpdateCameraVectors();
 }
 
 void Camera::ProcessMouseScroll(float yoffset)
 {
 	Zoom -= (float)yoffset;
+	
 	if (Zoom < 1.0f)
 		Zoom = 1.0f;
+
 	if (Zoom > 45.0f)
 		Zoom = 45.0f;
 }

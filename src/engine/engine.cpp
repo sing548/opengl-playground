@@ -1,5 +1,9 @@
 #include "engine.h"
 
+#ifndef ASSETS_DIR
+#define ASSETS_DIR "./assets"
+#endif
+
 Engine::Engine()
 {
     bool adjust = true;
@@ -12,6 +16,8 @@ Engine::Engine()
     settings_["sky_box"] = skyBox;
     bool hitboxes = false;
     settings_["hitboxes"] = hitboxes;
+    bool bloom = true;
+    settings_["bloom"] = bloom;
 
     camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 60.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0F, -90.0F);
     
@@ -43,7 +49,7 @@ void Engine::SetupScene(std::vector<Model> models)
     scene_ = std::make_unique<Scene>();
 
     for (auto& m : models) {
-        scene_->AddModel(m);    
+        scene_->AddModel(m);
     }
 }
 
@@ -65,7 +71,7 @@ void Engine::Run()
         HandleInput(deltaTime);
         HandleLogic(deltaTime);
 
-        renderer_->Draw(*scene_, window_->GetCamera(), window_->GetSize().width, window_->GetSize().height);
+        renderer_->Draw(*scene_, window_->GetCamera(), window_->GetSize().width, window_->GetSize().height, settings_);
         window_->SwapBuffers();
 
         i++;
@@ -87,7 +93,12 @@ void Engine::HandleLogic(float deltaTime)
 
     if (adjust)
         AdjustCamera();
+    
+    CheckHits();
+}
 
+void Engine::CheckHits()
+{
     auto model1 = scene_->GetModelByReference(1);
     auto model2 = scene_->GetModelByReference(2);
 
@@ -157,15 +168,14 @@ void Engine::Shoot(Model shooter)
 {
     PhysicalInfo pi = PhysicalInfo();
     pi.position_ = shooter.GetPosition();
-    pi.rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
-    pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
+    pi.rotation_ = shooter.GetRotation();
+    pi.scale_ = glm::vec3(0.05f, 0.05f, 0.05f);
     pi.orientation_ = shooter.GetOrientation();
     pi.baseOrientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
     pi.speed_ = shooter.GetSpeed() + glm::vec3(0.1f, 0.0f, 0.0f);
 
-    Model shot(0.1f, pi);
+    Model shot(ASSETS_DIR "/models/shot/shot.obj", pi, *assMan_, true, 0.05f);
 
-    shot.SetScale(glm::vec3(1.0f, 1.0f, 1.0f));
     scene_->AddModel(shot);
 }
 
@@ -174,17 +184,6 @@ void Engine::MoveModel(unsigned int id, glm::vec3 change)
     Model& model = scene_->GetModelByReference(id);
     glm::vec3 position = model.GetPosition();
     position += change;
-
-    /*if (id == 1 || id == 2) {
-        if (abs(position.x) > 20) {
-            position.x *=  -1;
-        }
-        
-        if (abs(position.z) > 15) {
-            position.z *= -1;
-        }
-    }*/
-
     model.SetPosition(position);
 
     if (abs(position.x) > this->currentFurthestPosition.x) this->currentFurthestPosition.x = abs(position.x);
@@ -231,20 +230,21 @@ void Engine::HandleInput(float deltaTime)
     }
 
     if (glfwGetKey(window_->Get(), GLFW_KEY_A) == GLFW_PRESS) {
-        RotateModel(glm::vec3(0.0f, glm::radians(1.5f), 0.0f));
+        RotateModel(glm::vec3(0.0f, glm::radians(0.7f), 0.0f));
     }
 
     if (glfwGetKey(window_->Get(), GLFW_KEY_D) == GLFW_PRESS) {
-        RotateModel(glm::vec3(0.0f, glm::radians(-1.5f), 0.0f));
+        RotateModel(glm::vec3(0.0f, glm::radians(-0.7f), 0.0f));
     }
     
     // Flight logic
     if (glfwGetKey(window_->Get(), GLFW_KEY_W) == GLFW_PRESS) {
-        float acc = deltaTime * 0.1f;
+        float acc = deltaTime * 0.05f;
         glm::vec3 speed = scene_->GetModelByReference(1).GetSpeed();
         speed.x += acc;
 
-        if (1.0f > speed.x)
+        // Max Speed
+        if (0.1f > speed.x)
             scene_->GetModelByReference(1).SetSpeed(speed);
     } else if (glfwGetKey(window_->Get(), GLFW_KEY_SPACE) != GLFW_PRESS) {
         float acc = deltaTime * 0.05f;
@@ -261,9 +261,21 @@ void Engine::HandleInput(float deltaTime)
         scene_->GetModelByReference(1).SetSpeed(speed);
     }
 
+    if (lastShot > 0)
+        lastShot -= deltaTime;
+
+    if (lastShot < 0)
+        lastShot = 0;
+
     // Shooting
-    if (glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS) {
+    if (glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS && lastShot == 0 && shotReleased) {
         Shoot(scene_->GetModelByReference(1));
+        lastShot = 5;
+        shotReleased = false;
+    }
+
+    if (glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_RELEASE) {
+        shotReleased = true;
     }
 }
 
@@ -302,6 +314,10 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, 
                 cam.UpdateCameraVectors();
                 cam.Position = glm::vec3(0.0f, 60.0f, 0.0f);
             }
-        }    
+        }
+
+        if (key == GLFW_KEY_F12 && action == GLFW_PRESS) {
+            engine->settings_["bloom"] = !engine->settings_["bloom"];
+        }
     }
 }

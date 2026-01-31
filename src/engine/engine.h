@@ -23,6 +23,9 @@ public:
 private:
     const unsigned int WIDTH = 1920;
     const unsigned int HEIGHT = 1080;
+
+    unsigned int lastShot = 0;
+    bool shotReleased = true;
     
     std::unique_ptr<Window> window_;
     std::unique_ptr<InputManager> inputManager_;
@@ -38,6 +41,7 @@ private:
     std::map<std::string, bool> settings_;
 
     void HandleLogic(float deltaTime);
+    void CheckHits();
     void HandleInput(float deltaTime);
     static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
     void MoveModel(unsigned int id, glm::vec3 change);

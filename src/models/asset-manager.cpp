@@ -121,6 +121,9 @@ Mesh AssetManager::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::st
 		// height maps
 		std::vector<Texture> heightMaps = LoadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height", directory);
 		textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
+
+		std::vector<Texture> emissiveMaps = LoadMaterialTextures(material, aiTextureType_EMISSIVE, "texture_emissive", directory);
+		textures.insert(textures.end(), emissiveMaps.begin(), emissiveMaps.end());
 	}
 	
     return Mesh(vertices, indices, textures);
@@ -152,7 +155,6 @@ std::vector<Texture> AssetManager::LoadMaterialTextures(aiMaterial* mat, aiTextu
 			texture.id = TextureFromFile(str.C_Str(), directory);
 			texture.type = typeName;
 			texture.path = str.C_Str();
-			textures.push_back(texture);
 			textures.push_back(texture);
 		}
 	}

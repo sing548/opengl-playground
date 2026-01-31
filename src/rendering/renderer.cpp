@@ -25,11 +25,14 @@ Renderer::Renderer(unsigned int width, unsigned int height, bool showHitboxes, b
 	std::string hitboxFrag = std::string(SHADER_DIR) + "/hitbox.frag";
 	std::string skyboxVert = std::string(SHADER_DIR) + "/skybox.vert";
 	std::string skyboxFrag = std::string(SHADER_DIR) + "/skybox.frag";
+	std::string blurVert   = std::string(SHADER_DIR) + "/blur.vert";
+	std::string blurFrag   = std::string(SHADER_DIR) + "/blur.frag";
 	
     screenShader_ = std::make_unique<Shader>(screenVert.c_str(), screenFrag.c_str());
     modelShader_  = std::make_unique<Shader>(modelVert.c_str(), modelFrag.c_str());
 	hitboxShader_ = std::make_unique<Shader>(hitboxVert.c_str(), modelFrag.c_str());
 	skyboxShader_ = std::make_unique<Shader>(skyboxVert.c_str(), skyboxFrag.c_str());
+	blurShader_	  = std::make_unique<Shader>(blurVert.c_str(), blurFrag.c_str());
 
 	float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
 		// positions   // texCoords
@@ -53,21 +56,38 @@ Renderer::Renderer(unsigned int width, unsigned int height, bool showHitboxes, b
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
-	glGenFramebuffers(1, &framebuffer_);
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
+	glGenFramebuffers(1, &frameFBO_);
+	glBindFramebuffer(GL_FRAMEBUFFER, frameFBO_);
 
-	glGenTextures(1, &textureColorbuffer_);
-	glBindTexture(GL_TEXTURE_2D, textureColorbuffer_);
-	
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer_, 0);
+	// multiple buffers
+	glGenTextures(2, colorBuffers_);
+
+	for (unsigned int i = 0; i < 2; i++)
+	{
+	    glBindTexture(GL_TEXTURE_2D, colorBuffers_[i]);
+	    glTexImage2D(
+	        GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL
+	    );
+	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	    // attach texture to framebuffer
+	    glFramebufferTexture2D(
+	        GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers_[i], 0
+	    );
+	}
 
 	glGenRenderbuffers(1, &rbo_);
 	glBindRenderbuffer(GL_RENDERBUFFER, rbo_);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo_);
+
+	unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+	glDrawBuffers(2, attachments);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "Framebuffer not complete!" << std::endl;
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
@@ -75,7 +95,35 @@ Renderer::Renderer(unsigned int width, unsigned int height, bool showHitboxes, b
 	glViewport(0, 0, width, height);	
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+	glGenFramebuffers(2, pingpongFBO_);
+	glGenTextures(2, pingPongColorbuffers_);
+
+	for (unsigned int i = 0; i < 2; i++)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO_[i]);
+        glBindTexture(GL_TEXTURE_2D, pingPongColorbuffers_[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingPongColorbuffers_[i], 0);
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cout << "Framebuffer not complete!" << std::endl;
+    }
+
 	backgroundRGBA_ = glm::vec4(.201f, 0.301f, 0.401f, 1.00f);
+	sceneClear_ = {
+    	backgroundRGBA_.x,
+    	backgroundRGBA_.y,
+    	backgroundRGBA_.z,
+    	
+		backgroundRGBA_.w
+	};
+	black_ = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+
 	showHitboxes_ = false;
 
 	/// SKYBOX
@@ -158,12 +206,14 @@ void Renderer::ToggleSkyBox()
 	this->showSkyBox_ = !this->showSkyBox_;
 }
 
-void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width, unsigned int height)
+void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width, unsigned int height, const std::map<std::string, bool>& settings)
 {
 	glEnable(GL_DEPTH_TEST);
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_);
-	glClearColor(backgroundRGBA_.x, backgroundRGBA_.y, backgroundRGBA_.z, backgroundRGBA_.w);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_MULTISAMPLE);
+	glBindFramebuffer(GL_FRAMEBUFFER, frameFBO_);
+	glClearBufferfv(GL_COLOR, 0, sceneClear_.data());
+	glClearBufferfv(GL_COLOR, 1, black_.data());
+	glClear(GL_DEPTH_BUFFER_BIT);
 
     modelShader_->Use();
 	
@@ -240,7 +290,8 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
     	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 	
-	if (this->showSkyBox_) {
+	if (this->showSkyBox_)
+	{
 		glDepthFunc(GL_LEQUAL);          // allow skybox depth = 1.0 to pass
     	glDepthMask(GL_FALSE);           // disable writing to depth buffer
 
@@ -257,20 +308,50 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 
     	glDepthMask(GL_TRUE);            // restore depth writing
     	glDepthFunc(GL_LESS);            // restore default depth test
-	}	
+	}
 	
 	// ---------- Post-processing / Render to screen ----------
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);  // back to default framebuffer
-    glDisable(GL_DEPTH_TEST);              // no depth for screen quad
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);  // back to default framebuffer
+
+
+	bool horizontal = true, firstIteration = true;
+	unsigned int amount = 10;
+	blurShader_->Use();
+	blurShader_->SetInt("image", 0);
+
+	for (unsigned int i = 0; i < amount; i++)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO_[horizontal]);
+		blurShader_->SetInt("horizontal", horizontal);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, firstIteration ?  colorBuffers_[1] : pingPongColorbuffers_[!horizontal]);
+
+		glBindVertexArray(quadVAO_);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glBindVertexArray(0);
+
+		horizontal = !horizontal;
+
+		if (firstIteration) firstIteration = false;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     screenShader_->Use();
+	screenShader_->SetInt("screenTexture", 0);
+	screenShader_->SetInt("bloomTexture", 1);
+	screenShader_->SetInt("bloom", settings.at("bloom"));
+	screenShader_->SetFloat("exposure", 1.0f);
+
     glActiveTexture(GL_TEXTURE0);
-    glBindVertexArray(quadVAO_);
-    glBindTexture(GL_TEXTURE_2D, textureColorbuffer_);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    glBindVertexArray(0);
+	glBindTexture(GL_TEXTURE_2D, colorBuffers_[0]);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, pingPongColorbuffers_[1]);
+
+	glBindVertexArray(quadVAO_);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glBindVertexArray(0);
 }
 
 unsigned int Renderer::LoadCubemap(std::vector<std::string> faces)
