@@ -81,25 +81,6 @@ void Window::SwapBuffers()
 	glfwPollEvents();
 }
 
-void Window::setCallbacks()
-{
-	/*glfwSetWindowUserPointer(window_, this);
-
-	glfwSetFramebufferSizeCallback(window_, [](GLFWwindow* window, int width, int height) {
-        glViewport(0, 0, width, height);
-
-		Window* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
-		if (self) {
-			self->ResizeWindow(width, height);
-		}
-    });
-
-	glfwSetKeyCallback(window_, [](GLFWwindow* w, int key, int scancode, int action, int mods) {
-            auto window = static_cast<Window*>(glfwGetWindowUserPointer(w));
-            window->inputManager_->UpdateKey(key, action);
-    });*/
-}
-
 void Window::UpdateCameraPosition(glm::vec3 position)
 {
 	camera_->Position = position;

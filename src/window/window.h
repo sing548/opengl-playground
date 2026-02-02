@@ -35,7 +35,6 @@ public:
     WindowSize GetSize();
     void HandleInput(float deltaTime);
     void ResizeWindow(unsigned int width, unsigned int height);
-    void setCallbacks();
     void UpdateCameraPosition(glm::vec3 position);
     void UpdateCameraOrientation(glm::vec3 orientation);
     void UpdateCameraYaw(float yaw);

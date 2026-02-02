@@ -5,6 +5,6 @@
     "glfw3",
     "glew",
     "glm",
-    "gamenetworkingsockets"
+    "openssl"
   ]
 }

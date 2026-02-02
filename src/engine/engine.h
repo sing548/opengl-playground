@@ -1,3 +1,6 @@
+#ifndef ENGINE_H
+#define ENGINE_H
+
 #include "../window/window.h"
 #include "../camera/camera.h"
 #include "../models/scene.h"
@@ -7,18 +10,19 @@
 #include "../models/scene.h"
 #include "../models/model.h"
 #include "../models/asset-manager.h"
+#include "../networking/networking.h"
 
 #include <map>
-
+#include <thread>
 
 class Engine {
 public:
 
     Engine();
+    std::vector<Model> BasicLevel();
     void SetupScene(std::vector<Model>);
     void Run();
     AssetManager& GetAssMan();
-
 
 private:
     const unsigned int WIDTH = 1920;
@@ -39,10 +43,15 @@ private:
     glm::vec3 currentFurthestPosition;
 
     std::map<std::string, bool> settings_;
+    InputState previousInputState_;
+    InputState currentInputState_;
+
+    Networking* networking_;
 
     void HandleLogic(float deltaTime);
     void CheckHits();
-    void HandleInput(float deltaTime);
+    void CollectInputs(float deltaTime);
+    void ExecuteInput(float deltaTime);
     static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
     void MoveModel(unsigned int id, glm::vec3 change);
     void RotateModel(glm::vec3 change);
@@ -51,3 +60,5 @@ private:
     void Shoot(Model shooter);
     void AdjustCamera();
 };
+
+#endif

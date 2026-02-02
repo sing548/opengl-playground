@@ -3,14 +3,14 @@
 Mesh* Model::hitboxSphere_ = nullptr;
 bool Model::hitboxSphereInitialized_ = false;
 
-Model::Model(float radius, PhysicalInfo pi) : gammaCorrection(false), 
-	physicalInfo_ (pi), radius(radius)
+Model::Model(float radius, PhysicalInfo pi, ModelType type) : gammaCorrection(false), 
+	physicalInfo_ (pi), radius(radius), type_(type)
 {
 	if (!hitboxSphereInitialized_)
 		CreateHitboxSphere();
 }
 
-Model::Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, bool gamma, float radius) : gammaCorrection(gamma), physicalInfo_(pi), radius(radius)
+Model::Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, bool gamma, float radius) : gammaCorrection(gamma), physicalInfo_(pi), radius(radius), type_(type)
 {
 	meshes = assMan.LoadModel(path);
 	

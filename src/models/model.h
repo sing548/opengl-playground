@@ -32,16 +32,25 @@ struct PhysicalInfo {
     glm::vec3 rotationSpeed_;
 };
 
+enum ModelType
+{
+    PLAYER,
+    NPC,
+    OBJECT
+};
+
 class Model
 {
 public:
+    ModelType type_;
+    
     std::vector<std::shared_ptr<Mesh>> meshes;
     bool gammaCorrection;
 
     float radius;
 
-    Model(float radius, PhysicalInfo pi);
-    Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, bool gamma = false, float radius = 0.7);
+    Model(float radius, PhysicalInfo pi, ModelType type);
+    Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, bool gamma = false, float radius = 0.7);
 
     void Draw(Shader shader);
     void DrawHitbox(Shader shader);

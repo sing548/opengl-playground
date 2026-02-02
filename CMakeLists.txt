@@ -8,6 +8,8 @@ project(OpenGLPlayground)
 
 set(CMAKE_CXX_STANDARD 17)
 
+add_subdirectory(include/GameNetworkingSockets)
+
 add_executable(OpenGLPlayground
     src/camera/camera.cpp
     src/models/asset-manager.cpp
@@ -19,6 +21,9 @@ add_executable(OpenGLPlayground
     src/main.cpp
     src/engine/engine.cpp
     src/input-manager/input-manager.cpp
+    src/networking/networking.cpp
+    src/networking/client-logic.cpp
+    src/networking/server-logic.cpp
     include/glad/glad.c
     include/stb/stb_image.cpp
     )
@@ -27,11 +32,16 @@ add_executable(OpenGLPlayground
 include_directories(include)
 include_directories(include/stb)
 
+include_directories(include/GameNetworkingSockets/include)
+include_directories(${OPENSSL_INCLUDE_DIR})
+
 # Link GLFW and OpenGL
+find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(assimp REQUIRED)
+find_package(OpenSSL REQUIRED)
 
-target_link_libraries(OpenGLPlayground PRIVATE glfw OpenGL::GL assimp)
+target_link_libraries(OpenGLPlayground PRIVATE glfw OpenGL::GL assimp GameNetworkingSockets OpenSSL::Crypto OpenSSL::SSL)
 # Copy shader files to build directory
 # Add shader files to be copied
 file(GLOB SHADERS "src/shaders/*.vert" "src/shaders/*.frag")
