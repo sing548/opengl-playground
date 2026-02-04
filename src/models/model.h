@@ -54,12 +54,13 @@ public:
 
     void Draw(Shader shader);
     void DrawHitbox(Shader shader);
-    glm::vec3& GetPosition();
-    glm::vec3& GetScale();
-    glm::vec3& GetRotation();
-    glm::vec3& GetOrientation();
-    glm::vec3& GetSpeed();
-    glm::vec3& GetRotationSpeed();
+    const glm::vec3& GetPosition() const;
+    const glm::vec3& GetScale() const;
+    const glm::vec3& GetRotation() const;
+    const glm::vec3& GetOrientation() const;
+    const glm::vec3& GetBaseOrientation() const;
+    const glm::vec3& GetSpeed() const;
+    const glm::vec3& GetRotationSpeed() const;
 
     void SetPosition(glm::vec3 position);
     void SetScale(glm::vec3 scale);

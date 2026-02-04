@@ -18,7 +18,7 @@
 class Engine {
 public:
 
-    Engine();
+    Engine(int config);
     std::vector<Model> BasicLevel();
     void SetupScene(std::vector<Model>);
     void Run();
@@ -30,7 +30,9 @@ private:
 
     unsigned int lastShot = 0;
     bool shotReleased = true;
-    
+
+    int playerId_;
+
     std::unique_ptr<Window> window_;
     std::unique_ptr<InputManager> inputManager_;
     std::unique_ptr<Camera> camera_;
@@ -43,18 +45,22 @@ private:
     glm::vec3 currentFurthestPosition;
 
     std::map<std::string, bool> settings_;
-    InputState previousInputState_;
-    InputState currentInputState_;
+    std::vector<InputState> previousInputStates_;
+    std::vector<InputState> currentInputStates_;
 
-    Networking* networking_;
+    bool m_bNetworking = false;
+    bool m_bServer = false;
+    Networking* networking_ = nullptr;
 
     void HandleLogic(float deltaTime);
     void CheckHits();
+    void ReconcileNetwork();
     void CollectInputs(float deltaTime);
     void ExecuteInput(float deltaTime);
     static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+
     void MoveModel(unsigned int id, glm::vec3 change);
-    void RotateModel(glm::vec3 change);
+    void RotateModel(unsigned int id, glm::vec3 change);
 
     void MoveModels();
     void Shoot(Model shooter);

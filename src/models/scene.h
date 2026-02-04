@@ -18,7 +18,9 @@ public:
     Scene();
 
     unsigned int AddModel(Model model);
+    unsigned int AddModelWithId(Model model, unsigned int id);
     const std::vector<ModelWithReference>& GetModels() const;
+    std::vector<std::reference_wrapper<ModelWithReference>> GetPlayerModels();
     Model& GetModelByReference(unsigned int id);
     void RemoveModel(unsigned int Id);
 

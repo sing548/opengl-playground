@@ -35,13 +35,17 @@ include_directories(include/stb)
 include_directories(include/GameNetworkingSockets/include)
 include_directories(${OPENSSL_INCLUDE_DIR})
 
+find_package(msgpack-cxx CONFIG REQUIRED)
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
+
 # Link GLFW and OpenGL
 find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(assimp REQUIRED)
 find_package(OpenSSL REQUIRED)
 
-target_link_libraries(OpenGLPlayground PRIVATE glfw OpenGL::GL assimp GameNetworkingSockets OpenSSL::Crypto OpenSSL::SSL)
+target_link_libraries(OpenGLPlayground PRIVATE glfw OpenGL::GL assimp GameNetworkingSockets OpenSSL::Crypto OpenSSL::SSL msgpack-cxx )
 # Copy shader files to build directory
 # Add shader files to be copied
 file(GLOB SHADERS "src/shaders/*.vert" "src/shaders/*.frag")

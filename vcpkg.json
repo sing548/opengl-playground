@@ -5,6 +5,7 @@
     "glfw3",
     "glew",
     "glm",
-    "openssl"
+    "openssl",
+    "msgpack"
   ]
 }

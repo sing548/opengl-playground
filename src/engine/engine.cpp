@@ -4,8 +4,18 @@
 #define ASSETS_DIR "./assets"
 #endif
 
-Engine::Engine()
+Engine::Engine(int config)
 {
+    if (config == 1)
+    {
+        m_bNetworking = true;
+        m_bServer = true;
+    }
+    else if (config == 2)
+    {
+        m_bNetworking = true;
+    }
+
     bool adjust = true;
     settings_["adjust_camera"] = adjust;
     bool mouseLooking = false;
@@ -37,7 +47,40 @@ Engine::Engine()
         }
     });
 
-    networking_ = new Networking(false);
+    if (m_bNetworking)
+    {
+        playerId_ = m_bServer ? 1 : -1;
+        auto state = InputState { playerId_, false, false, false, false, false, false  };
+        currentInputStates_.push_back(state);
+        previousInputStates_.push_back(state);
+
+        std::vector<Model> models = std::vector<Model>();
+        if (m_bServer)
+        {
+            PhysicalInfo pi = PhysicalInfo();
+            pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
+            pi.rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
+            pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
+            pi.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
+            pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
+            Model model(ASSETS_DIR "/models/tie2/bland-tie.obj", pi, *assMan_, ModelType::PLAYER);
+            models.push_back(model);
+        }
+
+        SetupScene(models);
+
+        networking_ = new Networking(true, *scene_);
+    }
+    else
+    {
+        playerId_ = 1;
+        auto state = InputState { playerId_, false, false, false, false, false, false  };
+        currentInputStates_.push_back(state);
+        previousInputStates_.push_back(state);
+
+        auto models = BasicLevel();
+        SetupScene(models);
+    }
 }
 
 AssetManager& Engine::GetAssMan()
@@ -96,9 +139,12 @@ void Engine::Run()
         accTime += deltaTime;
         
         glfwPollEvents();
+        ReconcileNetwork();
         CollectInputs(deltaTime);
         ExecuteInput(deltaTime);
         HandleLogic(deltaTime);
+        if (m_bNetworking && m_bServer)
+            networking_->SendGameState(*scene_, deltaTime);
 
         renderer_->Draw(*scene_, window_->GetCamera(), window_->GetSize().width, window_->GetSize().height, settings_);
         window_->SwapBuffers();
@@ -111,9 +157,19 @@ void Engine::Run()
         }
     }
     
-    networking_->Shutdown();
+    if (networking_ != nullptr)
+        networking_->Shutdown();
+
     std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
     delete window_.get();
+}
+
+void Engine::ReconcileNetwork()
+{
+    if (m_bNetworking && !m_bServer)
+    {
+
+    }
 }
 
 void Engine::HandleLogic(float deltaTime)
@@ -125,33 +181,44 @@ void Engine::HandleLogic(float deltaTime)
     if (adjust)
         AdjustCamera();
     
-    CheckHits();
+    if (!m_bNetworking || m_bNetworking && m_bServer)
+        CheckHits();
 }
 
 void Engine::CheckHits()
 {
-    auto model1 = scene_->GetModelByReference(1);
-    auto model2 = scene_->GetModelByReference(2);
+    auto playerModels = scene_->GetPlayerModels();
+    
+    // ToDo: change to auto &other
+    for (auto other : scene_->GetModels())
+    {
+        glm::vec3 otherPos = other.model.GetPosition();
+        float otherRadius = other.model.radius;
 
-    for (auto it : scene_->GetModels()) {
-        if (it.Id == 1 || it.Id == 2)
-            continue;
+        for (auto& playerRef : playerModels)
+        {
+            auto& player = playerRef.get();
 
-        float d1 = glm::length(it.model.GetPosition() - model1.GetPosition());
-        float r1 = it.model.radius + model1.radius;
+            if (player.Id == other.Id)
+                continue;
+                
+            glm::vec3 playerPos = player.model.GetPosition();
+            float playerRadius = player.model.radius;
 
-        float d2 = glm::length(it.model.GetPosition() - model2.GetPosition());
-        float r2 = it.model.radius + model2.radius;
-        
-        if (d1 <= r1 || d2 <= r2) {
-           glfwSetWindowShouldClose(window_->Get(), true);
+            float dist = glm::length(otherPos - playerPos);
+            float radiusSum = otherRadius + playerRadius;
+
+            if (dist <= radiusSum)
+            {
+                glfwSetWindowShouldClose(window_->Get(), true);
+            }
         }
     }
 }
 
 void Engine::AdjustCamera()
 {
-    if (settings_["third_person"]) {
+    if (settings_["third_person"] ) {
         auto model = scene_->GetModelByReference(1);
         glm::vec3 modelPos = model.GetPosition();
         
@@ -235,20 +302,17 @@ void Engine::MoveModels()
         MoveModel(it.Id, change);
 
         auto position = it.model.GetPosition();
-        if (abs(position.x) > 80 || abs(position.z) > 80)
+        if ((abs(position.x) > 80 || abs(position.z) > 80) && it.model.type_ != ModelType::PLAYER)
             deletes.push_back(it.Id);
     }
 
     for (auto id : deletes) 
-    {
-        if (id != 1 && id != 2)
-            scene_->RemoveModel(id);
-    }
+        scene_->RemoveModel(id);
 }
 
-void Engine::RotateModel(glm::vec3 change) 
+void Engine::RotateModel(unsigned int id, glm::vec3 change) 
 {
-    Model& model = scene_->GetModelByReference(1);
+    Model& model = scene_->GetModelByReference(id);
     glm::vec3 rotation = model.GetRotation();
     rotation += change;
     model.SetRotation(rotation);
@@ -261,19 +325,17 @@ void Engine::ChangeSetting(std::string key, bool value)
 
 void Engine::CollectInputs(float deltaTime)
 {
-    previousInputState_ = currentInputState_;
+    previousInputStates_[0] = currentInputStates_[0];
 
-    currentInputState_.left     = glfwGetKey(window_->Get(), GLFW_KEY_A) == GLFW_PRESS;
-    currentInputState_.right    = glfwGetKey(window_->Get(), GLFW_KEY_D) == GLFW_PRESS;
-    currentInputState_.forward  = glfwGetKey(window_->Get(), GLFW_KEY_W) == GLFW_PRESS;
-    currentInputState_.backward = glfwGetKey(window_->Get(), GLFW_KEY_S) == GLFW_PRESS;
-    currentInputState_.shoot    = glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS;
-}
+    currentInputStates_[0].left      = glfwGetKey(window_->Get(), GLFW_KEY_A) == GLFW_PRESS;
+    currentInputStates_[0].right     = glfwGetKey(window_->Get(), GLFW_KEY_D) == GLFW_PRESS;
+    currentInputStates_[0].forward   = glfwGetKey(window_->Get(), GLFW_KEY_W) == GLFW_PRESS;
+    currentInputStates_[0].backward  = glfwGetKey(window_->Get(), GLFW_KEY_S) == GLFW_PRESS;
+    currentInputStates_[0].shoot     = glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS;
+    currentInputStates_[0].shootShot = false;
 
-void Engine::ExecuteInput(float deltaTime)
-{
-    bool shootPressed  =  currentInputState_.shoot && !previousInputState_.shoot;
-    bool shootReleased = !currentInputState_.shoot &&  previousInputState_.shoot;
+    bool shootPressed  =  currentInputStates_[0].shoot && !previousInputStates_[0].shoot;
+    bool shootReleased = !currentInputStates_[0].shoot &&  previousInputStates_[0].shoot;
 
     if (lastShot > 0)
         lastShot -= deltaTime;
@@ -281,38 +343,56 @@ void Engine::ExecuteInput(float deltaTime)
     if (lastShot < 0)
         lastShot = 0;
 
-    if (currentInputState_.left) 
-        RotateModel({0.0f, glm::radians(0.7f), 0.0f});
-
-    if (currentInputState_.right)
-        RotateModel({0.0f, glm::radians(-0.7f), 0.0f});
-
-    if (currentInputState_.forward) 
-    {
-        float acc = deltaTime * 0.05f;
-        glm::vec3 speed = scene_->GetModelByReference(1).GetSpeed();
-        speed.x += acc;
-
-        // Max Speed
-        if (0.1f > speed.x)
-            scene_->GetModelByReference(1).SetSpeed(speed);
-    } else 
-    {
-        float acc = deltaTime * 0.05f;
-        if (currentInputState_.backward)
-            acc = deltaTime * .2f;
-        glm::vec3 speed = scene_->GetModelByReference(1).GetSpeed();
-
-        if (speed.x > 0) speed.x -= acc;
-        if (speed.x < 0) speed.x = 0;
-
-        scene_->GetModelByReference(1).SetSpeed(speed);
-    }
-
     if (shootPressed && lastShot == 0) {
-        Shoot(scene_->GetModelByReference(1));
+        currentInputStates_[0].shootShot = true;
         lastShot = 5;
     }
+
+    if (m_bNetworking)
+    {
+        // To Network
+        networking_->SendInputState(currentInputStates_[0]);
+    }
+}
+
+void Engine::ExecuteInput(float deltaTime)
+{
+    if (playerId_ < 1) return;
+
+    for (auto& state : currentInputStates_)
+    {
+        if (state.left) 
+            RotateModel(playerId_, {0.0f, glm::radians(0.7f), 0.0f});
+
+        if (state.right)
+            RotateModel(playerId_, {0.0f, glm::radians(-0.7f), 0.0f});
+
+        if (state.forward) 
+        {
+            float acc = deltaTime * 0.05f;
+            glm::vec3 speed = scene_->GetModelByReference(playerId_).GetSpeed();
+            speed.x += acc;
+
+            // Max Speed
+            if (0.1f > speed.x)
+                scene_->GetModelByReference(playerId_).SetSpeed(speed);
+        } else 
+        {
+            float acc = deltaTime * 0.05f;
+            if (state.backward)
+                acc = deltaTime * .2f;
+            glm::vec3 speed = scene_->GetModelByReference(playerId_).GetSpeed();
+
+            if (speed.x > 0) speed.x -= acc;
+            if (speed.x < 0) speed.x = 0;
+
+            scene_->GetModelByReference(playerId_).SetSpeed(speed);
+        }
+
+        if (state.shootShot)
+            Shoot(scene_->GetModelByReference(playerId_));
+    }
+    
 }
 
 void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)

@@ -1,6 +1,10 @@
 #include "networking.h"
 
-Networking::Networking(bool bServer)
+#ifndef ASSETS_DIR
+#define ASSETS_DIR "./assets"
+#endif
+
+Networking::Networking(bool bServer, const Scene& scene)
 {
 	m_bServer = bServer;
     #ifdef STEAMNETWORKINGSOCKETS_OPENSOURCE
@@ -27,7 +31,6 @@ Networking::Networking(bool bServer)
 	SteamNetworkingUtils()->SetDebugOutputFunction( k_ESteamNetworkingSocketsDebugOutputType_Msg, DebugOutput );
 
 	running_ = true;
-	
     if (bServer)
     {
 		server_ = std::make_unique<ServerLogic>();
@@ -70,15 +73,87 @@ Networking::~Networking()
 
 };
 
+void Networking::SendGameState(const Scene& scene, float dT)
+{
+	tickTimer += dT;
+
+	if (tickTimer >= tickRate)
+	{
+		currentTick++;
+		tickTimer -= tickRate;
+		auto gs = BuildGameState(scene);
+		server_->UpdateGameState(std::move(gs));
+	}
+}
+
+std::unique_ptr<GameState> Networking::BuildGameState(const Scene& scene)
+{
+    auto gs = std::make_unique<GameState>();
+    gs->tick = currentTick;
+
+    for (auto& mw : scene.GetModels())
+    {
+        EntityState e;
+        e.id = mw.Id;
+		e.position_ 		= mw.model.GetPosition();
+		e.scale_			= mw.model.GetScale();
+		e.rotation_			= mw.model.GetRotation();
+		e.orientation_		= mw.model.GetOrientation();
+		e.baseOrientation_	= mw.model.GetBaseOrientation();
+		e.speed_			= mw.model.GetSpeed();
+		e.rotationSpeed_	= mw.model.GetRotationSpeed();
+
+        gs->entities.push_back(e);
+    }
+
+    return gs;
+}
+
 void Networking::Shutdown()
 {
 	running_ = false;
 };
 
-void Networking::HandInState(InputState state)
+void Networking::SendInputState(const InputState& state)
 {
+
 };
 
-GameState Networking::RetrieveState()
+const GameState& Networking::RetrieveGameState() const
 {
+    if (!gameState_)
+    {
+        throw std::runtime_error("No GameState available");
+    }
+	return *gameState_;
+};
+
+unsigned int UpdateScene(const GameState& gs, Scene& scene, uint32_t tick, AssetManager& assMan)
+{
+	if (tick > gs.tick) return  gs.playerId;
+
+	for (auto &entity : gs.createdEntities)
+	{
+		PhysicalInfo pi = PhysicalInfo();
+		pi.baseOrientation_ = entity.baseOrientation_;
+		pi.orientation_ 	= entity.orientation_;
+		pi.position_		= entity.position_;
+		pi.rotation_		= entity.rotation_;
+		pi.rotationSpeed_	= entity.rotationSpeed_;
+		pi.scale_			= entity.scale_;
+		pi.speed_			= entity.speed_;
+
+		ModelType type;
+		switch (entity.type) 
+		{
+			case 0: type = ModelType::PLAYER; 	break;
+			case 1: type = ModelType::NPC;		break;
+			case 2: type = ModelType::OBJECT;	break;	
+		}
+
+		Model model(std::string(ASSETS_DIR) + entity.path, pi, assMan, type, true, entity.radius);
+		scene.AddModel(model);
+	}
+
+	return gs.playerId;
 };

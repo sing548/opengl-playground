@@ -29,32 +29,39 @@ void Model::DrawHitbox(Shader shader)
 	hitboxSphere_->Draw(shader);
 }
 
-glm::vec3& Model::GetPosition()
+
+// ToDo: change to const glm::vec3&....
+const glm::vec3& Model::GetPosition() const
 {
 	return physicalInfo_.position_;
 }
 
-glm::vec3& Model::GetScale()
+const glm::vec3& Model::GetScale() const
 {
 	return physicalInfo_.scale_;
 }
 
-glm::vec3& Model::GetRotation()
+const glm::vec3& Model::GetRotation() const
 {
 	return physicalInfo_.rotation_;
 }
 
-glm::vec3& Model::GetOrientation()
+const glm::vec3& Model::GetOrientation() const
 {
 	return physicalInfo_.orientation_;
 }
 
-glm::vec3& Model::GetSpeed()
+const glm::vec3& Model::GetBaseOrientation() const
 {
+    return physicalInfo_.baseOrientation_;
+}
+
+const glm::vec3& Model::GetSpeed() const
+{ 
 	return physicalInfo_.speed_;
 }
 
-glm::vec3& Model::GetRotationSpeed()
+const glm::vec3& Model::GetRotationSpeed() const
 {
 	return physicalInfo_.rotationSpeed_;
 }

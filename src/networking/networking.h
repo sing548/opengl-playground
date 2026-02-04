@@ -1,6 +1,8 @@
 #ifndef NETWORKING_H
 #define NETWORKING_H
 
+#include <glm/glm.hpp>
+
 #include <iostream>
 #include <stdarg.h>
 #include <assert.h>
@@ -14,6 +16,8 @@
 
 #include "../networking/client-logic.h"
 #include "../networking/server-logic.h"
+#include "../models/scene.h"
+#include "../networking/shared-strucs.h"
 
 #ifdef _WIN32
 	#include <windows.h> // Ug, for NukeProcess -- see below
@@ -27,38 +31,35 @@
 #endif
 
 
-struct InputState {
-    bool left      = false;
-    bool right     = false;
-    bool forward   = false;
-    bool backward  = false;
-    bool shoot     = false;
-};
-
-struct GameState {
-
-};
-
 class Networking 
 {
 
 public:
-    Networking(bool bServer);
+    Networking(bool bServer, const Scene& scene);
     ~Networking();
 
-    void HandInState(InputState state);
-    GameState RetrieveState();
+    void SendInputState(const InputState& state);
+    void SendGameState(const Scene& scene, float dT);
+    const GameState& RetrieveGameState() const;
+    unsigned int UpdateScene(const GameState& gs, Scene& scene);
     void Shutdown();
 private:
 
+    uint32_t currentTick = 0;
+    float tickTimer = 0.0f;
+    const float tickRate = 1.0f / 30.0f;
+
     bool m_bServer;
     InputState inputState_;
+    std::unique_ptr<GameState> gameState_;
+
     std::unique_ptr<ClientLogic> client_;
     std::unique_ptr<ServerLogic> server_;
 
     std::thread networkThread_;
     std::atomic<bool> running_ { false };
 
+    std::unique_ptr<GameState> BuildGameState(const Scene& scene);
     static void FatalError( const char *fmt, ... )
     {
     	char text[ 2048 ];
