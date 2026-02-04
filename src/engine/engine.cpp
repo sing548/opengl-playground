@@ -66,10 +66,13 @@ Engine::Engine(int config)
             Model model(ASSETS_DIR "/models/tie2/bland-tie.obj", pi, *assMan_, ModelType::PLAYER);
             models.push_back(model);
         }
-
+        
         SetupScene(models);
-
-        networking_ = new Networking(true, *scene_);
+        
+        if (m_bServer)
+            networking_ = new Networking(true, *scene_);
+        else
+            networking_ = new Networking(false, *scene_);
     }
     else
     {
@@ -168,7 +171,7 @@ void Engine::ReconcileNetwork()
 {
     if (m_bNetworking && !m_bServer)
     {
-
+        auto playerId = networking_->UpdateScene(*scene_, *assMan_);
     }
 }
 

@@ -41,11 +41,11 @@ public:
     void SendInputState(const InputState& state);
     void SendGameState(const Scene& scene, float dT);
     const GameState& RetrieveGameState() const;
-    unsigned int UpdateScene(const GameState& gs, Scene& scene);
+    unsigned int UpdateScene(Scene& scene, AssetManager& assMan);
     void Shutdown();
+    uint32_t currentTick = 0;
 private:
 
-    uint32_t currentTick = 0;
     float tickTimer = 0.0f;
     const float tickRate = 1.0f / 30.0f;
 

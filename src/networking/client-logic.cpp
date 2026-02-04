@@ -42,8 +42,8 @@ void ClientLogic::ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomi
 		
 			PollIncomingMessagesClient(running);
 			PollConnectionStateChangesClient();
-        	std::string msg = "I am the client";
-        	m_pInterface->SendMessageToConnection(m_hConnection, msg.c_str(), (uint32)msg.length(), k_nSteamNetworkingSend_Reliable, nullptr);
+        	//std::string msg = "I am the client";
+        	//m_pInterface->SendMessageToConnection(m_hConnection, msg.c_str(), (uint32)msg.length(), k_nSteamNetworkingSend_Reliable, nullptr);
 			//PollLocalUserInput();
         }
         else {
@@ -66,13 +66,24 @@ void ClientLogic::PollIncomingMessagesClient(std::atomic<bool>& running)
 		if ( numMsgs < 0 )
             std::cerr << "Error checking for messages" << std::endl;
 
+		msgpack::object_handle oh = msgpack::unpack(
+										static_cast<const char*>(pIncomingMsg->m_pData), pIncomingMsg->m_cbSize);
+		
+		msgpack::object obj = oh.get();
+		obj.convert(gameState_);
+
 		// Just echo anything we get from the server
-		fwrite( pIncomingMsg->m_pData, 1, pIncomingMsg->m_cbSize, stdout );
-		fputc( '\n', stdout );
+		//fwrite( pIncomingMsg->m_pData, 1, pIncomingMsg->m_cbSize, stdout );
+		//fputc( '\n', stdout );
 
 		// We don't need this anymore.
 		pIncomingMsg->Release();
 	}
+}
+
+const GameState& ClientLogic::GetLatestGameState() const
+{
+	return gameState_;
 }
 
 void ClientLogic::PollConnectionStateChangesClient()

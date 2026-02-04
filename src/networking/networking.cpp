@@ -93,8 +93,11 @@ std::unique_ptr<GameState> Networking::BuildGameState(const Scene& scene)
 
     for (auto& mw : scene.GetModels())
     {
-        EntityState e;
+        EntityCreationState e;
         e.id = mw.Id;
+		e.type				= ModelType::NPC;
+		e.radius			= 0.7f;
+		e.path 				= mw.model.GetPath();
 		e.position_ 		= mw.model.GetPosition();
 		e.scale_			= mw.model.GetScale();
 		e.rotation_			= mw.model.GetRotation();
@@ -128,31 +131,52 @@ const GameState& Networking::RetrieveGameState() const
 	return *gameState_;
 };
 
-unsigned int UpdateScene(const GameState& gs, Scene& scene, uint32_t tick, AssetManager& assMan)
+unsigned int Networking::UpdateScene(Scene& scene, AssetManager& assMan)
 {
-	if (tick > gs.tick) return  gs.playerId;
+	auto& gs = client_->GetLatestGameState();
 
-	for (auto &entity : gs.createdEntities)
+	if (currentTick > gs.tick) return  gs.playerId;
+
+	for (auto &entity : gs.entities)
 	{
-		PhysicalInfo pi = PhysicalInfo();
-		pi.baseOrientation_ = entity.baseOrientation_;
-		pi.orientation_ 	= entity.orientation_;
-		pi.position_		= entity.position_;
-		pi.rotation_		= entity.rotation_;
-		pi.rotationSpeed_	= entity.rotationSpeed_;
-		pi.scale_			= entity.scale_;
-		pi.speed_			= entity.speed_;
+		auto& models = scene.GetModels();
 
-		ModelType type;
-		switch (entity.type) 
+		if (models.size() == 0)
 		{
-			case 0: type = ModelType::PLAYER; 	break;
-			case 1: type = ModelType::NPC;		break;
-			case 2: type = ModelType::OBJECT;	break;	
+			PhysicalInfo pi = PhysicalInfo();
+			pi.baseOrientation_ = entity.baseOrientation_;
+			pi.orientation_ 	= entity.orientation_;
+			pi.position_		= entity.position_;
+			pi.rotation_		= entity.rotation_;
+			pi.rotationSpeed_	= entity.rotationSpeed_;
+			pi.scale_			= entity.scale_;
+			pi.speed_			= entity.speed_;
+	
+			ModelType type;
+			switch (entity.type) 
+			{
+				case 0: type = ModelType::PLAYER; 	break;
+				case 1: type = ModelType::NPC;		break;
+				case 2: type = ModelType::OBJECT;	break;	
+			}
+	
+			Model model(entity.path, pi, assMan, type, true, entity.radius);
+			scene.AddModel(model);
+		}
+		else if (models.size() == 1)
+		{
+			auto& m = scene.GetModelByReference(entity.id);
+
+			m.SetBaseOrientation(entity.baseOrientation_);
+			m.SetOrientation(entity.orientation_);
+			m.SetPosition(entity.position_);
+			m.SetRotation(entity.rotation_);
+			m.SetRotationSpeed(entity.rotationSpeed_);
+			m.SetScale(entity.scale_);
+			m.SetSpeed(entity.speed_);
+			
 		}
 
-		Model model(std::string(ASSETS_DIR) + entity.path, pi, assMan, type, true, entity.radius);
-		scene.AddModel(model);
 	}
 
 	return gs.playerId;

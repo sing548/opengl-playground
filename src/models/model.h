@@ -43,6 +43,7 @@ class Model
 {
 public:
     ModelType type_;
+    std::string path_;
     
     std::vector<std::shared_ptr<Mesh>> meshes;
     bool gammaCorrection;
@@ -61,10 +62,12 @@ public:
     const glm::vec3& GetBaseOrientation() const;
     const glm::vec3& GetSpeed() const;
     const glm::vec3& GetRotationSpeed() const;
+    const std::string& GetPath() const;
 
     void SetPosition(glm::vec3 position);
     void SetScale(glm::vec3 scale);
     void SetRotation(glm::vec3 rotation);
+    void SetOrientation(glm::vec3);
     void SetBaseOrientation(glm::vec3 orientation);
     void SetSpeed(glm::vec3 speed);
     void SetRotationSpeed(glm::vec3 speed);

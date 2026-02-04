@@ -12,6 +12,7 @@ Model::Model(float radius, PhysicalInfo pi, ModelType type) : gammaCorrection(fa
 
 Model::Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, bool gamma, float radius) : gammaCorrection(gamma), physicalInfo_(pi), radius(radius), type_(type)
 {
+    path_ = path;
 	meshes = assMan.LoadModel(path);
 	
 	if (!hitboxSphereInitialized_)
@@ -66,6 +67,11 @@ const glm::vec3& Model::GetRotationSpeed() const
 	return physicalInfo_.rotationSpeed_;
 }
 
+const std::string& Model::GetPath() const
+{
+    return path_;
+}
+
 void Model::SetPosition(glm::vec3 position)
 {
 	this->physicalInfo_.position_ = position;
@@ -87,9 +93,13 @@ void Model::SetRotation(glm::vec3 rotation)
     physicalInfo_.orientation_ = q * physicalInfo_.baseOrientation_;
 }
 
+void Model::SetOrientation(glm::vec3 orientation)
+{
+    this->physicalInfo_.orientation_ = orientation;
+}
+
 void Model::SetBaseOrientation(glm::vec3 orientation)
 {
-	this->physicalInfo_.orientation_ = orientation;
 	this->physicalInfo_.baseOrientation_ = orientation;
 }
 

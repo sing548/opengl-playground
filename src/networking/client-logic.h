@@ -10,7 +10,9 @@
 
 #include <steam/steam_api_common.h>
 #include <steam/steamnetworkingsockets.h>
+
 #include <steam/isteamnetworkingutils.h>
+#include "../networking/server-logic.h"
 
 #ifdef _WIN32
 	#include <windows.h> // Ug, for NukeProcess -- see below
@@ -30,13 +32,16 @@ public:
     ClientLogic();
     ~ClientLogic();
     void ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomic<bool>& running);
-    
-private:
+    const GameState& GetLatestGameState() const;
+    private:
     static ClientLogic *s_pCallbackInstance;
     static HSteamNetConnection m_hConnection;
     static ISteamNetworkingSockets *m_pInterface;
+    GameState gameState_;
+
 
     void PollIncomingMessagesClient(std::atomic<bool>& running);
+    //void PollIncomingGameStateMessages(std::atomic<bool>& running);
     void PollConnectionStateChangesClient();
     void OnSteamNetConnectionStatusChangedClient( SteamNetConnectionStatusChangedCallback_t *pInfo, std::atomic<bool>& running );
     

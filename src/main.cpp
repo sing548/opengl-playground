@@ -12,8 +12,8 @@
 
 int main(int argc, const char *argv[]) {
 
-    bool bServer = true;
-	bool bClient = false;
+    bool bServer = false;
+	bool bClient = true;
 	int nPort = 5001;
 	SteamNetworkingIPAddr addrServer; addrServer.Clear();
 
