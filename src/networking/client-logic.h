@@ -39,6 +39,7 @@ public:
     static ISteamNetworkingSockets *m_pInterface;
     GameState gameState_;
 
+    bool messageReceived_ = false;
 
     void PollIncomingMessagesClient(std::atomic<bool>& running);
     //void PollIncomingGameStateMessages(std::atomic<bool>& running);

@@ -34,14 +34,31 @@ Networking::Networking(bool bServer, const Scene& scene)
     if (bServer)
     {
 		server_ = std::make_unique<ServerLogic>();
+		gameState_ = std::make_unique<GameState>();
 		
+		server_->UpdateGameState(std::move(gameState_));
+
         networkThread_ = std::thread([this]() {
-            try {
+            try 
+			{
                 server_->ServerLoop(5001, running_);
-            } catch (const std::exception& e) {
+            }
+			catch (const std::exception& e)
+			{
                 std::cerr << "Error in thread: " << e.what() << std::endl;
             }
         });
+
+		distributionThread_ = std::thread([this]() {
+			try 
+			{
+				server_->DistributeGameState(running_);
+			}
+			catch (const std::exception& e)
+			{
+				std::cerr << "Error in thread: " << e.what() << std::endl;
+			}
+		});
     }
     else
     {
@@ -71,25 +88,40 @@ Networking::~Networking()
 	if (networkThread_.joinable())
 		networkThread_.join();
 
+	if (distributionThread_.joinable())
+		distributionThread_.join();
 };
 
 void Networking::SendGameState(const Scene& scene, float dT)
 {
+	const auto now = std::chrono::steady_clock::now();
+
 	tickTimer += dT;
 
 	if (tickTimer >= tickRate)
 	{
+		timesSent++;
 		currentTick++;
 		tickTimer -= tickRate;
-		auto gs = BuildGameState(scene);
-		server_->UpdateGameState(std::move(gs));
+		BuildGameState(scene);
+		server_->UpdateGameState(std::move(gameState_));
+
+		if (std::chrono::duration_cast<std::chrono::seconds>(now - lastLogTime_).count() >= 1)
+        {
+            std::cout
+                << "Updated GameStet: " << timesSent << " times last second, "
+                << std::endl;
+
+			timesSent = 1;
+            lastLogTime_ = now;
+        }
 	}
 }
 
-std::unique_ptr<GameState> Networking::BuildGameState(const Scene& scene)
+void Networking::BuildGameState(const Scene& scene)
 {
-    auto gs = std::make_unique<GameState>();
-    gs->tick = currentTick;
+    gameState_ = std::make_unique<GameState>();
+    gameState_->tick = currentTick;
 
     for (auto& mw : scene.GetModels())
     {
@@ -106,10 +138,8 @@ std::unique_ptr<GameState> Networking::BuildGameState(const Scene& scene)
 		e.speed_			= mw.model.GetSpeed();
 		e.rotationSpeed_	= mw.model.GetRotationSpeed();
 
-        gs->entities.push_back(e);
+        gameState_->entities.push_back(e);
     }
-
-    return gs;
 }
 
 void Networking::Shutdown()
@@ -120,15 +150,6 @@ void Networking::Shutdown()
 void Networking::SendInputState(const InputState& state)
 {
 
-};
-
-const GameState& Networking::RetrieveGameState() const
-{
-    if (!gameState_)
-    {
-        throw std::runtime_error("No GameState available");
-    }
-	return *gameState_;
 };
 
 unsigned int Networking::UpdateScene(Scene& scene, AssetManager& assMan)

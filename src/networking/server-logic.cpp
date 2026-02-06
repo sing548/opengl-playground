@@ -28,41 +28,43 @@ void ServerLogic::ServerLoop(int port, std::atomic<bool>& running)
         std::cerr << "Failed to listen on port" << std::endl;
 
     std::printf( "Server listening on port %d\n", port );
-
-    /*const int tickRate = 30;
-    const std::chrono::milliseconds tickDuration(1000 / tickRate);
-    auto previousTickTime = std::chrono::steady_clock::now();*/
-
-    // Game server loop
+	
     while (running) {
-        //auto now = std::chrono::steady_clock::now();
-        //auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - previousTickTime);
-
-        // Ensure the server loop runs at the desired tick rate
-        //if (deltaTime >= tickDuration) {
-        //    previousTickTime = now;  // Update the previous tick time
-		if (gameState->tick > lastSyncedTick)
-		{
-			lastSyncedTick = gameState->tick;
-            PollIncomingMessagesServer(running);
-            PollConnectionStateChangesServer();
-			SendGameStateToAllClients();
-            //SendStringToAllClients("This will be the game state");
-        }
-        else 
-		{
-            // Sleep for the remaining time to maintain the fixed tick rate
-            //std::this_thread::sleep_for(tickDuration - deltaTime);
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
+        PollIncomingMessagesServer(running);
+        PollConnectionStateChangesServer();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 };
 
+void ServerLogic::DistributeGameState(std::atomic<bool>& running)
+{
+    std::unique_lock<std::mutex> lock(mtx_);
+
+    while (running)
+    {
+
+		cv_.wait(lock, [&]{
+			return !running || (gameState_ != nullptr);
+		});
+	
+		if (!running || gameState_ == nullptr) break;
+	
+		auto stateToSend = *gameState_;
+		lastSyncedTick_ = gameState_->tick;
+		lock.unlock();
+		SendGameStateToAllClients();
+		lock.lock();
+		
+		gameState_.reset();
+    }
+}
+
 void ServerLogic::UpdateGameState(std::unique_ptr<GameState> gs)
 {
-	std::lock_guard<std::mutex> lock(mtx);
+	std::lock_guard<std::mutex> lock(mtx_);
+	gameState_ = std::move(gs);
 	gameStateUpdateTime = std::chrono::steady_clock::now();
-	gameState = std::move(gs);
+	cv_.notify_one();
 }
 
 void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
@@ -270,51 +272,29 @@ void ServerLogic::SendGameStateToAllClients()
 	const auto now = std::chrono::steady_clock::now();
 
     {
-        std::lock_guard<std::mutex> lock(mtx);
+        std::lock_guard<std::mutex> lock(mtx_);
 
-        // Delta between last GameState update and now
-        accumulatedDelta += (now - gameStateUpdateTime);
-        ++deltaSamples;
 
-        // Time between ticks
-        if (lastTickTime.time_since_epoch().count() != 0)
-        {
-            accumulatedTickInterval += (now - lastTickTime);
-            ++tickSamples;
-        }
-
-        lastTickTime = now;
-
+		deltaSamples_++;
         // Log once per second
-        if (std::chrono::duration_cast<std::chrono::seconds>(now - lastLogTime).count() >= 1)
+        if (std::chrono::duration_cast<std::chrono::seconds>(now - lastLogTime_).count() >= 1)
         {
-            const double meanDeltaMs =
-                deltaSamples > 0
-                    ? std::chrono::duration<double, std::milli>(accumulatedDelta).count() / deltaSamples
-                    : 0.0;
-
-            const double meanTickMs =
-                tickSamples > 0
-                    ? std::chrono::duration<double, std::milli>(accumulatedTickInterval).count() / tickSamples
-                    : 0.0;
-
             std::cout
-                << "Mean GS update → send delta: " << meanDeltaMs << " ms, "
-                << "Mean tick interval: " << meanTickMs << " ms"
+                << "Sent updates: " << deltaSamples_ << " times last second, "
                 << std::endl;
 
             // Reset accumulators
-            accumulatedDelta = std::chrono::nanoseconds{0};
-            accumulatedTickInterval = std::chrono::nanoseconds{0};
-            deltaSamples = 0;
-            tickSamples = 0;
-            lastLogTime = now;
+            accumulatedDelta_ = std::chrono::nanoseconds{0};
+            accumulatedTickInterval_ = std::chrono::nanoseconds{0};
+            deltaSamples_ = 0;
+            tickSamples_ = 0;
+            lastLogTime_ = now;
         }
     }
 
+	std::lock_guard<std::mutex> lock(mtx_);
 	for (auto& c : m_mapClients)
 	{
-		std::lock_guard<std::mutex> lock(mtx);
 		auto now = std::chrono::steady_clock::now();
 		SendGameStateToClient(c.second.id);
 	}
@@ -333,7 +313,7 @@ void ServerLogic::SendGameStateToClient(unsigned int playerId)
 	}
 	
 	msgpack::sbuffer buffer;
-	msgpack::pack(buffer, gameState);
+	msgpack::pack(buffer, gameState_);
 
 	m_pInterface->SendMessageToConnection( conn, buffer.data(), buffer.size(), k_nSteamNetworkingSend_Reliable, nullptr );
 };

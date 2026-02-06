@@ -36,20 +36,13 @@ void ClientLogic::ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomi
 		auto now = std::chrono::steady_clock::now();
         auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - previousTickTime);
 
-		// Ensure the server loop runs at the desired tick rate
-        if (deltaTime >= tickDuration) {
-            previousTickTime = now;  // Update the previous tick time
+        previousTickTime = now;  // Update the previous tick time
 		
-			PollIncomingMessagesClient(running);
-			PollConnectionStateChangesClient();
-        	//std::string msg = "I am the client";
-        	//m_pInterface->SendMessageToConnection(m_hConnection, msg.c_str(), (uint32)msg.length(), k_nSteamNetworkingSend_Reliable, nullptr);
-			//PollLocalUserInput();
-        }
-        else {
-            // Sleep for the remaining time to maintain the fixed tick rate
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
+		PollIncomingMessagesClient(running);
+		PollConnectionStateChangesClient();
+
+		if (messageReceived_)
+			std::this_thread::sleep_for(std::chrono::milliseconds(6));
 	}
 
     m_pInterface->CloseConnection( m_hConnection, 0, "Goodbye", true );
@@ -59,6 +52,7 @@ void ClientLogic::PollIncomingMessagesClient(std::atomic<bool>& running)
 {
 	while ( running )
 	{
+		messageReceived_ = false;
 		ISteamNetworkingMessage *pIncomingMsg = nullptr;
 		int numMsgs = m_pInterface->ReceiveMessagesOnConnection( m_hConnection, &pIncomingMsg, 1 );
 		if ( numMsgs == 0 )
@@ -66,6 +60,7 @@ void ClientLogic::PollIncomingMessagesClient(std::atomic<bool>& running)
 		if ( numMsgs < 0 )
             std::cerr << "Error checking for messages" << std::endl;
 
+		messageReceived_ = true;
 		msgpack::object_handle oh = msgpack::unpack(
 										static_cast<const char*>(pIncomingMsg->m_pData), pIncomingMsg->m_cbSize);
 		

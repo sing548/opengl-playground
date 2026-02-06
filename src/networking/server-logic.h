@@ -8,6 +8,7 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <condition_variable>
 
 #include <steam/steam_api_common.h>
 #include <steam/steamnetworkingsockets.h>
@@ -20,6 +21,7 @@ class ServerLogic
 public:
     void ServerLoop(int port, std::atomic<bool>& running);
     void UpdateGameState(std::unique_ptr<GameState> gs);
+    void DistributeGameState(std::atomic<bool>& running);
 private:
     struct Client_t
 	{
@@ -27,25 +29,26 @@ private:
 		std::string m_sNick;
 	};
 
-    std::unique_ptr<GameState> gameState;
+    std::unique_ptr<GameState> gameState_;
 
-    std::mutex mtx;
+    std::mutex mtx_;
+    std::condition_variable cv_;
 
-    std::chrono::steady_clock::time_point lastSendTime;
-    std::chrono::duration<double> totalDelta;
-	uint32_t sendCount = 0;
-    uint32_t deltaCount = 0;
-    std::chrono::steady_clock::time_point lastLogTime;
-    std::chrono::steady_clock::time_point lastTickTime;
+    std::chrono::steady_clock::time_point lastSendTime_;
+    std::chrono::duration<double> totalDelta_;
+	uint32_t sendCount_ = 0;
+    uint32_t deltaCount_ = 0;
+    std::chrono::steady_clock::time_point lastLogTime_;
+    std::chrono::steady_clock::time_point lastTickTime_;
     
-    std::chrono::nanoseconds accumulatedDelta{0};
-    std::chrono::nanoseconds accumulatedTickInterval{0};
+    std::chrono::nanoseconds accumulatedDelta_{0};
+    std::chrono::nanoseconds accumulatedTickInterval_{0};
     
-    uint64_t deltaSamples = 0;
-    uint64_t tickSamples = 0;
+    uint64_t deltaSamples_ = 0;
+    uint64_t tickSamples_ = 0;
 
 
-    uint32_t lastSyncedTick = 0;
+    uint32_t lastSyncedTick_ = 0;
     
     static HSteamNetPollGroup m_hPollGroup;
     static HSteamListenSocket m_hListenSock;
