@@ -48,7 +48,7 @@ void ClientLogic::ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomi
         }
         else {
             // Sleep for the remaining time to maintain the fixed tick rate
-            std::this_thread::sleep_for(tickDuration - deltaTime);
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
 	}
 

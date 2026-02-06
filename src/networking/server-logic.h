@@ -30,6 +30,22 @@ private:
     std::unique_ptr<GameState> gameState;
 
     std::mutex mtx;
+
+    std::chrono::steady_clock::time_point lastSendTime;
+    std::chrono::duration<double> totalDelta;
+	uint32_t sendCount = 0;
+    uint32_t deltaCount = 0;
+    std::chrono::steady_clock::time_point lastLogTime;
+    std::chrono::steady_clock::time_point lastTickTime;
+    
+    std::chrono::nanoseconds accumulatedDelta{0};
+    std::chrono::nanoseconds accumulatedTickInterval{0};
+    
+    uint64_t deltaSamples = 0;
+    uint64_t tickSamples = 0;
+
+
+    uint32_t lastSyncedTick = 0;
     
     static HSteamNetPollGroup m_hPollGroup;
     static HSteamListenSocket m_hListenSock;

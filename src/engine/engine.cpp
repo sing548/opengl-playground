@@ -152,12 +152,12 @@ void Engine::Run()
         renderer_->Draw(*scene_, window_->GetCamera(), window_->GetSize().width, window_->GetSize().height, settings_);
         window_->SwapBuffers();
 
-        i++;
+        /*i++;
         if (accTime >= 1) {
             std::cout << "Current FPS: " << i / accTime << std::endl;
             i = 0;
             accTime = 0;
-        }
+        }*/
     }
     
     if (networking_ != nullptr)

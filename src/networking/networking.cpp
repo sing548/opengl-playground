@@ -139,6 +139,8 @@ unsigned int Networking::UpdateScene(Scene& scene, AssetManager& assMan)
 
 	for (auto &entity : gs.entities)
 	{
+		currentTick = gs.tick;
+		
 		auto& models = scene.GetModels();
 
 		if (models.size() == 0)
