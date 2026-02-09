@@ -3,9 +3,12 @@
   "version": "0.1.0",
   "dependencies": [
     "glfw3",
-    "glew",
     "glm",
+    "assimp",
     "openssl",
-    "msgpack"
+    "msgpack",
+    "boost",
+    "gamenetworkingsockets"
   ]
-}*/
+}
+*/
