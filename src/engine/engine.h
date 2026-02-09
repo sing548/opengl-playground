@@ -33,6 +33,8 @@ private:
 
     int playerId_;
 
+    std::chrono::steady_clock::time_point gameClock_;
+
     std::unique_ptr<Window> window_;
     std::unique_ptr<InputManager> inputManager_;
     std::unique_ptr<Camera> camera_;
@@ -48,6 +50,9 @@ private:
     std::vector<InputState> previousInputStates_;
     std::vector<InputState> currentInputStates_;
 
+    std::vector<unsigned int> addedModels = std::vector<unsigned int>();
+    std::vector<unsigned int> removedModels = std::vector<unsigned int>();
+
     bool m_bNetworking = false;
     bool m_bServer = false;
     Networking* networking_ = nullptr;
@@ -59,8 +64,10 @@ private:
     void ExecuteInput(float deltaTime);
     static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
-    void MoveModel(unsigned int id, glm::vec3 change);
-    void RotateModel(unsigned int id, glm::vec3 change);
+    void AddModel(Model& model);
+    void RemoveModel(unsigned int id);
+    void MoveModel(unsigned int id, const glm::vec3& change);
+    void RotateModel(unsigned int id, const glm::vec3& change);
 
     void MoveModels();
     void Shoot(Model shooter);

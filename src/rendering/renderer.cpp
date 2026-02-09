@@ -277,7 +277,7 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 		// Construct model matrix (same as your object transform)
     	glm::mat4 modelMat = glm::mat4(1.0f);
     	modelMat = glm::translate(modelMat, it.model.GetPosition());
-    	modelMat = glm::scale(modelMat, glm::vec3(it.model.radius));
+    	modelMat = glm::scale(modelMat, glm::vec3(it.model.GetRadius()));
 
     	// No hitboxShader.Use() here — renderer already sets it
     	hitboxShader_->SetMat4("projection", projection);

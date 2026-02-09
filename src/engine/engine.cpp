@@ -1,9 +1,5 @@
 #include "engine.h"
 
-#ifndef ASSETS_DIR
-#define ASSETS_DIR "./assets"
-#endif
-
 Engine::Engine(int config)
 {
     if (config == 1)
@@ -61,9 +57,9 @@ Engine::Engine(int config)
             pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
             pi.rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
             pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
-            pi.orientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
+            pi.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
             pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
-            Model model(ASSETS_DIR "/models/tie2/bland-tie.obj", pi, *assMan_, ModelType::PLAYER);
+            Model model(getModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
             models.push_back(model);
         }
         
@@ -99,20 +95,20 @@ std::vector<Model> Engine::BasicLevel()
     pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
     pi.rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
     pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
-    pi.orientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
+    pi.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
     pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
 
-    Model model(ASSETS_DIR "/models/tie2/bland-tie.obj", pi, *assMan_, ModelType::PLAYER);
+    Model model(getModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
     models.push_back(model);
 
     PhysicalInfo pi2 = PhysicalInfo();
     pi2.position_ = glm::vec3(-20.0f, 0.0f, 0.0f);
-    pi2.rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
+    pi2.rotation_ = glm::vec3(0.0f, glm::radians(180.0f), 0.0f);
     pi2.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
     pi2.orientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
-    pi2.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
+    pi2.baseOrientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
 
-    Model model2(ASSETS_DIR "/models/tie2/bland-tie.obj", pi2, *assMan_, ModelType::PLAYER);
+    Model model2(getModelPath(ModelType::PLAYER), pi2, *assMan_, ModelType::PLAYER);
     models.push_back(model2);
 
     return models;
@@ -141,23 +137,29 @@ void Engine::Run()
 	    lastFrame = currentFrame;
         accTime += deltaTime;
         
+        gameClock_ = std::chrono::steady_clock::now();
+
+        removedModels.clear();
+        addedModels.clear();
+        
         glfwPollEvents();
         ReconcileNetwork();
         CollectInputs(deltaTime);
         ExecuteInput(deltaTime);
         HandleLogic(deltaTime);
         if (m_bNetworking && m_bServer)
-            networking_->SendGameState(*scene_, deltaTime);
+            networking_->SendGameState(*scene_, addedModels, removedModels, deltaTime);
 
         renderer_->Draw(*scene_, window_->GetCamera(), window_->GetSize().width, window_->GetSize().height, settings_);
         window_->SwapBuffers();
 
-        /*i++;
+        i++;
+        // FPS counter in console
         if (accTime >= 1) {
             std::cout << "Current FPS: " << i / accTime << std::endl;
             i = 0;
             accTime = 0;
-        }*/
+        }
     }
     
     if (networking_ != nullptr)
@@ -192,11 +194,10 @@ void Engine::CheckHits()
 {
     auto playerModels = scene_->GetPlayerModels();
     
-    // ToDo: change to auto &other
-    for (auto other : scene_->GetModels())
+    for (auto &other : scene_->GetModels())
     {
         glm::vec3 otherPos = other.model.GetPosition();
-        float otherRadius = other.model.radius;
+        float otherRadius = other.model.GetRadius();
 
         for (auto& playerRef : playerModels)
         {
@@ -206,7 +207,7 @@ void Engine::CheckHits()
                 continue;
                 
             glm::vec3 playerPos = player.model.GetPosition();
-            float playerRadius = player.model.radius;
+            float playerRadius = player.model.GetRadius();
 
             float dist = glm::length(otherPos - playerPos);
             float radiusSum = otherRadius + playerRadius;
@@ -278,12 +279,24 @@ void Engine::Shoot(Model shooter)
     pi.baseOrientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
     pi.speed_ = shooter.GetSpeed() + glm::vec3(0.1f, 0.0f, 0.0f);
 
-    Model shot(ASSETS_DIR "/models/shot/longshot.obj", pi, *assMan_, ModelType::OBJECT, true, 0.05f);
+    Model shot(getModelPath(ModelType::SHOT), pi, *assMan_, ModelType::SHOT, true, 0.05f);
 
-    scene_->AddModel(shot);
+    AddModel(shot);
 }
 
-void Engine::MoveModel(unsigned int id, glm::vec3 change)
+void Engine::AddModel(Model& model)
+{
+    unsigned int modelId = scene_->AddModel(model);
+    addedModels.push_back(modelId);
+}
+
+void Engine::RemoveModel(unsigned int id)
+{
+    scene_->RemoveModel(id);
+    removedModels.push_back(id);
+}
+
+void Engine::MoveModel(unsigned int id, const glm::vec3& change)
 {
     Model& model = scene_->GetModelByReference(id);
     glm::vec3 position = model.GetPosition();
@@ -309,16 +322,14 @@ void Engine::MoveModels()
             deletes.push_back(it.Id);
     }
 
-    for (auto id : deletes) 
-        scene_->RemoveModel(id);
+    //for (auto id : deletes)
+    //    RemoveModel(id);
 }
 
-void Engine::RotateModel(unsigned int id, glm::vec3 change) 
+void Engine::RotateModel(unsigned int id, const glm::vec3& change) 
 {
     Model& model = scene_->GetModelByReference(id);
-    glm::vec3 rotation = model.GetRotation();
-    rotation += change;
-    model.SetRotation(rotation);
+    model.SetRotation(model.GetRotation() + change);
 }
 
 void Engine::ChangeSetting(std::string key, bool value)

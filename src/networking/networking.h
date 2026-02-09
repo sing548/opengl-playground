@@ -39,30 +39,33 @@ public:
     ~Networking();
 
     void SendInputState(const InputState& state);
-    void SendGameState(const Scene& scene, float dT);
+    void SendGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels, float dT);
     unsigned int UpdateScene(Scene& scene, AssetManager& assMan);
     void Shutdown();
     uint32_t currentTick = 0;
 private:
 
     float tickTimer = 0.0f;
-    const float tickRate = 1.0f / 160.0f;
+    const float tickRate = 1.0f / 30.0f;
 
     uint32_t timesSent = 0;
     std::chrono::steady_clock::time_point lastLogTime_;
 
     bool m_bServer;
     InputState inputState_;
-    std::unique_ptr<GameState> gameState_;
-
-    std::unique_ptr<ClientLogic> client_;
     std::unique_ptr<ServerLogic> server_;
+    std::unique_ptr<GameState> gameState_;
+    std::vector<unsigned int> addedModels_;
+    std::vector<unsigned int> removedModels_;
+
+    bool firstLoad_ = true;
+    std::unique_ptr<ClientLogic> client_;
 
     std::thread networkThread_;
     std::thread distributionThread_;
     std::atomic<bool> running_ { false };
-
-    void BuildGameState(const Scene& scene);
+    
+    void BuildGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels);
     static void FatalError( const char *fmt, ... )
     {
     	char text[ 2048 ];

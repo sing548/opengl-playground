@@ -2,14 +2,35 @@
 
 Scene::Scene() : nextId_(1) {}
 
-unsigned int Scene::AddModel(Model model)
+bool Scene::ModelExists(unsigned int id)
 {
-    unsigned int id = nextId_++;
-    models_.emplace_back(id, std::move(model));
-    return id;
+    for (const auto& mw : models_)
+    {
+        if (mw.Id == id)
+            return true;
+    }
+    return false;
 }
 
-unsigned int Scene::AddModelWithId(Model model, unsigned int id)
+unsigned int Scene::AddModel(Model& model, int id)
+{
+    unsigned int modelId;
+
+    if (id < 0)
+    {
+        modelId = nextId_++;
+    }
+    else 
+    {
+        modelId = id;
+        nextId_ = id + 1;     
+    }
+    
+    models_.emplace_back(modelId, std::move(model));
+    return modelId;
+}
+
+unsigned int Scene::AddModelWithId(Model& model, unsigned int id)
 {
     models_.emplace_back(id, std::move(model));
     nextId_ = id++;

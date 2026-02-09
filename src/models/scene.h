@@ -17,12 +17,15 @@ class Scene
 public:
     Scene();
 
-    unsigned int AddModel(Model model);
-    unsigned int AddModelWithId(Model model, unsigned int id);
+    bool ModelExists(unsigned int id);
+    unsigned int AddModel(Model& model, int id = -1);
+    unsigned int AddModelWithId(Model& model, unsigned int id);
     const std::vector<ModelWithReference>& GetModels() const;
     std::vector<std::reference_wrapper<ModelWithReference>> GetPlayerModels();
     Model& GetModelByReference(unsigned int id);
     void RemoveModel(unsigned int Id);
+
+    uint32_t currentTick = 0;
 
 private:
     unsigned int nextId_;

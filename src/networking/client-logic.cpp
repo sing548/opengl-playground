@@ -34,7 +34,6 @@ void ClientLogic::ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomi
 	while ( running )
 	{
 		auto now = std::chrono::steady_clock::now();
-        auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - previousTickTime);
 
         previousTickTime = now;  // Update the previous tick time
 		
@@ -42,7 +41,7 @@ void ClientLogic::ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomi
 		PollConnectionStateChangesClient();
 
 		if (messageReceived_)
-			std::this_thread::sleep_for(std::chrono::milliseconds(6));
+			std::this_thread::sleep_for(std::chrono::milliseconds(33));
 	}
 
     m_pInterface->CloseConnection( m_hConnection, 0, "Goodbye", true );
@@ -50,30 +49,39 @@ void ClientLogic::ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomi
 
 void ClientLogic::PollIncomingMessagesClient(std::atomic<bool>& running)
 {
-	while ( running )
-	{
-		messageReceived_ = false;
-		ISteamNetworkingMessage *pIncomingMsg = nullptr;
-		int numMsgs = m_pInterface->ReceiveMessagesOnConnection( m_hConnection, &pIncomingMsg, 1 );
-		if ( numMsgs == 0 )
-			break;
-		if ( numMsgs < 0 )
-            std::cerr << "Error checking for messages" << std::endl;
+    ISteamNetworkingMessage* pIncomingMsg = nullptr;
 
-		messageReceived_ = true;
-		msgpack::object_handle oh = msgpack::unpack(
-										static_cast<const char*>(pIncomingMsg->m_pData), pIncomingMsg->m_cbSize);
-		
-		msgpack::object obj = oh.get();
-		obj.convert(gameState_);
+    while (true)
+    {
+        int numMsgs = m_pInterface->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
+        if (numMsgs == 0)
+            break; // no more messages
+        if (numMsgs < 0)
+        {
+            std::cerr << "Error receiving messages" << std::endl;
+            break;
+        }
 
-		// Just echo anything we get from the server
-		//fwrite( pIncomingMsg->m_pData, 1, pIncomingMsg->m_cbSize, stdout );
-		//fputc( '\n', stdout );
+        // Unpack message
+        msgpack::object_handle oh = msgpack::unpack(
+            static_cast<const char*>(pIncomingMsg->m_pData), pIncomingMsg->m_cbSize);
+        msgpack::object obj = oh.get();
+        GameState gs;
+        obj.convert(gs);
+		int newTick = gs.tick;
+		if (newTick - previoustick != 1)
+        	std::cout <<   "Skipped tick(1) between: " << previoustick << " and " << newTick << std::endl;
 
-		// We don't need this anymore.
-		pIncomingMsg->Release();
-	}
+		previoustick = newTick;
+        {
+            std::lock_guard lock(gsMutex);
+            pendingStates.push_back(std::move(gs));
+        }
+
+        // Release this message immediately
+        pIncomingMsg->Release();
+        pIncomingMsg = nullptr;
+    }
 }
 
 const GameState& ClientLogic::GetLatestGameState() const

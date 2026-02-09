@@ -1,9 +1,5 @@
 #include "networking.h"
 
-#ifndef ASSETS_DIR
-#define ASSETS_DIR "./assets"
-#endif
-
 Networking::Networking(bool bServer, const Scene& scene)
 {
 	m_bServer = bServer;
@@ -59,6 +55,9 @@ Networking::Networking(bool bServer, const Scene& scene)
 				std::cerr << "Error in thread: " << e.what() << std::endl;
 			}
 		});
+
+        addedModels_ = std::vector<unsigned int>();
+        removedModels_ = std::vector<unsigned int>();
     }
     else
     {
@@ -92,54 +91,83 @@ Networking::~Networking()
 		distributionThread_.join();
 };
 
-void Networking::SendGameState(const Scene& scene, float dT)
+void Networking::SendGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels, float dT)
 {
 	const auto now = std::chrono::steady_clock::now();
 
 	tickTimer += dT;
+
+    addedModels_.insert(addedModels_.end(), addedModels.begin(), addedModels.end());
+    removedModels_.insert(removedModels_.end(), removedModels.begin(), removedModels.end());
 
 	if (tickTimer >= tickRate)
 	{
 		timesSent++;
 		currentTick++;
 		tickTimer -= tickRate;
-		BuildGameState(scene);
+        bool test = addedModels.size() > 0 || removedModels.size() > 0;
+		BuildGameState(scene, addedModels_, removedModels_);
 		server_->UpdateGameState(std::move(gameState_));
 
-		if (std::chrono::duration_cast<std::chrono::seconds>(now - lastLogTime_).count() >= 1)
-        {
-            std::cout
-                << "Updated GameStet: " << timesSent << " times last second, "
-                << std::endl;
-
-			timesSent = 1;
-            lastLogTime_ = now;
-        }
+        addedModels_.clear();
+        removedModels_.clear();
 	}
 }
 
-void Networking::BuildGameState(const Scene& scene)
-{
+void Networking::BuildGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels)
+{	
     gameState_ = std::make_unique<GameState>();
     gameState_->tick = currentTick;
 
-    for (auto& mw : scene.GetModels())
+    // Destroyed entities
+    for (unsigned int id : removedModels)
     {
-        EntityCreationState e;
-        e.id = mw.Id;
-		e.type				= ModelType::NPC;
-		e.radius			= 0.7f;
-		e.path 				= mw.model.GetPath();
-		e.position_ 		= mw.model.GetPosition();
-		e.scale_			= mw.model.GetScale();
-		e.rotation_			= mw.model.GetRotation();
-		e.orientation_		= mw.model.GetOrientation();
-		e.baseOrientation_	= mw.model.GetBaseOrientation();
-		e.speed_			= mw.model.GetSpeed();
-		e.rotationSpeed_	= mw.model.GetRotationSpeed();
-
-        gameState_->entities.push_back(e);
+        gameState_->destroyedEntities.push_back(id);
     }
+
+    for (const auto& mw : scene.GetModels())
+    {
+        const bool isNew = std::find(addedModels.begin(), addedModels.end(), mw.Id) != addedModels.end();
+
+        if (isNew || server_->newClientConnected_)
+        {
+            // --- Full creation data ---
+            EntityCreationState e;
+            e.id                 = mw.Id;
+            e.type               = mw.model.type_;
+            e.radius             = mw.model.GetRadius();
+            e.position_          = mw.model.GetPosition();
+            e.scale_             = mw.model.GetScale();
+            e.rotation_          = mw.model.GetRotation();
+            e.orientation_       = mw.model.GetOrientation();
+            e.baseOrientation_   = mw.model.GetBaseOrientation();
+            e.speed_             = mw.model.GetSpeed();
+            e.rotationSpeed_     = mw.model.GetRotationSpeed();
+
+            gameState_->createdEntities.push_back(e);
+        }
+        else
+        {
+			if (mw.model.type_ == ModelType::PLAYER)
+			{
+				// ToDo: "Lightweight" state update ---
+				EntityState e;
+				e.id                 = mw.Id;
+				e.position_          = mw.model.GetPosition();
+				e.scale_             = mw.model.GetScale();
+				e.rotation_          = mw.model.GetRotation();
+				e.orientation_       = mw.model.GetOrientation();
+				e.baseOrientation_   = mw.model.GetBaseOrientation();
+				e.speed_             = mw.model.GetSpeed();
+				e.rotationSpeed_     = mw.model.GetRotationSpeed();
+	
+				gameState_->entities.push_back(e);
+			}
+        }
+    }
+
+	if (server_->newClientConnected_)
+		server_->newClientConnected_ = false;
 }
 
 void Networking::Shutdown()
@@ -154,53 +182,74 @@ void Networking::SendInputState(const InputState& state)
 
 unsigned int Networking::UpdateScene(Scene& scene, AssetManager& assMan)
 {
-	auto& gs = client_->GetLatestGameState();
+	GameState gs;
 
-	if (currentTick > gs.tick) return  gs.playerId;
+	if (client_->pendingStates.size() == 0) return 0;
 
-	for (auto &entity : gs.entities)
 	{
-		currentTick = gs.tick;
-		
-		auto& models = scene.GetModels();
-
-		if (models.size() == 0)
-		{
-			PhysicalInfo pi = PhysicalInfo();
-			pi.baseOrientation_ = entity.baseOrientation_;
-			pi.orientation_ 	= entity.orientation_;
-			pi.position_		= entity.position_;
-			pi.rotation_		= entity.rotation_;
-			pi.rotationSpeed_	= entity.rotationSpeed_;
-			pi.scale_			= entity.scale_;
-			pi.speed_			= entity.speed_;
-	
-			ModelType type;
-			switch (entity.type) 
-			{
-				case 0: type = ModelType::PLAYER; 	break;
-				case 1: type = ModelType::NPC;		break;
-				case 2: type = ModelType::OBJECT;	break;	
-			}
-	
-			Model model(entity.path, pi, assMan, type, true, entity.radius);
-			scene.AddModel(model);
-		}
-		else if (models.size() == 1)
-		{
-			auto& m = scene.GetModelByReference(entity.id);
-
-			m.SetBaseOrientation(entity.baseOrientation_);
-			m.SetOrientation(entity.orientation_);
-			m.SetPosition(entity.position_);
-			m.SetRotation(entity.rotation_);
-			m.SetRotationSpeed(entity.rotationSpeed_);
-			m.SetScale(entity.scale_);
-			m.SetSpeed(entity.speed_);
-			
-		}
-
+		std::lock_guard lock(client_->gsMutex);
+		gs = std::move(client_->pendingStates.front());
+		client_->pendingStates.pop_front();
 	}
 
+    if (gs.tick == 0) 
+		return 0;
+	if (currentTick > gs.tick) 
+		return gs.playerId;
+	
+	if (scene.currentTick >= gs.tick) 
+		return gs.playerId;
+
+	scene.currentTick = gs.tick;
+
+	for (uint32_t id : gs.destroyedEntities)
+    {
+        scene.RemoveModel(id);
+    }
+
+	for (auto &entity : gs.createdEntities)
+	{
+		auto& models = scene.GetModels();
+
+		PhysicalInfo pi;
+		pi.baseOrientation_ = entity.baseOrientation_;
+		pi.orientation_ 	= entity.orientation_;
+		pi.position_		= entity.position_;
+		pi.rotation_		= entity.rotation_;
+		pi.rotationSpeed_	= entity.rotationSpeed_;
+		pi.scale_			= entity.scale_;
+		pi.speed_			= entity.speed_;
+	
+		ModelType type;
+		switch (entity.type) 
+		{
+			case 0: type = ModelType::PLAYER; 	break;
+			case 1: type = ModelType::SHOT;	break;
+			default: type == ModelType::SHOT;	break;
+		}
+	
+		Model model(getModelPath(type), pi, assMan, type, true, entity.radius);
+		scene.AddModel(model);
+	}
+
+	for (const auto& entity : gs.entities)
+    {
+        if (!scene.ModelExists(entity.id))
+        {
+            std::cout << "Entity not loaded: " << entity.id << std::endl;
+            continue;
+        }
+
+        auto& m = scene.GetModelByReference(entity.id);
+
+        m.SetBaseOrientation(entity.baseOrientation_);
+        m.SetOrientation(entity.orientation_);
+        m.SetPosition(entity.position_);
+        m.SetRotation(entity.rotation_);
+        m.SetRotationSpeed(entity.rotationSpeed_);
+        m.SetScale(entity.scale_);
+        m.SetSpeed(entity.speed_);
+    }
+ 
 	return gs.playerId;
 };

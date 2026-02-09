@@ -242,6 +242,8 @@ void ServerLogic::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionSta
 			// Add them to the client list, using std::map wacky syntax
 			m_mapClients[ pInfo->m_hConn ];
 			SetClientNick( pInfo->m_hConn, nick, id );
+
+			newClientConnected_ = true;
 			break;
 		}
 
@@ -279,9 +281,9 @@ void ServerLogic::SendGameStateToAllClients()
         // Log once per second
         if (std::chrono::duration_cast<std::chrono::seconds>(now - lastLogTime_).count() >= 1)
         {
-            std::cout
+            /*std::cout
                 << "Sent updates: " << deltaSamples_ << " times last second, "
-                << std::endl;
+                << std::endl;*/
 
             // Reset accumulators
             accumulatedDelta_ = std::chrono::nanoseconds{0};
@@ -302,6 +304,7 @@ void ServerLogic::SendGameStateToAllClients()
 
 void ServerLogic::SendGameStateToClient(unsigned int playerId)
 {
+	auto t0 = std::chrono::steady_clock::now();
 	HSteamNetConnection conn;
 	
 	for (auto& c : m_mapClients) {
@@ -315,7 +318,10 @@ void ServerLogic::SendGameStateToClient(unsigned int playerId)
 	msgpack::sbuffer buffer;
 	msgpack::pack(buffer, gameState_);
 
-	m_pInterface->SendMessageToConnection( conn, buffer.data(), buffer.size(), k_nSteamNetworkingSend_Reliable, nullptr );
+	EResult res = m_pInterface->SendMessageToConnection( conn, buffer.data(), buffer.size(), k_nSteamNetworkingSend_Reliable, nullptr );
+
+	if (res != k_EResultOK)
+		std::cout << "Send failed: " << res << " tick: " << gameState_->tick << "\n";
 };
 
 void ServerLogic::SendStringToClient( HSteamNetConnection conn, const char *str )

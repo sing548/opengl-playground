@@ -4,19 +4,28 @@ Mesh* Model::hitboxSphere_ = nullptr;
 bool Model::hitboxSphereInitialized_ = false;
 
 Model::Model(float radius, PhysicalInfo pi, ModelType type) : gammaCorrection(false), 
-	physicalInfo_ (pi), radius(radius), type_(type)
+	physicalInfo_ (pi), radius_(radius), type_(type)
 {
 	if (!hitboxSphereInitialized_)
 		CreateHitboxSphere();
 }
 
-Model::Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, bool gamma, float radius) : gammaCorrection(gamma), physicalInfo_(pi), radius(radius), type_(type)
+Model::Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, bool gamma, float radius) : gammaCorrection(gamma), physicalInfo_(pi), radius_(radius), type_(type)
 {
     path_ = path;
 	meshes = assMan.LoadModel(path);
 	
 	if (!hitboxSphereInitialized_)
 		CreateHitboxSphere();
+}
+
+Model::Model(std::string_view const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, bool gamma, float radius) : gammaCorrection(gamma), physicalInfo_(pi), radius_(radius), type_(type)
+{
+    path_ = path;
+    meshes = assMan.LoadModel(path_);
+
+    if (!hitboxSphereInitialized_)
+        CreateHitboxSphere();
 }
 
 void Model::Draw(Shader shader)
@@ -30,46 +39,49 @@ void Model::DrawHitbox(Shader shader)
 	hitboxSphere_->Draw(shader);
 }
 
-
-// ToDo: change to const glm::vec3&....
-const glm::vec3& Model::GetPosition() const
+glm::vec3 Model::GetPosition() const
 {
 	return physicalInfo_.position_;
 }
 
-const glm::vec3& Model::GetScale() const
+glm::vec3 Model::GetScale() const
 {
 	return physicalInfo_.scale_;
 }
 
-const glm::vec3& Model::GetRotation() const
+glm::vec3 Model::GetRotation() const
 {
 	return physicalInfo_.rotation_;
 }
 
-const glm::vec3& Model::GetOrientation() const
+glm::vec3 Model::GetOrientation() const
 {
 	return physicalInfo_.orientation_;
 }
 
-const glm::vec3& Model::GetBaseOrientation() const
+glm::vec3 Model::GetBaseOrientation() const
 {
     return physicalInfo_.baseOrientation_;
 }
 
-const glm::vec3& Model::GetSpeed() const
+glm::vec3 Model::GetSpeed() const
 { 
 	return physicalInfo_.speed_;
 }
 
-const glm::vec3& Model::GetRotationSpeed() const
+glm::vec3 Model::GetRotationSpeed() const
 {
 	return physicalInfo_.rotationSpeed_;
 }
 
-const std::string& Model::GetPath() const
+std::string Model::GetPath() const
 {
     return path_;
+}
+
+float Model::GetRadius() const
+{
+    return radius_;
 }
 
 void Model::SetPosition(glm::vec3 position)
@@ -122,8 +134,6 @@ void Model::CreateHitboxSphere()
     std::vector<unsigned int> indices;
     std::vector<Texture> textures;
 
-    float radius = 1.0f;
-
     for (unsigned int i = 0; i <= stackCount; ++i) {
         float stackAngle = glm::pi<float>() / 2 - i * glm::pi<float>() / stackCount; 
         float xy = cos(stackAngle);
@@ -133,7 +143,7 @@ void Model::CreateHitboxSphere()
             float sectorAngle = j * 2 * glm::pi<float>() / sectorCount;
 
             Vertex v{};
-            v.Position = glm::vec3(xy * cos(sectorAngle), xy * sin(sectorAngle), z) * radius;
+            v.Position = glm::vec3(xy * cos(sectorAngle), xy * sin(sectorAngle), z) * radius_;
             v.Normal   = glm::normalize(v.Position); // sphere normal
             v.TexCoords = glm::vec2(
                 (float)j / sectorCount,

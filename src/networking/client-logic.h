@@ -33,11 +33,18 @@ public:
     ~ClientLogic();
     void ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomic<bool>& running);
     const GameState& GetLatestGameState() const;
+    
+    std::mutex gsMutex;
+    std::deque<GameState> pendingStates;
+
     private:
     static ClientLogic *s_pCallbackInstance;
     static HSteamNetConnection m_hConnection;
     static ISteamNetworkingSockets *m_pInterface;
     GameState gameState_;
+
+    int previoustick = 0;
+
 
     bool messageReceived_ = false;
 

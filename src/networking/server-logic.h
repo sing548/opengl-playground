@@ -19,6 +19,8 @@
 class ServerLogic
 {
 public:
+    bool newClientConnected_ = false;
+
     void ServerLoop(int port, std::atomic<bool>& running);
     void UpdateGameState(std::unique_ptr<GameState> gs);
     void DistributeGameState(std::atomic<bool>& running);
@@ -46,6 +48,7 @@ private:
     
     uint64_t deltaSamples_ = 0;
     uint64_t tickSamples_ = 0;
+
 
 
     uint32_t lastSyncedTick_ = 0;

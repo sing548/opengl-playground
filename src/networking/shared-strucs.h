@@ -20,7 +20,6 @@ struct InputState {
 
 struct EntityState {
     uint32_t id;
-
     glm::vec3 position_;
     glm::vec3 scale_;
     glm::vec3 rotation_;
@@ -43,8 +42,7 @@ struct EntityState {
 
 struct EntityCreationState {
     uint32_t id;
-    std::string path;
-    uint8_t type;
+    uint32_t type;
     float radius;
 
     glm::vec3 position_;
@@ -56,7 +54,7 @@ struct EntityCreationState {
     glm::vec3 rotationSpeed_;
 
     MSGPACK_DEFINE(
-        id, path, radius,
+        id, type, radius, 
         position_.x, position_.y, position_.z,
         scale_.x, scale_.y, scale_.z,
         rotation_.x, rotation_.y, rotation_.z,
@@ -70,7 +68,7 @@ struct EntityCreationState {
 struct GameState {
     uint32_t tick = 0;
     unsigned int playerId = 0;
-    std::vector<EntityCreationState> entities;
+    std::vector<EntityState> entities;
     std::vector<uint32_t> destroyedEntities;
     std::vector<EntityCreationState> createdEntities;
 
