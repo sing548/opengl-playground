@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 #include "mesh.h"
-#include "stb_image.h"
+#include "stb/stb_image.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
