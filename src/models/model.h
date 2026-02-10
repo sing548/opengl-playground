@@ -21,6 +21,8 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include <array>
+#include <string_view>
 
 #ifndef ASSETS_DIR
 #define ASSETS_DIR "./assets"
