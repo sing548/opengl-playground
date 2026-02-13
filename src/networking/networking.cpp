@@ -91,8 +91,9 @@ Networking::~Networking()
 		distributionThread_.join();
 };
 
-void Networking::SendGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels, float dT)
+uint32_t Networking::SendGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels, float dT)
 {
+	uint32_t newClientId = 0;
 	const auto now = std::chrono::steady_clock::now();
 
 	tickTimer += dT;
@@ -105,13 +106,17 @@ void Networking::SendGameState(const Scene& scene, const std::vector<unsigned in
 		timesSent++;
 		currentTick++;
 		tickTimer -= tickRate;
-        bool test = addedModels.size() > 0 || removedModels.size() > 0;
 		BuildGameState(scene, addedModels_, removedModels_);
-		server_->UpdateGameState(std::move(gameState_));
+		newClientId = server_->UpdateGameState(std::move(gameState_));
 
         addedModels_.clear();
         removedModels_.clear();
 	}
+
+	if (newClientId != 0)
+		return newClientId;
+
+	return 0;
 }
 
 void Networking::BuildGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels)
@@ -125,49 +130,46 @@ void Networking::BuildGameState(const Scene& scene, const std::vector<unsigned i
         gameState_->destroyedEntities.push_back(id);
     }
 
-    for (const auto& mw : scene.GetModels())
+    for (const auto& [id, model] : scene.GetModels())
     {
-        const bool isNew = std::find(addedModels.begin(), addedModels.end(), mw.Id) != addedModels.end();
+        const bool isNew = std::find(addedModels.begin(), addedModels.end(), id) != addedModels.end();
 
-        if (isNew || server_->newClientConnected_)
+        if (isNew)
         {
             // --- Full creation data ---
             EntityCreationState e;
-            e.id                 = mw.Id;
-            e.type               = mw.model.type_;
-            e.radius             = mw.model.GetRadius();
-            e.position_          = mw.model.GetPosition();
-            e.scale_             = mw.model.GetScale();
-            e.rotation_          = mw.model.GetRotation();
-            e.orientation_       = mw.model.GetOrientation();
-            e.baseOrientation_   = mw.model.GetBaseOrientation();
-            e.speed_             = mw.model.GetSpeed();
-            e.rotationSpeed_     = mw.model.GetRotationSpeed();
+            e.id                 = id;
+            e.type               = model.type_;
+            e.radius             = model.GetRadius();
+            e.position_          = model.GetPosition();
+            e.scale_             = model.GetScale();
+            e.rotation_          = model.GetRotation();
+            e.orientation_       = model.GetOrientation();
+            e.baseOrientation_   = model.GetBaseOrientation();
+            e.speed_             = model.GetSpeed();
+            e.rotationSpeed_     = model.GetRotationSpeed();
 
             gameState_->createdEntities.push_back(e);
         }
         else
         {
-			if (mw.model.type_ == ModelType::PLAYER)
+			if (model.type_ == ModelType::PLAYER)
 			{
 				// ToDo: "Lightweight" state update ---
 				EntityState e;
-				e.id                 = mw.Id;
-				e.position_          = mw.model.GetPosition();
-				e.scale_             = mw.model.GetScale();
-				e.rotation_          = mw.model.GetRotation();
-				e.orientation_       = mw.model.GetOrientation();
-				e.baseOrientation_   = mw.model.GetBaseOrientation();
-				e.speed_             = mw.model.GetSpeed();
-				e.rotationSpeed_     = mw.model.GetRotationSpeed();
+				e.id                 = id;
+				e.position_          = model.GetPosition();
+				e.scale_             = model.GetScale();
+				e.rotation_          = model.GetRotation();
+				e.orientation_       = model.GetOrientation();
+				e.baseOrientation_   = model.GetBaseOrientation();
+				e.speed_             = model.GetSpeed();
+				e.rotationSpeed_     = model.GetRotationSpeed();
 	
 				gameState_->entities.push_back(e);
 			}
         }
     }
-
-	if (server_->newClientConnected_)
-		server_->newClientConnected_ = false;
 }
 
 void Networking::Shutdown()
@@ -209,8 +211,6 @@ unsigned int Networking::UpdateScene(Scene& scene, AssetManager& assMan)
 
 	for (auto &entity : gs.createdEntities)
 	{
-		auto& models = scene.GetModels();
-
 		PhysicalInfo pi;
 		pi.baseOrientation_ = entity.baseOrientation_;
 		pi.orientation_ 	= entity.orientation_;
@@ -225,11 +225,11 @@ unsigned int Networking::UpdateScene(Scene& scene, AssetManager& assMan)
 		{
 			case 0: type = ModelType::PLAYER; 	break;
 			case 1: type = ModelType::SHOT;	break;
-			default: type == ModelType::SHOT;	break;
+			default: type = ModelType::SHOT;	break;
 		}
 	
 		Model model(getModelPath(type), pi, assMan, type, true, entity.radius);
-		scene.AddModel(model);
+		scene.AddModel(model, entity.id);
 	}
 
 	for (const auto& entity : gs.entities)
@@ -251,5 +251,5 @@ unsigned int Networking::UpdateScene(Scene& scene, AssetManager& assMan)
         m.SetSpeed(entity.speed_);
     }
  
-	return gs.playerId;
+	return client_->playerId_;
 };

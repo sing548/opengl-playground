@@ -20,8 +20,8 @@ public:
     bool ModelExists(unsigned int id);
     unsigned int AddModel(Model& model, int id = -1);
     unsigned int AddModelWithId(Model& model, unsigned int id);
-    const std::vector<ModelWithReference>& GetModels() const;
-    std::vector<std::reference_wrapper<ModelWithReference>> GetPlayerModels();
+    const std::unordered_map<uint32_t, Model>& GetModels() const;
+    std::unordered_map<uint32_t, std::reference_wrapper<Model>> GetPlayerModels();
     Model& GetModelByReference(unsigned int id);
     void RemoveModel(unsigned int Id);
 
@@ -29,7 +29,7 @@ public:
 
 private:
     unsigned int nextId_;
-    std::vector<ModelWithReference> models_;
+    std::unordered_map<uint32_t, Model> models_;
 };
 
 #endif

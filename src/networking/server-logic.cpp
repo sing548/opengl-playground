@@ -32,7 +32,7 @@ void ServerLogic::ServerLoop(int port, std::atomic<bool>& running)
     while (running) {
         PollIncomingMessagesServer(running);
         PollConnectionStateChangesServer();
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::milliseconds(30));
     }
 };
 
@@ -42,7 +42,6 @@ void ServerLogic::DistributeGameState(std::atomic<bool>& running)
 
     while (running)
     {
-
 		cv_.wait(lock, [&]{
 			return !running || (gameState_ != nullptr);
 		});
@@ -59,12 +58,18 @@ void ServerLogic::DistributeGameState(std::atomic<bool>& running)
     }
 }
 
-void ServerLogic::UpdateGameState(std::unique_ptr<GameState> gs)
+uint32_t ServerLogic::UpdateGameState(std::unique_ptr<GameState> gs)
 {
 	std::lock_guard<std::mutex> lock(mtx_);
 	gameState_ = std::move(gs);
 	gameStateUpdateTime = std::chrono::steady_clock::now();
 	cv_.notify_one();
+
+	uint32_t returnValue = 0;
+	if (newClientConnected_)
+		returnValue = lastConnectedClient_;
+	newClientConnected_ = false;
+	return returnValue;
 }
 
 void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
@@ -213,37 +218,23 @@ void ServerLogic::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionSta
 			// but not logged on) until them.  I'm trying to keep this example
 			// code really simple.
 			char nick[ 64 ];
-			unsigned int id = 0;
-			sprintf( nick, "BraveWarrior%d", 10000 + ( rand() % 100000 ) );
+			unsigned int id = lastConnectedClient_;
 
-			// Send them a welcome message
-			sprintf( temp, "Welcome, stranger.  Thou art known to us for now as '%s'; upon thine command '/nick' we shall know thee otherwise.", nick ); 
-			//SendStringToClient( pInfo->m_hConn, temp ); 
-
-			// Also send them a list of everybody who is already connected
-			if ( m_mapClients.empty() )
-			{
-				//SendStringToClient( pInfo->m_hConn, "Thou art utterly alone." ); 
-			}
-			else
-			{
-				sprintf( temp, "%d companions greet you:", (int)m_mapClients.size() ); 
-				for ( auto &c: m_mapClients )
-                   {
-					//SendStringToClient( pInfo->m_hConn, c.second.m_sNick.c_str() ); 
-                   }
-			}
-
-			// Let everybody else know who they are for now
-			sprintf( temp, "Hark!  A stranger hath joined this merry host.  For now we shall call them '%s', id: '%d'", nick, id ); 
 			std::cout << temp << std::endl;
-			//SendStringToAllClients( temp, pInfo->m_hConn ); 
-
-			// Add them to the client list, using std::map wacky syntax
 			m_mapClients[ pInfo->m_hConn ];
 			SetClientNick( pInfo->m_hConn, nick, id );
 
-			newClientConnected_ = true;
+			msgpack::sbuffer buffer;
+			msgpack::packer<msgpack::sbuffer> pk(buffer);
+			pk.pack_array(2);
+			pk.pack_uint8(1);
+			// ToDo: This is hacky, make this better in future
+			pk.pack(id - 1);
+
+			SendPackageToClient(id, buffer);
+
+			newClientConnected_ = id;
+			lastConnectedClient_--;
 			break;
 		}
 
@@ -266,7 +257,7 @@ void ServerLogic::SetClientNick( HSteamNetConnection hConn, const char *nick, un
 		m_mapClients[hConn].id = id;
 
 		// Set the connection name, too, which is useful for debugging
-		m_pInterface->SetConnectionName( hConn, id + "" );
+		m_pInterface->SetConnectionName( hConn, nick);
 	}
 	
 void ServerLogic::SendGameStateToAllClients()
@@ -295,14 +286,21 @@ void ServerLogic::SendGameStateToAllClients()
     }
 
 	std::lock_guard<std::mutex> lock(mtx_);
+
+	msgpack::sbuffer buffer;
+	msgpack::packer<msgpack::sbuffer> pk(buffer);
+	pk.pack_array(2);
+	pk.pack_uint8(0);
+	pk.pack(gameState_);
+
 	for (auto& c : m_mapClients)
 	{
 		auto now = std::chrono::steady_clock::now();
-		SendGameStateToClient(c.second.id);
+		SendPackageToClient(c.second.id, buffer);
 	}
 }
 
-void ServerLogic::SendGameStateToClient(unsigned int playerId)
+void ServerLogic::SendPackageToClient(unsigned int playerId, const msgpack::sbuffer &buffer)
 {
 	auto t0 = std::chrono::steady_clock::now();
 	HSteamNetConnection conn;
@@ -315,9 +313,6 @@ void ServerLogic::SendGameStateToClient(unsigned int playerId)
 		}
 	}
 	
-	msgpack::sbuffer buffer;
-	msgpack::pack(buffer, gameState_);
-
 	EResult res = m_pInterface->SendMessageToConnection( conn, buffer.data(), buffer.size(), k_nSteamNetworkingSend_Reliable, nullptr );
 
 	if (res != k_EResultOK)

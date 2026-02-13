@@ -232,12 +232,12 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 	auto models = scene.GetModels();
 
 	int i = 0;
-	for (auto& it : models)
+	for (auto& [id, model] : models)
 	{
 		if (i > 1) {
 			std::string pos = std::to_string(i - 2);
 
-			modelShader_->SetVec3("pointLights[" + pos + "].position", it.model.GetPosition());
+			modelShader_->SetVec3("pointLights[" + pos + "].position", model.GetPosition());
 
 			modelShader_->SetVec3("pointLights[" + pos + "].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
 			modelShader_->SetVec3("pointLights[" + pos + "].diffuse", glm::vec3(0.2f, 0.0f, 0.0f));
@@ -253,18 +253,18 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 	if (i > 256) i = 256;
 	modelShader_->SetInt("numPointLights", i - 2);
 
-	for (auto& it : models)
+	for (auto& [id, model] : models)
 	{
 		glm::mat4 modelProjection = glm::mat4(1.0f);
-		modelProjection = glm::translate(modelProjection, it.model.GetPosition());
-		modelProjection *=  glm::mat4_cast(glm::quat(it.model.GetRotation()));
-		modelProjection = glm::scale(modelProjection, it.model.GetScale());
+		modelProjection = glm::translate(modelProjection, model.GetPosition());
+		modelProjection *=  glm::mat4_cast(glm::quat(model.GetRotation()));
+		modelProjection = glm::scale(modelProjection, model.GetScale());
 
 		modelShader_->SetMat4("model", modelProjection);
 
 		glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelProjection)));
 		modelShader_->SetMat3("normalMatrix", normalMatrix);
-		it.model.Draw(*modelShader_);
+		model.Draw(*modelShader_);
 	}
 
 	hitboxShader_->Use();
@@ -272,12 +272,12 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 	hitboxShader_->SetMat4("view", view);
 
 	if (this->showHitboxes_)
-	for (auto& it : models)
+	for (auto& [id, model] : models)
 	{
 		// Construct model matrix (same as your object transform)
     	glm::mat4 modelMat = glm::mat4(1.0f);
-    	modelMat = glm::translate(modelMat, it.model.GetPosition());
-    	modelMat = glm::scale(modelMat, glm::vec3(it.model.GetRadius()));
+    	modelMat = glm::translate(modelMat, model.GetPosition());
+    	modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
 
     	// No hitboxShader.Use() here — renderer already sets it
     	hitboxShader_->SetMat4("projection", projection);
@@ -286,7 +286,7 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 
     	// Draw unit sphere as wireframe
     	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		it.model.DrawHitbox(*hitboxShader_);
+		model.DrawHitbox(*hitboxShader_);
     	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 	

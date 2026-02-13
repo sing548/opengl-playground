@@ -4,72 +4,62 @@ Scene::Scene() : nextId_(1) {}
 
 bool Scene::ModelExists(unsigned int id)
 {
-    for (const auto& mw : models_)
-    {
-        if (mw.Id == id)
-            return true;
-    }
-    return false;
+    return models_.find(id) != models_.end();
 }
 
 unsigned int Scene::AddModel(Model& model, int id)
 {
-    unsigned int modelId;
+    uint32_t modelId;
 
-    if (id < 0)
+    if (id > 0)
     {
-        modelId = nextId_++;
+        modelId = id;
     }
     else 
     {
-        modelId = id;
-        nextId_ = id + 1;     
+        modelId = nextId_++;  
     }
     
-    models_.emplace_back(modelId, std::move(model));
+    models_.try_emplace(modelId, model);
     return modelId;
 }
 
-unsigned int Scene::AddModelWithId(Model& model, unsigned int id)
+unsigned int Scene::AddModelWithId(Model& model, uint32_t id)
 {
-    models_.emplace_back(id, std::move(model));
-    nextId_ = id++;
+    models_.try_emplace(id, model);
     return id;
 }
 
 void Scene::RemoveModel(unsigned int id)
 {
-    auto it = std::remove_if(models_.begin(), models_.end(),
-                             [id](const ModelWithReference& mw) {
-                                 return mw.Id == id;
-                             });
-    models_.erase(it, models_.end());
+    auto it = models_.find(id);
+    if (it != models_.end())
+    {
+        models_.erase(it);
+    }
 }
 
-const std::vector<ModelWithReference>& Scene::GetModels() const
+const std::unordered_map<uint32_t, Model>& Scene::GetModels() const
 {
     return models_;
 }
 
 Model& Scene::GetModelByReference(unsigned int id) {
-    for (auto& mw : models_) {
-        if (mw.Id == id) {
-            return mw.model;
-        }
-    }
+    return models_.at(id);
     throw std::out_of_range("No model found with given ID");
 }
 
-std::vector<std::reference_wrapper<ModelWithReference>> Scene::GetPlayerModels()
+std::unordered_map<uint32_t, std::reference_wrapper<Model>>Scene::GetPlayerModels()
 {
-    std::vector<std::reference_wrapper<ModelWithReference>> result;
-    result.reserve(models_.size());
+    std::unordered_map<uint32_t, std::reference_wrapper<Model>> result;
 
-    std::copy_if(
-        models_.begin(), models_.end(),
-        std::back_inserter(result),
-        [](ModelWithReference& m){ return m.model.type_ == ModelType::PLAYER; }
-    );
+    for (auto& [id, modelRef] : models_)
+    {
+        if (modelRef.type_ == ModelType::PLAYER)
+        {
+            result.emplace(id, modelRef);
+        }
+    }
 
     return result;
 }

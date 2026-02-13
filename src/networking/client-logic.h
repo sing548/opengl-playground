@@ -37,6 +37,8 @@ public:
     std::mutex gsMutex;
     std::deque<GameState> pendingStates;
 
+    uint32_t playerId_;
+
     private:
     static ClientLogic *s_pCallbackInstance;
     static HSteamNetConnection m_hConnection;

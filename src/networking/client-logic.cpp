@@ -20,7 +20,7 @@ void ClientLogic::ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomi
 	// Start connecting
 	char szAddr[ SteamNetworkingIPAddr::k_cchMaxString ];
 	serverAddr.ToString( szAddr, sizeof(szAddr), true );
-	std::printf( "Connecting to chat server at %s", szAddr );
+	std::printf( "Connecting to chat server at %s\n", szAddr );
 	SteamNetworkingConfigValue_t opt;
 	opt.SetPtr( k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged, (void*)SteamNetConnectionStatusChangedCallbackClient );
 	m_hConnection = m_pInterface->ConnectByIPAddress( serverAddr, 1, &opt );
@@ -66,17 +66,42 @@ void ClientLogic::PollIncomingMessagesClient(std::atomic<bool>& running)
         msgpack::object_handle oh = msgpack::unpack(
             static_cast<const char*>(pIncomingMsg->m_pData), pIncomingMsg->m_cbSize);
         msgpack::object obj = oh.get();
-        GameState gs;
-        obj.convert(gs);
-		int newTick = gs.tick;
-		if (newTick - previoustick != 1)
-        	std::cout <<   "Skipped tick(1) between: " << previoustick << " and " << newTick << std::endl;
 
-		previoustick = newTick;
-        {
-            std::lock_guard lock(gsMutex);
-            pendingStates.push_back(std::move(gs));
-        }
+		if (obj.type != msgpack::type::ARRAY || obj.via.array.size != 2)
+		{
+		    std::cerr << "Invalid message format\n";
+		    return;
+		}
+
+
+		uint8_t type = obj.via.array.ptr[0].as<uint8_t>();
+		msgpack::object payload = obj.via.array.ptr[1];
+
+		switch (type)
+		{
+			case 0:
+			{
+				GameState gs;
+				payload.convert(gs);
+				int newTick = gs.tick;
+				if (newTick - previoustick != 1)
+        			std::cout <<   "Skipped tick(1) between: " << previoustick << " and " << newTick << std::endl;
+
+				previoustick = newTick;
+        		{
+        		    std::lock_guard lock(gsMutex);
+        		    pendingStates.push_back(std::move(gs));
+        		}
+				break;
+			}
+			case 1:
+			{
+				int i;
+				payload.convert(i);
+				std::cout << "PlayerId: " << i << " received!" << std::endl;
+				playerId_ = i;
+			}
+		}
 
         // Release this message immediately
         pIncomingMsg->Release();
@@ -146,7 +171,7 @@ void ClientLogic::OnSteamNetConnectionStatusChangedClient( SteamNetConnectionSta
 			break;
 
 		case k_ESteamNetworkingConnectionState_Connected:
-			std::printf( "Connected to server OK" );
+			std::printf( "Connected to server OK\n" );
 			break;
 
 		default:

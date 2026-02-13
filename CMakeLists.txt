@@ -1,8 +1,16 @@
 cmake_minimum_required(VERSION 3.15) # Bumped for better vcpkg support
-project(OpenGLPlayground)
+project(OpenGLPlayground LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Generate compile_commands.json (VS Code loves this)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Default to Debug build if not specified
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+endif()
 
 # Fix for Linux GLVND, ignored by Windows
 set(OpenGL_GL_PREFERENCE "GLVND")

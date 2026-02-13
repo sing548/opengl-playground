@@ -64,7 +64,8 @@ private:
     void ExecuteInput(float deltaTime);
     static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
-    void AddModel(Model& model);
+    void AddNewPlayer(uint32_t id);
+    void AddModel(Model& model, uint32_t id = 0);
     void RemoveModel(unsigned int id);
     void MoveModel(unsigned int id, const glm::vec3& change);
     void RotateModel(unsigned int id, const glm::vec3& change);

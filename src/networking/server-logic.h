@@ -19,15 +19,13 @@
 class ServerLogic
 {
 public:
-    bool newClientConnected_ = false;
-
     void ServerLoop(int port, std::atomic<bool>& running);
-    void UpdateGameState(std::unique_ptr<GameState> gs);
+    uint32_t UpdateGameState(std::unique_ptr<GameState> gs);
     void DistributeGameState(std::atomic<bool>& running);
 private:
     struct Client_t
 	{
-        unsigned int id;
+        uint32_t id;
 		std::string m_sNick;
 	};
 
@@ -49,9 +47,10 @@ private:
     uint64_t deltaSamples_ = 0;
     uint64_t tickSamples_ = 0;
 
-
-
     uint32_t lastSyncedTick_ = 0;
+
+    bool newClientConnected_ = false;
+    uint32_t lastConnectedClient_ = UINT16_MAX;
     
     static HSteamNetPollGroup m_hPollGroup;
     static HSteamListenSocket m_hListenSock;
@@ -60,7 +59,7 @@ private:
     static ServerLogic *s_pCallbackInstance;
     
     void SendGameStateToAllClients();
-    void SendGameStateToClient(unsigned int playerId);
+    void SendPackageToClient(unsigned int playerId, const msgpack::sbuffer &buffer);
     void PollIncomingMessagesServer(std::atomic<bool>& running);
     void PollConnectionStateChangesServer();
     void OnSteamNetConnectionStatusChangedServer( SteamNetConnectionStatusChangedCallback_t *pInfo );

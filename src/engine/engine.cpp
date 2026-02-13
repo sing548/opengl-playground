@@ -130,13 +130,14 @@ void Engine::Run()
 
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
+    uint32_t newClient = 0;
 
     while (!glfwWindowShouldClose(window_->Get())) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
 	    lastFrame = currentFrame;
         accTime += deltaTime;
-        
+         
         gameClock_ = std::chrono::steady_clock::now();
 
         removedModels.clear();
@@ -147,8 +148,18 @@ void Engine::Run()
         CollectInputs(deltaTime);
         ExecuteInput(deltaTime);
         HandleLogic(deltaTime);
+
+        if (newClient != 0)
+        {
+            AddNewPlayer(newClient);
+        }
+
+        newClient = 0;
+
         if (m_bNetworking && m_bServer)
-            networking_->SendGameState(*scene_, addedModels, removedModels, deltaTime);
+        {
+           newClient = networking_->SendGameState(*scene_, addedModels, removedModels, deltaTime);    
+        }
 
         renderer_->Draw(*scene_, window_->GetCamera(), window_->GetSize().width, window_->GetSize().height, settings_);
         window_->SwapBuffers();
@@ -174,6 +185,8 @@ void Engine::ReconcileNetwork()
     if (m_bNetworking && !m_bServer)
     {
         auto playerId = networking_->UpdateScene(*scene_, *assMan_);
+        if (playerId != 0)
+            playerId_ = playerId;
     }
 }
 
@@ -193,21 +206,21 @@ void Engine::HandleLogic(float deltaTime)
 void Engine::CheckHits()
 {
     auto playerModels = scene_->GetPlayerModels();
-    
-    for (auto &other : scene_->GetModels())
-    {
-        glm::vec3 otherPos = other.model.GetPosition();
-        float otherRadius = other.model.GetRadius();
 
-        for (auto& playerRef : playerModels)
+    for (auto& [id, other] : scene_->GetModels())
+    {
+        glm::vec3 otherPos = other.GetPosition();
+        float otherRadius = other.GetRadius();
+
+        for (auto& [playerId, playerRef] : playerModels)
         {
             auto& player = playerRef.get();
 
-            if (player.Id == other.Id)
+            if (playerId == id)
                 continue;
                 
-            glm::vec3 playerPos = player.model.GetPosition();
-            float playerRadius = player.model.GetRadius();
+            glm::vec3 playerPos = player.GetPosition();
+            float playerRadius = player.GetRadius();
 
             float dist = glm::length(otherPos - playerPos);
             float radiusSum = otherRadius + playerRadius;
@@ -223,7 +236,7 @@ void Engine::CheckHits()
 void Engine::AdjustCamera()
 {
     if (settings_["third_person"] ) {
-        auto model = scene_->GetModelByReference(1);
+        auto model = scene_->GetModelByReference(playerId_);
         glm::vec3 modelPos = model.GetPosition();
         
         // Offset from the model in its local orientation
@@ -284,9 +297,40 @@ void Engine::Shoot(Model shooter)
     AddModel(shot);
 }
 
-void Engine::AddModel(Model& model)
+void Engine::AddNewPlayer(uint32_t id)
 {
-    unsigned int modelId = scene_->AddModel(model);
+    PhysicalInfo pi = PhysicalInfo();
+    pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
+    pi.rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
+    pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
+    pi.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
+    pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
+    Model model(getModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
+
+    AddModel(model, id);
+    
+    auto playerModels = scene_->GetPlayerModels();
+
+    for (auto& [id, model] : playerModels)
+    {
+        if (std::find(addedModels.begin(), addedModels.end(), id) == addedModels.end())
+            addedModels.push_back(id);
+    }
+}
+
+void Engine::AddModel(Model& model, uint32_t id)
+{
+    unsigned int modelId;
+
+    if (id == 0)
+    {
+        modelId = scene_->AddModel(model);
+    }
+    else
+    {
+        modelId = scene_->AddModelWithId(model, id);
+    }
+    
     addedModels.push_back(modelId);
 }
 
@@ -312,14 +356,14 @@ void Engine::MoveModels()
     std::vector<unsigned int> deletes;
              
     currentFurthestPosition = glm::vec3(0.0f, 0.0f, 0.0f);
-    for (auto it : scene_->GetModels())
+    for (auto& [id, model] : scene_->GetModels())
     {
-        glm::vec3 change = it.model.GetOrientation() * it.model.GetSpeed().x;
-        MoveModel(it.Id, change);
+        glm::vec3 change = model.GetOrientation() * model.GetSpeed().x;
+        MoveModel(id, change);
 
-        auto position = it.model.GetPosition();
-        if ((abs(position.x) > 80 || abs(position.z) > 80) && it.model.type_ != ModelType::PLAYER)
-            deletes.push_back(it.Id);
+        auto position = model.GetPosition();
+        if ((abs(position.x) > 80 || abs(position.z) > 80) && model.type_ != ModelType::PLAYER)
+            deletes.push_back(id);
     }
 
     //for (auto id : deletes)
@@ -371,7 +415,8 @@ void Engine::CollectInputs(float deltaTime)
 
 void Engine::ExecuteInput(float deltaTime)
 {
-    if (playerId_ < 1) return;
+    bool playerExists = scene_->ModelExists(playerId_);
+    if (playerId_ <= 0 || !playerExists) return;
 
     for (auto& state : currentInputStates_)
     {
