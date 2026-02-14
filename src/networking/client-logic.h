@@ -39,7 +39,9 @@ public:
 
     uint32_t playerId_;
 
-    private:
+    void SendStateToServer(const InputState& state);
+
+private:
     static ClientLogic *s_pCallbackInstance;
     static HSteamNetConnection m_hConnection;
     static ISteamNetworkingSockets *m_pInterface;
@@ -50,10 +52,10 @@ public:
 
     bool messageReceived_ = false;
 
-    void PollIncomingMessagesClient(std::atomic<bool>& running);
-    //void PollIncomingGameStateMessages(std::atomic<bool>& running);
     void PollConnectionStateChangesClient();
+    void PollIncomingMessagesClient(std::atomic<bool>& running);
     void OnSteamNetConnectionStatusChangedClient( SteamNetConnectionStatusChangedCallback_t *pInfo, std::atomic<bool>& running );
+    void SendBufferToServer(const msgpack::sbuffer& buffer);
     
     static void SteamNetConnectionStatusChangedCallbackClient( SteamNetConnectionStatusChangedCallback_t *pInfo, std::atomic<bool>& running )
     {

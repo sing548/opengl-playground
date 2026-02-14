@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15) # Bumped for better vcpkg support
 project(OpenGLPlayground LANGUAGES C CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Generate compile_commands.json (VS Code loves this)

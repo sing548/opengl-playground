@@ -160,6 +160,10 @@ void Engine::Run()
         {
            newClient = networking_->SendGameState(*scene_, addedModels, removedModels, deltaTime);    
         }
+        else if (m_bNetworking)
+        {
+            networking_->SendInputState(currentInputStates_[0]);
+        }
 
         renderer_->Draw(*scene_, window_->GetCamera(), window_->GetSize().width, window_->GetSize().height, settings_);
         window_->SwapBuffers();
@@ -187,6 +191,15 @@ void Engine::ReconcileNetwork()
         auto playerId = networking_->UpdateScene(*scene_, *assMan_);
         if (playerId != 0)
             playerId_ = playerId;
+    }
+    else if (m_bNetworking)
+    {
+        auto inputStates = networking_->GetInputStates();
+        
+        for (auto& state : currentInputStates_)
+        {
+            
+        }
     }
 }
 
@@ -404,12 +417,6 @@ void Engine::CollectInputs(float deltaTime)
     if (shootPressed && lastShot == 0) {
         currentInputStates_[0].shootShot = true;
         lastShot = 5;
-    }
-
-    if (m_bNetworking)
-    {
-        // To Network
-        networking_->SendInputState(currentInputStates_[0]);
     }
 }
 

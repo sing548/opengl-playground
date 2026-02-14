@@ -51,7 +51,7 @@ void ClientLogic::PollIncomingMessagesClient(std::atomic<bool>& running)
 {
     ISteamNetworkingMessage* pIncomingMsg = nullptr;
 
-    while (true)
+    while (running)
     {
         int numMsgs = m_pInterface->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
         if (numMsgs == 0)
@@ -69,7 +69,7 @@ void ClientLogic::PollIncomingMessagesClient(std::atomic<bool>& running)
 
 		if (obj.type != msgpack::type::ARRAY || obj.via.array.size != 2)
 		{
-		    std::cerr << "Invalid message format\n";
+		    std::cerr << "Invalid message format" << std::endl;
 		    return;
 		}
 
@@ -179,3 +179,19 @@ void ClientLogic::OnSteamNetConnectionStatusChangedClient( SteamNetConnectionSta
 			break;
 	}
 }
+
+void ClientLogic::SendStateToServer(const InputState& state)
+{
+	msgpack::sbuffer buffer;
+	msgpack::packer<msgpack::sbuffer> pk(buffer);
+	pk.pack_array(2);
+	pk.pack_uint8(0);
+	pk.pack(state);
+
+	SendBufferToServer(buffer);
+};
+
+void ClientLogic::SendBufferToServer(const msgpack::sbuffer& buffer)
+{
+	m_pInterface->SendMessageToConnection( m_hConnection, buffer.data(), buffer.size(), k_nSteamNetworkingSend_Reliable, nullptr );
+};

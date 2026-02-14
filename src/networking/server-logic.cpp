@@ -89,21 +89,51 @@ void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
 		auto itClient = m_mapClients.find( pIncomingMsg->m_conn );
 		assert( itClient != m_mapClients.end() );
 
-		// '\0'-terminate it to make it easier to parse
-		std::string sCmd;
-		sCmd.assign( (const char *)pIncomingMsg->m_pData, pIncomingMsg->m_cbSize );
-		const char *cmd = sCmd.c_str();
+		msgpack::object_handle oh = msgpack::unpack(
+			static_cast<const char*>(pIncomingMsg->m_pData), pIncomingMsg->m_cbSize);
+		msgpack::object obj = oh.get();
 
-		// We don't need this anymore.
-		pIncomingMsg->Release();
+		if (obj.type != msgpack::type::ARRAY || obj.via.array.size != 2)
+		{
+			std::cerr << "Invalid message format" << std::endl;
+			return;
+		}
 
-		// Check for known commands.  None of this example code is secure or robust.
-		// Don't write a real server like this, please.
+		uint8_t type = obj.via.array.ptr[0].as<uint8_t>();
+		msgpack::object payload = obj.via.array.ptr[1];
 
-		// Assume it's just a ordinary chat message, dispatch to everybody else
-		sprintf( temp, "%s: %s", itClient->second.m_sNick.c_str(), cmd );
-        std::cout << temp << std::endl;
-		//SendStringToAllClients( temp, itClient->first );
+		switch (type)
+		{
+			case 0:
+			{
+				InputState is;
+				payload.convert(is);
+				std::cout << "Input State forward: " << is.forward << std::endl;
+				break;
+			}
+			case 1:
+			{
+				std::string sCmd;
+				sCmd.assign( (const char *)pIncomingMsg->m_pData, pIncomingMsg->m_cbSize );
+				const char *cmd = sCmd.c_str();
+
+				// We don't need this anymore.
+				pIncomingMsg->Release();
+
+				// Check for known commands.  None of this example code is secure or robust.
+				// Don't write a real server like this, please.
+
+				// Assume it's just a ordinary chat message, dispatch to everybody else
+				sprintf( temp, "%s: %s", itClient->second.m_sNick.c_str(), cmd );
+        		std::cout << temp << std::endl;
+				break;
+			}
+			default:
+			{
+				std::cerr << "Invalid message type" << std::endl;
+				return;
+			}
+		}
 	}
 };
 

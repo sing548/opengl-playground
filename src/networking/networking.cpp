@@ -179,8 +179,13 @@ void Networking::Shutdown()
 
 void Networking::SendInputState(const InputState& state)
 {
-
+	client_->SendStateToServer(state);
 };
+
+std::vector<InputState> Networking::GetInputStates()
+{
+	return std::vector<InputState>();
+}
 
 unsigned int Networking::UpdateScene(Scene& scene, AssetManager& assMan)
 {
