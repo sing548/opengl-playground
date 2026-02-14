@@ -38,8 +38,8 @@ public:
     Networking(bool bServer, const Scene& scene);
     ~Networking();
 
-    void SendInputState(const InputState& state);
-    std::vector<InputState> GetInputStates();
+    void SendInputState(InputState& state);
+    std::unordered_map<int, InputState>& GetInputStates();
     uint32_t SendGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels, float dT);
     unsigned int UpdateScene(Scene& scene, AssetManager& assMan);
     void Shutdown();

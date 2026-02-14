@@ -108,7 +108,16 @@ void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
 			{
 				InputState is;
 				payload.convert(is);
-				std::cout << "Input State forward: " << is.forward << std::endl;
+
+				if (is.shootShot) shotTick = lastSyncedTick_;
+
+				if (shotTick == lastSyncedTick_)
+				{
+					is.shootShot = true;
+				}
+
+				is.tick = lastSyncedTick_;
+				inputStates_[is.id] = is;
 				break;
 			}
 			case 1:
@@ -135,6 +144,11 @@ void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
 			}
 		}
 	}
+};
+
+std::unordered_map<int, InputState>& ServerLogic::GetLatestInputStates()
+{
+	return inputStates_;
 };
 
 void ServerLogic::PollConnectionStateChangesServer()

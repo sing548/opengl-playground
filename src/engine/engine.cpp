@@ -46,13 +46,15 @@ Engine::Engine(int config)
     if (m_bNetworking)
     {
         playerId_ = m_bServer ? 1 : -1;
-        auto state = InputState { playerId_, false, false, false, false, false, false  };
-        currentInputStates_.push_back(state);
-        previousInputStates_.push_back(state);
+       
 
         std::vector<Model> models = std::vector<Model>();
         if (m_bServer)
         {
+            auto state = InputState { playerId_, false, false, false, false, false, false  };
+            currentInputStates_.try_emplace(playerId_, state);
+            previousInputStates_.try_emplace(playerId_, state);
+
             PhysicalInfo pi = PhysicalInfo();
             pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
             pi.rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -74,11 +76,11 @@ Engine::Engine(int config)
     {
         playerId_ = 1;
         auto state = InputState { playerId_, false, false, false, false, false, false  };
-        currentInputStates_.push_back(state);
-        previousInputStates_.push_back(state);
+        currentInputStates_.try_emplace(playerId_, state);
+        previousInputStates_.try_emplace(playerId_, state);
 
         auto models = BasicLevel();
-        SetupScene(models);
+        SetupScene (models);
     }
 }
 
@@ -160,9 +162,9 @@ void Engine::Run()
         {
            newClient = networking_->SendGameState(*scene_, addedModels, removedModels, deltaTime);    
         }
-        else if (m_bNetworking)
+        else if (m_bNetworking && playerId_ >= 0)
         {
-            networking_->SendInputState(currentInputStates_[0]);
+            networking_->SendInputState(currentInputStates_.at(playerId_));
         }
 
         renderer_->Draw(*scene_, window_->GetCamera(), window_->GetSize().width, window_->GetSize().height, settings_);
@@ -190,15 +192,31 @@ void Engine::ReconcileNetwork()
     {
         auto playerId = networking_->UpdateScene(*scene_, *assMan_);
         if (playerId != 0)
+        {
             playerId_ = playerId;
+            auto state = InputState { playerId_, false, false, false, false, false, false  };
+            currentInputStates_.try_emplace(playerId_, state);
+            previousInputStates_.try_emplace(playerId_, state);
+        }
     }
     else if (m_bNetworking)
     {
         auto inputStates = networking_->GetInputStates();
-        
-        for (auto& state : currentInputStates_)
+
+        for (const auto [id, state] : inputStates)
         {
+            auto it = currentInputStates_.find(state.id);
             
+            if (it == currentInputStates_.end())
+            {
+                previousInputStates_[state.id] = state;
+            }
+            else if (previousInputStates_.at(state.id).tick - 1 < networking_->currentTick)
+            {
+                previousInputStates_.at(state.id) = currentInputStates_.at(state.id);
+            }
+
+            currentInputStates_[state.id] = state;
         }
     }
 }
@@ -297,6 +315,8 @@ void Engine::AdjustCamera()
 
 void Engine::Shoot(Model shooter)
 {
+    if (m_bNetworking && !m_bServer) return;
+
     PhysicalInfo pi = PhysicalInfo();
     pi.position_ = shooter.GetPosition() + shooter.GetOrientation();
     pi.rotation_ = shooter.GetRotation();
@@ -379,8 +399,8 @@ void Engine::MoveModels()
             deletes.push_back(id);
     }
 
-    //for (auto id : deletes)
-    //    RemoveModel(id);
+    for (auto id : deletes)
+        RemoveModel(id);
 }
 
 void Engine::RotateModel(unsigned int id, const glm::vec3& change) 
@@ -396,28 +416,33 @@ void Engine::ChangeSetting(std::string key, bool value)
 
 void Engine::CollectInputs(float deltaTime)
 {
-    previousInputStates_[0] = currentInputStates_[0];
+    if (playerId_ < 0) return;
+    auto state = currentInputStates_.at(playerId_);
+    auto previousState = previousInputStates_.at(playerId_);
+    previousState = currentInputStates_.at(playerId_);
 
-    currentInputStates_[0].left      = glfwGetKey(window_->Get(), GLFW_KEY_A) == GLFW_PRESS;
-    currentInputStates_[0].right     = glfwGetKey(window_->Get(), GLFW_KEY_D) == GLFW_PRESS;
-    currentInputStates_[0].forward   = glfwGetKey(window_->Get(), GLFW_KEY_W) == GLFW_PRESS;
-    currentInputStates_[0].backward  = glfwGetKey(window_->Get(), GLFW_KEY_S) == GLFW_PRESS;
-    currentInputStates_[0].shoot     = glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS;
-    currentInputStates_[0].shootShot = false;
+    state.left      = glfwGetKey(window_->Get(), GLFW_KEY_A) == GLFW_PRESS;
+    state.right     = glfwGetKey(window_->Get(), GLFW_KEY_D) == GLFW_PRESS;
+    state.forward   = glfwGetKey(window_->Get(), GLFW_KEY_W) == GLFW_PRESS;
+    state.backward  = glfwGetKey(window_->Get(), GLFW_KEY_S) == GLFW_PRESS;
+    state.shoot     = glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS;
+    state.shootShot = false;
 
-    bool shootPressed  =  currentInputStates_[0].shoot && !previousInputStates_[0].shoot;
-    bool shootReleased = !currentInputStates_[0].shoot &&  previousInputStates_[0].shoot;
+    bool shootPressed  =  state.shoot && !previousState.shoot;
+    bool shootReleased = !state.shoot &&  previousState.shoot;
 
     if (lastShot > 0)
-        lastShot -= deltaTime;
-
-    if (lastShot < 0)
-        lastShot = 0;
-
-    if (shootPressed && lastShot == 0) {
-        currentInputStates_[0].shootShot = true;
-        lastShot = 5;
+    {
+        lastShot -= deltaTime > lastShot ? lastShot : deltaTime;
     }
+    
+    if (shootPressed && lastShot == 0) {
+        state.shootShot = true;
+        lastShot = 5;              
+    }
+
+    currentInputStates_.at(playerId_) = state;
+    previousInputStates_.at(playerId_) = previousState;
 }
 
 void Engine::ExecuteInput(float deltaTime)
@@ -425,38 +450,48 @@ void Engine::ExecuteInput(float deltaTime)
     bool playerExists = scene_->ModelExists(playerId_);
     if (playerId_ <= 0 || !playerExists) return;
 
-    for (auto& state : currentInputStates_)
+    for (auto& [playerId, state] : currentInputStates_)
     {
         if (state.left) 
-            RotateModel(playerId_, {0.0f, glm::radians(0.7f), 0.0f});
+            RotateModel(playerId, {0.0f, glm::radians(0.7f), 0.0f});
 
         if (state.right)
-            RotateModel(playerId_, {0.0f, glm::radians(-0.7f), 0.0f});
+            RotateModel(playerId, {0.0f, glm::radians(-0.7f), 0.0f});
 
         if (state.forward) 
         {
             float acc = deltaTime * 0.05f;
-            glm::vec3 speed = scene_->GetModelByReference(playerId_).GetSpeed();
+            glm::vec3 speed = scene_->GetModelByReference(playerId).GetSpeed();
             speed.x += acc;
 
             // Max Speed
             if (0.1f > speed.x)
-                scene_->GetModelByReference(playerId_).SetSpeed(speed);
+                scene_->GetModelByReference(playerId).SetSpeed(speed);
         } else 
         {
             float acc = deltaTime * 0.05f;
             if (state.backward)
                 acc = deltaTime * .2f;
-            glm::vec3 speed = scene_->GetModelByReference(playerId_).GetSpeed();
+            glm::vec3 speed = scene_->GetModelByReference(playerId).GetSpeed();
 
             if (speed.x > 0) speed.x -= acc;
             if (speed.x < 0) speed.x = 0;
 
-            scene_->GetModelByReference(playerId_).SetSpeed(speed);
+            scene_->GetModelByReference(playerId).SetSpeed(speed);
         }
 
-        if (state.shootShot)
-            Shoot(scene_->GetModelByReference(playerId_));
+        if (state.shootShot && playerId == playerId_)
+        {
+            Shoot(scene_->GetModelByReference(playerId));
+        }
+        else 
+        {
+            if (state.shootShot && previousInputStates_.at(playerId).shootShot != true)
+            {
+                previousInputStates_.at(playerId).shootShot = true;
+                Shoot(scene_->GetModelByReference(playerId));
+            }
+        }
     }
     
 }

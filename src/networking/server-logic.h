@@ -22,6 +22,7 @@ public:
     void ServerLoop(int port, std::atomic<bool>& running);
     uint32_t UpdateGameState(std::unique_ptr<GameState> gs);
     void DistributeGameState(std::atomic<bool>& running);
+    std::unordered_map<int, InputState>& GetLatestInputStates();
 private:
     struct Client_t
 	{
@@ -30,6 +31,8 @@ private:
 	};
 
     std::unique_ptr<GameState> gameState_;
+    std::unordered_map<int, InputState> inputStates_;
+    uint32_t shotTick = 0;
 
     std::mutex mtx_;
     std::condition_variable cv_;

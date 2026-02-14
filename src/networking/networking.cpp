@@ -177,14 +177,15 @@ void Networking::Shutdown()
 	running_ = false;
 };
 
-void Networking::SendInputState(const InputState& state)
+void Networking::SendInputState(InputState& state)
 {
+	state.tick = currentTick;
 	client_->SendStateToServer(state);
 };
 
-std::vector<InputState> Networking::GetInputStates()
+std::unordered_map<int, InputState>& Networking::GetInputStates()
 {
-	return std::vector<InputState>();
+	return server_->GetLatestInputStates();
 }
 
 unsigned int Networking::UpdateScene(Scene& scene, AssetManager& assMan)

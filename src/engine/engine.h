@@ -47,8 +47,11 @@ private:
     glm::vec3 currentFurthestPosition;
 
     std::map<std::string, bool> settings_;
-    std::vector<InputState> previousInputStates_;
-    std::vector<InputState> currentInputStates_;
+    std::unordered_map<int, InputState> previousInputStates_;
+    std::unordered_map<int, InputState> currentInputStates_;
+    //std::vector<InputState> previousInputStates_;
+    //std::vector<InputState> currentInputStates_;
+    
 
     std::vector<unsigned int> addedModels = std::vector<unsigned int>();
     std::vector<unsigned int> removedModels = std::vector<unsigned int>();
