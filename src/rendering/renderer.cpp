@@ -8,16 +8,16 @@ Renderer::Renderer(unsigned int width, unsigned int height)
 
 Renderer::Renderer(unsigned int width, unsigned int height, bool showHitboxes, bool showSkyBox)
 {
-	std::string screenVert = FileHelper::GetShaderDir() + "/screen.vert";
-    std::string screenFrag = FileHelper::GetShaderDir() + "/screen.frag";
-    std::string modelVert  = FileHelper::GetShaderDir() + "/model.vert";
-    std::string modelFrag  = FileHelper::GetShaderDir() + "/model.frag";
-	std::string hitboxVert = FileHelper::GetShaderDir() + "/hitbox.vert";
-	std::string hitboxFrag = FileHelper::GetShaderDir() + "/hitbox.frag";
-	std::string skyboxVert = FileHelper::GetShaderDir() + "/skybox.vert";
-	std::string skyboxFrag = FileHelper::GetShaderDir() + "/skybox.frag";
-	std::string blurVert   = FileHelper::GetShaderDir() + "/blur.vert";
-	std::string blurFrag   = FileHelper::GetShaderDir() + "/blur.frag";
+	std::string screenVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "screen.vert").string();
+    std::string screenFrag = (std::filesystem::path(FileHelper::GetShaderDir()) / "screen.frag").string();
+    std::string modelVert  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.vert").string();
+    std::string modelFrag  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.frag").string();
+	std::string hitboxVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "hitbox.vert").string();
+	std::string hitboxFrag = (std::filesystem::path(FileHelper::GetShaderDir()) / "hitbox.frag").string();
+	std::string skyboxVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "skybox.vert").string();
+	std::string skyboxFrag = (std::filesystem::path(FileHelper::GetShaderDir()) / "skybox.frag").string();
+	std::string blurVert   = (std::filesystem::path(FileHelper::GetShaderDir()) / "blur.vert").string();
+	std::string blurFrag   = (std::filesystem::path(FileHelper::GetShaderDir()) / "blur.frag").string();
 	
     screenShader_ = std::make_unique<Shader>(screenVert.c_str(), screenFrag.c_str());
     modelShader_  = std::make_unique<Shader>(modelVert.c_str(), modelFrag.c_str());
@@ -172,15 +172,18 @@ Renderer::Renderer(unsigned int width, unsigned int height, bool showHitboxes, b
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
+	std::string base = (std::filesystem::path(FileHelper::GetAssetsDir()) / "skybox" / "NASA2").string();
+
 	std::vector<std::string> faces
 	{
-	    FileHelper::GetAssetsDir() + "/skybox/NASA2/posx.png",
-	    FileHelper::GetAssetsDir() + "/skybox/NASA2/negx.png",
-	    FileHelper::GetAssetsDir() + "/skybox/NASA2/posy.png",
-	    FileHelper::GetAssetsDir() + "/skybox/NASA2/negy.png",
-	    FileHelper::GetAssetsDir() + "/skybox/NASA2/posz.png",
-	    FileHelper::GetAssetsDir() + "/skybox/NASA2/negz.png"
+	    (std::filesystem::path(base) / "posx.png").string(),
+	    (std::filesystem::path(base) / "negx.png").string(),
+	    (std::filesystem::path(base) / "posy.png").string(),
+	    (std::filesystem::path(base) / "negy.png").string(),
+	    (std::filesystem::path(base) / "posz.png").string(),
+	    (std::filesystem::path(base) / "negz.png").string()
 	};
+
 	cubemapTexture_ = LoadCubemap(faces);
 
 	this->showHitboxes_ = showHitboxes;

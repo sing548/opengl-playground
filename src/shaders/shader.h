@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <filesystem>
 
 #include <glm/glm.hpp>
 
@@ -15,19 +16,22 @@ class Shader
 public:
 	unsigned int ID;
 
-	Shader(const char* vertexPath, const char* fragmentPath)
+	Shader(const std::filesystem::path vertexPath, const std::filesystem::path fragmentPath)
 	{
 		std::string vertexCode;
 		std::string fragmentCode;
 		std::ifstream vShaderFile;
 		std::ifstream fShaderFile;
 
+		std::string vertexPathString = vertexPath.string();
+		std::string fragmentPathString = fragmentPath.string();
+
 		vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 		fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 		try
 		{
-			vShaderFile.open(vertexPath);
-			fShaderFile.open(fragmentPath);
+			vShaderFile.open(vertexPathString);
+			fShaderFile.open(fragmentPathString);
 			std::stringstream vShaderStream, fShaderStream;
 
 			vShaderStream << vShaderFile.rdbuf();
@@ -41,8 +45,8 @@ public:
 		}
 		catch (std::ifstream::failure e)
 		{
-			std::cout << "Loading vertex shader: " << vertexPath << std::endl;
-			std::cout << "Loading fragment shader: " << fragmentPath << std::endl;
+			std::cout << "Loading vertex shader: " << vertexPathString << std::endl;
+			std::cout << "Loading fragment shader: " << fragmentPathString << std::endl;
 			std::cerr << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ: " << e.what() << std::endl;
     		throw std::runtime_error("Shader file read failed");
 		}

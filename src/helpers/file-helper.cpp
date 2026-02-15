@@ -7,20 +7,32 @@ void FileHelper::SetBaseDir(std::string dir)
 	baseDir = dir;
 }
 
-std::string FileHelper::GetShaderDir() 
+std::string FileHelper::GetShaderDir()
 {
+    namespace fs = std::filesystem;
+
     try {
-        return (std::filesystem::canonical(baseDir).parent_path() / "shaders").string();
-    } catch (...) {
-        return "./shaders";  // Fallback to current directory
+        fs::path exeDir = fs::weakly_canonical(baseDir).parent_path();
+        fs::path shaderDir = exeDir / "shaders";
+        return shaderDir.lexically_normal().string();
+    }
+    catch (const fs::filesystem_error&) {
+        return (fs::current_path() / "shaders").string();
     }
 }
 
 std::string FileHelper::GetAssetsDir()
 {
+    namespace fs = std::filesystem;
+
     try {
-        return (std::filesystem::canonical(baseDir).parent_path() / "assets").string();
-    } catch (...) {
-        return "./assets";  // Fallback to current directory
+        fs::path exeDir = fs::weakly_canonical(baseDir).parent_path();
+        fs::path assetsDir = exeDir / "assets";
+        std::cout << "Try output: " << assetsDir.lexically_normal().string() << std::endl;
+        return assetsDir.lexically_normal().string();
+    }
+    catch (const fs::filesystem_error&) {
+        std::cout << "Catch output" << std::endl;
+        return (fs::current_path() / "assets").string();
     }
 }

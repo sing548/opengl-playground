@@ -68,7 +68,7 @@ Networking::Networking(bool bServer, const Scene& scene)
             {
                 SteamNetworkingIPAddr addrServer;
                 addrServer.Clear();
-                addrServer.ParseString("127.0.0.1:5001");
+                addrServer.ParseString("192.168.178.25:5001");
 				client_->ClientLoop(addrServer, running_);
             }
             catch(const std::exception& e)

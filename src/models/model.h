@@ -42,10 +42,6 @@ enum ModelType
     Count
 };
 
-
-
-
-
 class Model
 {
 public:
@@ -90,7 +86,7 @@ public:
     
 private:
 
-    static const std::array<std::string, static_cast<size_t>(ModelType::Count)> ModelPaths;
+    static const std::array<std::filesystem::path, static_cast<size_t>(ModelType::Count)> ModelPaths;
 
     PhysicalInfo physicalInfo_;
 };

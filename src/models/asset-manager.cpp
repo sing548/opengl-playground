@@ -28,7 +28,10 @@ void AssetManager::LoadModelInternal(const std::string& path)
 		return;
 	}
 
-	std::string directory = path.substr(0, path.find_last_of('/'));
+	
+	std::filesystem::path p(path);
+	std::string directory = p.parent_path().string();
+	//std::string directory = path.substr(0, path.find_last_of('/'));
 	ProcessNode(scene->mRootNode, scene, directory, path);
 }
 
@@ -175,7 +178,7 @@ std::vector<Texture> AssetManager::LoadMaterialTextures(aiMaterial* mat, aiTextu
 unsigned int AssetManager::TextureFromFile(const char* path, const std::string& directory, bool gamma)
 {
 	std::string filename = std::string(path);
-	filename = directory + '/' + filename;
+	filename = (std::filesystem::path(directory) / filename).string();
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
 	int width, height, nrComponents;
@@ -203,7 +206,7 @@ unsigned int AssetManager::TextureFromFile(const char* path, const std::string& 
 	}
 	else
 	{
-		std::cout << "Texture failed to load at path: " << path << std::endl;
+		std::cout << "Texture failed to load at path: " << filename << std::endl;
 		stbi_image_free(data);
 	}
 

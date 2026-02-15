@@ -3,10 +3,10 @@
 Mesh* Model::hitboxSphere_ = nullptr;
 bool Model::hitboxSphereInitialized_ = false;
 
-const std::array<std::string, static_cast<size_t>(ModelType::Count)>  Model::ModelPaths = 
+const std::array<std::filesystem::path, static_cast<size_t>(ModelType::Count)>  Model::ModelPaths = 
 {
-    "/models/tie2/bland-tie.obj",
-    "/models/shot/longshot.obj"
+    std::filesystem::path("models") / "tie2" / "bland-tie.obj",
+    std::filesystem::path("models") / "shot" / "longshot.obj"
 };
 
 
@@ -181,6 +181,6 @@ void Model::CreateHitboxSphere()
 
 std::string Model::GetModelPath(ModelType type)
 {
-    return FileHelper::GetAssetsDir() + ModelPaths[static_cast<size_t>(type)];
+    return (FileHelper::GetAssetsDir() / ModelPaths[static_cast<size_t>(type)]).string();
 }
 
