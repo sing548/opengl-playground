@@ -127,44 +127,63 @@ void Engine::SetupScene(std::vector<Model> models)
 
 void Engine::Run()
 {
-    int i = 0;
-    float accTime = 0.0f;
+    const float fixedDelta = 1.0f / 60.0f;
 
+    int i = 0, j = 0;
+    float accTime = 0.0f;
+    float fpsTime = 0.0f;
+    float logicTime = 0.0f;
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
     uint32_t newClient = 0;
 
     while (!glfwWindowShouldClose(window_->Get())) {
+
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
 	    lastFrame = currentFrame;
         accTime += deltaTime;
-         
-        gameClock_ = std::chrono::steady_clock::now();
+        fpsTime += deltaTime;
+        logicTime += deltaTime;
 
         removedModels.clear();
         addedModels.clear();
         
         glfwPollEvents();
-        ReconcileNetwork();
-        CollectInputs(deltaTime);
-        ExecuteInput(deltaTime);
-        HandleLogic(deltaTime);
 
-        if (newClient != 0)
+        while (accTime >= fixedDelta)
         {
-            AddNewPlayer(newClient);
-        }
+            ReconcileNetwork();
+            CollectInputs(fixedDelta);
+            ExecuteInput(fixedDelta);
+            HandleLogic(fixedDelta);
 
-        newClient = 0;
+            accTime -= fixedDelta;
 
-        if (m_bNetworking && m_bServer)
-        {
-           newClient = networking_->SendGameState(*scene_, addedModels, removedModels, deltaTime);    
-        }
-        else if (m_bNetworking && playerId_ >= 0)
-        {
-            networking_->SendInputState(currentInputStates_.at(playerId_));
+            if (newClient != 0)
+            {
+                AddNewPlayer(newClient);
+            }
+    
+            newClient = 0;
+    
+            if (m_bNetworking && m_bServer)
+            {
+               newClient = networking_->SendGameState(*scene_, addedModels, removedModels, fixedDelta);    
+            }
+            else if (m_bNetworking && playerId_ >= 0)
+            {
+                networking_->SendInputState(currentInputStates_.at(playerId_));
+            }
+
+            j++;
+            // Logic/s counter in console
+            if (logicTime >= 1) 
+            {
+                std::cout << "Current Logic/s: " << j / logicTime << std::endl;
+                j = 0;
+                logicTime = 0;
+            }
         }
 
         renderer_->Draw(*scene_, window_->GetCamera(), window_->GetSize().width, window_->GetSize().height, settings_);
@@ -172,10 +191,10 @@ void Engine::Run()
 
         i++;
         // FPS counter in console
-        if (accTime >= 1) {
-            std::cout << "Current FPS: " << i / accTime << std::endl;
+        if (fpsTime >= 1) {
+            std::cout << "Current FPS: " << i / fpsTime << std::endl;
             i = 0;
-            accTime = 0;
+            fpsTime = 0;
         }
     }
     
@@ -302,7 +321,7 @@ void Engine::AdjustCamera()
 
         float oldHeight = window_->GetCamera().Position.y;
 
-        float changeRate = 0.25f;
+        float changeRate = 0.5f;
 
         if (abs(h - oldHeight) > changeRate) {
             if (h > oldHeight) h = oldHeight + changeRate;
@@ -323,7 +342,7 @@ void Engine::Shoot(Model shooter)
     pi.scale_ = glm::vec3(0.05f, 0.05f, 0.05f);
     pi.orientation_ = shooter.GetOrientation();
     pi.baseOrientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
-    pi.speed_ = shooter.GetSpeed() + glm::vec3(0.1f, 0.0f, 0.0f);
+    pi.speed_ = shooter.GetSpeed() + glm::vec3(0.15f, 0.0f, 0.0f);
 
     Model shot(Model::GetModelPath(ModelType::SHOT), pi, *assMan_, ModelType::SHOT, true, 0.05f);
 
@@ -453,25 +472,25 @@ void Engine::ExecuteInput(float deltaTime)
     for (auto& [playerId, state] : currentInputStates_)
     {
         if (state.left) 
-            RotateModel(playerId, {0.0f, glm::radians(0.7f), 0.0f});
+            RotateModel(playerId, {0.0f, glm::radians(2.1f), 0.0f});
 
         if (state.right)
-            RotateModel(playerId, {0.0f, glm::radians(-0.7f), 0.0f});
+            RotateModel(playerId, {0.0f, glm::radians(-2.1f), 0.0f});
 
         if (state.forward) 
         {
-            float acc = deltaTime * 0.05f;
+            float acc = deltaTime * 0.15f;
             glm::vec3 speed = scene_->GetModelByReference(playerId).GetSpeed();
             speed.x += acc;
 
             // Max Speed
-            if (0.1f > speed.x)
+            if (0.2f > speed.x)
                 scene_->GetModelByReference(playerId).SetSpeed(speed);
         } else 
         {
-            float acc = deltaTime * 0.05f;
+            float acc = deltaTime * 0.15f;
             if (state.backward)
-                acc = deltaTime * .2f;
+                acc = deltaTime * .6f;
             glm::vec3 speed = scene_->GetModelByReference(playerId).GetSpeed();
 
             if (speed.x > 0) speed.x -= acc;

@@ -33,8 +33,6 @@ private:
 
     int playerId_;
 
-    std::chrono::steady_clock::time_point gameClock_;
-
     std::unique_ptr<Window> window_;
     std::unique_ptr<InputManager> inputManager_;
     std::unique_ptr<Camera> camera_;

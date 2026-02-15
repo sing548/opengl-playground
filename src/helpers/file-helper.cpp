@@ -28,7 +28,6 @@ std::string FileHelper::GetAssetsDir()
     try {
         fs::path exeDir = fs::weakly_canonical(baseDir).parent_path();
         fs::path assetsDir = exeDir / "assets";
-        std::cout << "Try output: " << assetsDir.lexically_normal().string() << std::endl;
         return assetsDir.lexically_normal().string();
     }
     catch (const fs::filesystem_error&) {
