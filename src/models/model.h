@@ -14,6 +14,7 @@
 #include "mesh.h"
 #include "../shaders/shader.h"
 #include "asset-manager.h"
+#include "../helpers/file-helper.h"
 
 #include <string>
 #include <fstream>
@@ -23,10 +24,6 @@
 #include <vector>
 #include <array>
 #include <string_view>
-
-#ifndef ASSETS_DIR
-#define ASSETS_DIR "./assets"
-#endif
 
 struct PhysicalInfo {
     glm::vec3 position_;
@@ -45,16 +42,9 @@ enum ModelType
     Count
 };
 
-constexpr std::array<std::string_view, static_cast<size_t>(ModelType::Count)> ModelPaths =
-{
-    ASSETS_DIR "/models/tie2/bland-tie.obj",
-    ASSETS_DIR "/models/shot/longshot.obj"
-};
 
-constexpr std::string_view getModelPath(ModelType type)
-{
-    return ModelPaths[static_cast<size_t>(type)];
-}
+
+
 
 class Model
 {
@@ -95,8 +85,13 @@ public:
     
     static Mesh* hitboxSphere_;
     static bool hitboxSphereInitialized_;
+
+    static std::string GetModelPath(ModelType type);
     
-    private:
+private:
+
+    static const std::array<std::string, static_cast<size_t>(ModelType::Count)> ModelPaths;
+
     PhysicalInfo physicalInfo_;
 };
 

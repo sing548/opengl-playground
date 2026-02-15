@@ -234,7 +234,7 @@ unsigned int Networking::UpdateScene(Scene& scene, AssetManager& assMan)
 			default: type = ModelType::SHOT;	break;
 		}
 	
-		Model model(getModelPath(type), pi, assMan, type, true, entity.radius);
+		Model model(Model::GetModelPath(type), pi, assMan, type, true, entity.radius);
 		scene.AddModel(model, entity.id);
 	}
 

@@ -61,7 +61,7 @@ Engine::Engine(int config)
             pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
             pi.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
             pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
-            Model model(getModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
+            Model model(Model::GetModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
             models.push_back(model);
         }
         
@@ -100,7 +100,7 @@ std::vector<Model> Engine::BasicLevel()
     pi.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
     pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
 
-    Model model(getModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
+    Model model(Model::GetModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
     models.push_back(model);
 
     PhysicalInfo pi2 = PhysicalInfo();
@@ -110,7 +110,7 @@ std::vector<Model> Engine::BasicLevel()
     pi2.orientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
     pi2.baseOrientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
 
-    Model model2(getModelPath(ModelType::PLAYER), pi2, *assMan_, ModelType::PLAYER);
+    Model model2(Model::GetModelPath(ModelType::PLAYER), pi2, *assMan_, ModelType::PLAYER);
     models.push_back(model2);
 
     return models;
@@ -325,7 +325,7 @@ void Engine::Shoot(Model shooter)
     pi.baseOrientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
     pi.speed_ = shooter.GetSpeed() + glm::vec3(0.1f, 0.0f, 0.0f);
 
-    Model shot(getModelPath(ModelType::SHOT), pi, *assMan_, ModelType::SHOT, true, 0.05f);
+    Model shot(Model::GetModelPath(ModelType::SHOT), pi, *assMan_, ModelType::SHOT, true, 0.05f);
 
     AddModel(shot);
 }
@@ -338,7 +338,7 @@ void Engine::AddNewPlayer(uint32_t id)
     pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
     pi.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
     pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
-    Model model(getModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
+    Model model(Model::GetModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
 
     AddModel(model, id);
     

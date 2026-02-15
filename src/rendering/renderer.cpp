@@ -1,14 +1,5 @@
 #include "renderer.h"
 
-#ifndef SHADER_DIR
-#define SHADER_DIR "./shaders"
-#endif
-
-#ifndef ASSETS_DIR
-#define ASSETS_DIR "./assets"
-#endif
-
-
 Renderer::Renderer(unsigned int width, unsigned int height)
 	: Renderer(width, height, false, true)
 {
@@ -17,16 +8,16 @@ Renderer::Renderer(unsigned int width, unsigned int height)
 
 Renderer::Renderer(unsigned int width, unsigned int height, bool showHitboxes, bool showSkyBox)
 {
-	std::string screenVert = std::string(SHADER_DIR) + "/screen.vert";
-    std::string screenFrag = std::string(SHADER_DIR) + "/screen.frag";
-    std::string modelVert  = std::string(SHADER_DIR) + "/model.vert";
-    std::string modelFrag  = std::string(SHADER_DIR) + "/model.frag";
-	std::string hitboxVert = std::string(SHADER_DIR) + "/hitbox.vert";
-	std::string hitboxFrag = std::string(SHADER_DIR) + "/hitbox.frag";
-	std::string skyboxVert = std::string(SHADER_DIR) + "/skybox.vert";
-	std::string skyboxFrag = std::string(SHADER_DIR) + "/skybox.frag";
-	std::string blurVert   = std::string(SHADER_DIR) + "/blur.vert";
-	std::string blurFrag   = std::string(SHADER_DIR) + "/blur.frag";
+	std::string screenVert = FileHelper::GetShaderDir() + "/screen.vert";
+    std::string screenFrag = FileHelper::GetShaderDir() + "/screen.frag";
+    std::string modelVert  = FileHelper::GetShaderDir() + "/model.vert";
+    std::string modelFrag  = FileHelper::GetShaderDir() + "/model.frag";
+	std::string hitboxVert = FileHelper::GetShaderDir() + "/hitbox.vert";
+	std::string hitboxFrag = FileHelper::GetShaderDir() + "/hitbox.frag";
+	std::string skyboxVert = FileHelper::GetShaderDir() + "/skybox.vert";
+	std::string skyboxFrag = FileHelper::GetShaderDir() + "/skybox.frag";
+	std::string blurVert   = FileHelper::GetShaderDir() + "/blur.vert";
+	std::string blurFrag   = FileHelper::GetShaderDir() + "/blur.frag";
 	
     screenShader_ = std::make_unique<Shader>(screenVert.c_str(), screenFrag.c_str());
     modelShader_  = std::make_unique<Shader>(modelVert.c_str(), modelFrag.c_str());
@@ -183,12 +174,12 @@ Renderer::Renderer(unsigned int width, unsigned int height, bool showHitboxes, b
 
 	std::vector<std::string> faces
 	{
-	    ASSETS_DIR "/skybox/NASA2/posx.png",
-	    ASSETS_DIR "/skybox/NASA2/negx.png",
-	    ASSETS_DIR "/skybox/NASA2/posy.png",
-	    ASSETS_DIR "/skybox/NASA2/negy.png",
-	    ASSETS_DIR "/skybox/NASA2/posz.png",
-	    ASSETS_DIR "/skybox/NASA2/negz.png"
+	    FileHelper::GetAssetsDir() + "/skybox/NASA2/posx.png",
+	    FileHelper::GetAssetsDir() + "/skybox/NASA2/negx.png",
+	    FileHelper::GetAssetsDir() + "/skybox/NASA2/posy.png",
+	    FileHelper::GetAssetsDir() + "/skybox/NASA2/negy.png",
+	    FileHelper::GetAssetsDir() + "/skybox/NASA2/posz.png",
+	    FileHelper::GetAssetsDir() + "/skybox/NASA2/negz.png"
 	};
 	cubemapTexture_ = LoadCubemap(faces);
 

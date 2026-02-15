@@ -2,12 +2,14 @@
 #define RENDERER_H
 
 #include <memory>
+#include <filesystem>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/gtc/quaternion.hpp>
 
 #include "../models/scene.h"
 #include "../camera/camera.h"
+#include "../helpers/file-helper.h"
 
 class Renderer
 {
@@ -18,6 +20,7 @@ public:
     void Draw(const Scene& scene, const Camera& camera, unsigned int width, unsigned int height, const std::map<std::string, bool>& settings);
     void ToggleHitboxes();
     void ToggleSkyBox();
+
 private:
     unsigned int frameFBO_;
     unsigned int colorBuffers_[2];
@@ -35,7 +38,7 @@ private:
     std::unique_ptr<Shader> hitboxShader_;
     std::unique_ptr<Shader> skyboxShader_;
     std::unique_ptr<Shader> blurShader_;
-
+    
     unsigned int LoadCubemap(std::vector<std::string> faces);
 };
 

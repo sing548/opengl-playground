@@ -13,9 +13,11 @@
 int main(int argc, const char *argv[]) {
 
     bool bServer = false;
-	bool bClient = true;
+	bool bClient = false;
 	int nPort = 5001;
 	SteamNetworkingIPAddr addrServer; addrServer.Clear();
+
+    FileHelper::SetBaseDir(argv[0]);
 
 	for ( int i = 1 ; i < argc ; ++i )
 	{

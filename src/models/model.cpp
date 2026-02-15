@@ -3,6 +3,13 @@
 Mesh* Model::hitboxSphere_ = nullptr;
 bool Model::hitboxSphereInitialized_ = false;
 
+const std::array<std::string, static_cast<size_t>(ModelType::Count)>  Model::ModelPaths = 
+{
+    "/models/tie2/bland-tie.obj",
+    "/models/shot/longshot.obj"
+};
+
+
 Model::Model(float radius, PhysicalInfo pi, ModelType type) : gammaCorrection(false), 
 	physicalInfo_ (pi), radius_(radius), type_(type)
 {
@@ -171,3 +178,9 @@ void Model::CreateHitboxSphere()
 	hitboxSphere_ = new Mesh(vertices, indices, textures);
 	hitboxSphereInitialized_ = true;
 }
+
+std::string Model::GetModelPath(ModelType type)
+{
+    return FileHelper::GetAssetsDir() + ModelPaths[static_cast<size_t>(type)];
+}
+
