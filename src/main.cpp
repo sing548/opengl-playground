@@ -15,6 +15,7 @@ int main(int argc, const char *argv[]) {
     bool bServer = false;
 	bool bClient = false;
 	int nPort = 5001;
+    const char *serverUrl = nullptr;
 	SteamNetworkingIPAddr addrServer; addrServer.Clear();
 
     FileHelper::SetBaseDir(argv[0]);
@@ -54,7 +55,8 @@ int main(int argc, const char *argv[]) {
 
 		if ( bClient && addrServer.IsIPv6AllZeros() )
 		{
-			if ( !addrServer.ParseString( argv[i] ) )
+            serverUrl = argv[i]
+;			if ( !addrServer.ParseString( argv[i] ) )
             {
                 std::printf("Invalid server address '%s'", argv[i]);
                 return 0;
@@ -71,7 +73,7 @@ int main(int argc, const char *argv[]) {
         if (bServer)
             engine = new Engine(1);
         else if (bClient)
-            engine = new Engine(2);
+            engine = new Engine(2, serverUrl);
         else 
         {
             engine = new Engine(0);

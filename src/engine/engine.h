@@ -18,7 +18,7 @@
 class Engine {
 public:
 
-    Engine(int config);
+    Engine(int config, const char *serverAddr = nullptr);
     std::vector<Model> BasicLevel();
     void SetupScene(std::vector<Model>);
     void Run();

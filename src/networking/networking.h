@@ -35,7 +35,7 @@ class Networking
 {
 
 public:
-    Networking(bool bServer, const Scene& scene);
+    Networking(bool bServer, const Scene& scene, const char *serverAddr = nullptr);
     ~Networking();
 
     void SendInputState(InputState& state);

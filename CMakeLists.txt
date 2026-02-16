@@ -80,6 +80,24 @@ foreach(SHADER_FILE ${SHADERS})
     configure_file(${SHADER_FILE} ${CMAKE_CURRENT_BINARY_DIR}/shaders/${FILE_NAME} COPYONLY)
 endforeach()
 
+# 1. Find all files recursively in the assets folder
+file(GLOB_RECURSE ASSET_FILES 
+    RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+    "assets/*.mtl"
+    "assets/*.obj"
+    "assets/*.png"
+    "assets/*.jpg"
+)
+
+# 2. Loop through and copy them while maintaining structure
+foreach(ASSET_PATH ${ASSET_FILES})
+    configure_file(
+        "assets/${ASSET_PATH}" 
+        "${CMAKE_CURRENT_BINARY_DIR}/assets/${ASSET_PATH}" 
+        COPYONLY
+    )
+endforeach()
+
 target_compile_definitions(OpenGLPlayground PRIVATE
     SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/shaders"
     ASSETS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"

@@ -20,7 +20,7 @@ void ClientLogic::ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomi
 	// Start connecting
 	char szAddr[ SteamNetworkingIPAddr::k_cchMaxString ];
 	serverAddr.ToString( szAddr, sizeof(szAddr), true );
-	std::printf( "Connecting to chat server at %s\n", szAddr );
+	std::printf( "Connecting as client to server at %s\n", szAddr );
 	SteamNetworkingConfigValue_t opt;
 	opt.SetPtr( k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged, (void*)SteamNetConnectionStatusChangedCallbackClient );
 	m_hConnection = m_pInterface->ConnectByIPAddress( serverAddr, 1, &opt );

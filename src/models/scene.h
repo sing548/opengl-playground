@@ -21,7 +21,7 @@ public:
     unsigned int AddModel(Model& model, int id = -1);
     unsigned int AddModelWithId(Model& model, unsigned int id);
     const std::unordered_map<uint32_t, Model>& GetModels() const;
-    std::unordered_map<uint32_t, std::reference_wrapper<Model>> GetPlayerModels();
+    const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> GetPlayerModels() const;
     Model& GetModelByReference(unsigned int id);
     void RemoveModel(unsigned int Id);
 

@@ -1,37 +1,22 @@
 #include "file-helper.h"
 
-std::string FileHelper::baseDir = "";
+std::string FileHelper::baseDir_ = "";
+std::string FileHelper::shaderDir_ = "";
+std::string FileHelper::assetsDir_ = "";
 
 void FileHelper::SetBaseDir(std::string dir)
 {
-	baseDir = dir;
+	baseDir_ = std::filesystem::weakly_canonical(dir).parent_path();
+    shaderDir_ = (std::filesystem::path(baseDir_) / "shaders").lexically_normal().string();
+    assetsDir_ = (std::filesystem::path(baseDir_) / "assets").lexically_normal().string();
 }
 
 std::string FileHelper::GetShaderDir()
 {
-    namespace fs = std::filesystem;
-
-    try {
-        fs::path exeDir = fs::weakly_canonical(baseDir).parent_path();
-        fs::path shaderDir = exeDir / "shaders";
-        return shaderDir.lexically_normal().string();
-    }
-    catch (const fs::filesystem_error&) {
-        return (fs::current_path() / "shaders").string();
-    }
+    return shaderDir_;
 }
 
 std::string FileHelper::GetAssetsDir()
 {
-    namespace fs = std::filesystem;
-
-    try {
-        fs::path exeDir = fs::weakly_canonical(baseDir).parent_path();
-        fs::path assetsDir = exeDir / "assets";
-        return assetsDir.lexically_normal().string();
-    }
-    catch (const fs::filesystem_error&) {
-        std::cout << "Catch output" << std::endl;
-        return (fs::current_path() / "assets").string();
-    }
+    return assetsDir_;
 }

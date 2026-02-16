@@ -14,7 +14,9 @@ public:
     static std::string GetAssetsDir();
 
 private:
-    static std::string baseDir;
+    static std::string baseDir_;
+    static std::string assetsDir_;
+    static std::string shaderDir_;
 };
 
 #endif

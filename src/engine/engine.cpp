@@ -1,6 +1,6 @@
 #include "engine.h"
 
-Engine::Engine(int config)
+Engine::Engine(int config, const char *serverAddr)
 {
     if (config == 1)
     {
@@ -70,7 +70,9 @@ Engine::Engine(int config)
         if (m_bServer)
             networking_ = new Networking(true, *scene_);
         else
-            networking_ = new Networking(false, *scene_);
+        {
+            networking_ = new Networking(false, *scene_, serverAddr);
+        }
     }
     else
     {
@@ -259,6 +261,9 @@ void Engine::CheckHits()
 
     for (auto& [id, other] : scene_->GetModels())
     {
+        if (other.type_ == ModelType::PLAYER)
+            continue;
+        
         glm::vec3 otherPos = other.GetPosition();
         float otherRadius = other.GetRadius();
 

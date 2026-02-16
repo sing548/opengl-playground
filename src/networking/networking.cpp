@@ -1,6 +1,6 @@
 #include "networking.h"
 
-Networking::Networking(bool bServer, const Scene& scene)
+Networking::Networking(bool bServer, const Scene& scene, const char *serverAddr)
 {
 	m_bServer = bServer;
     #ifdef STEAMNETWORKINGSOCKETS_OPENSOURCE
@@ -63,12 +63,12 @@ Networking::Networking(bool bServer, const Scene& scene)
     {
 		client_ = std::make_unique<ClientLogic>();
 
-        networkThread_ = std::thread([this]() {
+        networkThread_ = std::thread([this, serverAddr]() {
             try
             {
                 SteamNetworkingIPAddr addrServer;
                 addrServer.Clear();
-                addrServer.ParseString("192.168.178.25:5001");
+                addrServer.ParseString(serverAddr);
 				client_->ClientLoop(addrServer, running_);
             }
             catch(const std::exception& e)

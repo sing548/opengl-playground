@@ -49,17 +49,15 @@ Model& Scene::GetModelByReference(unsigned int id) {
     throw std::out_of_range("No model found with given ID");
 }
 
-std::unordered_map<uint32_t, std::reference_wrapper<Model>>Scene::GetPlayerModels()
+const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> Scene::GetPlayerModels() const
 {
-    std::unordered_map<uint32_t, std::reference_wrapper<Model>> result;
-
+    std::unordered_map<uint32_t, std::reference_wrapper<const Model>> result;
     for (auto& [id, modelRef] : models_)
     {
         if (modelRef.type_ == ModelType::PLAYER)
         {
-            result.emplace(id, modelRef);
+            result.emplace(id, std::ref(modelRef));
         }
     }
-
     return result;
 }
