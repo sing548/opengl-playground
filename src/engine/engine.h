@@ -12,6 +12,10 @@
 #include "../models/asset-manager.h"
 #include "../networking/networking.h"
 
+#include "../systems/physics-system.h"
+#include "../systems/player-system.h"
+#include "../systems/shot-system.h"
+
 #include <map>
 #include <thread>
 
@@ -40,6 +44,10 @@ private:
     std::unique_ptr<Scene> scene_;
     std::unique_ptr<AssetManager> assMan_;
 
+    PhysicsSystem physicsSystem_;
+    PlayerSystem playerSystem_;
+    ShotSystem shotSystem_;
+
     void ChangeSetting(std::string key, bool value);
     glm::vec2 maxScreenSize_;
     glm::vec3 currentFurthestPosition;
@@ -47,10 +55,7 @@ private:
     std::map<std::string, bool> settings_;
     std::unordered_map<int, InputState> previousInputStates_;
     std::unordered_map<int, InputState> currentInputStates_;
-    //std::vector<InputState> previousInputStates_;
-    //std::vector<InputState> currentInputStates_;
     
-
     std::vector<unsigned int> addedModels = std::vector<unsigned int>();
     std::vector<unsigned int> removedModels = std::vector<unsigned int>();
 
@@ -68,10 +73,8 @@ private:
     void AddNewPlayer(uint32_t id);
     void AddModel(Model& model, uint32_t id = 0);
     void RemoveModel(unsigned int id);
-    void MoveModel(unsigned int id, const glm::vec3& change);
     void RotateModel(unsigned int id, const glm::vec3& change);
 
-    void MoveModels();
     void Shoot(Model shooter);
     void AdjustCamera();
 };

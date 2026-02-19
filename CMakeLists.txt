@@ -42,6 +42,9 @@ add_executable(OpenGLPlayground
     src/networking/client-logic.cpp
     src/networking/server-logic.cpp
     src/helpers/file-helper.cpp
+    src/systems/physics-system.cpp
+    src/systems/player-system.cpp
+    src/systems/shot-system.cpp
     include/glad/glad.c
     include/stb/stb_image.cpp
 )

@@ -39,6 +39,8 @@ private:
     std::unique_ptr<Shader> skyboxShader_;
     std::unique_ptr<Shader> blurShader_;
     
+    void DrawSkybox(const Camera& camera, glm::mat4& projection);
+    void PostProcessing();
     unsigned int LoadCubemap(std::vector<std::string> faces);
 };
 

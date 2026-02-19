@@ -202,6 +202,7 @@ void Renderer::ToggleSkyBox()
 
 void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width, unsigned int height, const std::map<std::string, bool>& settings)
 {
+	//ToDo: ECS (Entity Component System)
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_MULTISAMPLE);
 	glBindFramebuffer(GL_FRAMEBUFFER, frameFBO_);
@@ -228,8 +229,8 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 	int i = 0;
 	for (auto& [id, model] : models)
 	{
-		if (i > 1) {
-			std::string pos = std::to_string(i - 2);
+		if (model.type_ == ModelType::SHOT) {
+			std::string pos = std::to_string(i);
 
 			modelShader_->SetVec3("pointLights[" + pos + "].position", model.GetPosition());
 
@@ -240,8 +241,8 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 			modelShader_->SetFloat("pointLights[" + pos + "].constant", 1.0f);
 			modelShader_->SetFloat("pointLights[" + pos + "].linear", 0.09f);
 			modelShader_->SetFloat("pointLights[" + pos + "].quadratic", 0.032f);
+			i++;
 		}
-		i++;
 	}
 	
 	if (i > 256) i = 256;
@@ -265,24 +266,6 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 	hitboxShader_->SetMat4("projection", projection);
 	hitboxShader_->SetMat4("view", view);
 
-	for (auto& [id, modelRef] : scene.GetPlayerModels())
-	{
-		auto model = modelRef.get();
-
-		glm::mat4 modelMat = glm::mat4(1.0f);
-    	modelMat = glm::translate(modelMat, model.GetPosition());
-    	modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
-
-    	hitboxShader_->SetMat4("projection", projection);
-    	hitboxShader_->SetMat4("view", view);
-    	hitboxShader_->SetMat4("model", modelMat);
-
-    	// Draw unit sphere as wireframe
-    	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		model.DrawHitbox(*hitboxShader_);
-    	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	}
-
 	if (this->showHitboxes_)
 	for (auto& [id, model] : models)
 	{
@@ -302,27 +285,58 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 	
 	if (this->showSkyBox_)
 	{
-		glDepthFunc(GL_LEQUAL);          // allow skybox depth = 1.0 to pass
-    	glDepthMask(GL_FALSE);           // disable writing to depth buffer
-
-    	skyboxShader_->Use();
-    	glm::mat4 viewNoTranslation = glm::mat4(glm::mat3(camera.GetViewMatrix())); // remove translation
-    	skyboxShader_->SetMat4("view", viewNoTranslation);
-    	skyboxShader_->SetMat4("projection", projection);
-
-    	glBindVertexArray(skyboxVAO_);
-    	glActiveTexture(GL_TEXTURE0);
-    	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture_);
-    	glDrawArrays(GL_TRIANGLES, 0, 36);
-    	glBindVertexArray(0);
-
-    	glDepthMask(GL_TRUE);            // restore depth writing
-    	glDepthFunc(GL_LESS);            // restore default depth test
+		DrawSkybox(camera, projection);
 	}
 	
 	// ---------- Post-processing / Render to screen ----------
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);  // back to default framebuffer
 
+	if (settings.at("bloom"))
+	{
+		PostProcessing();
+	}
+	else
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+		screenShader_->Use();
+		screenShader_->SetInt("screenTexture", 0);
+		screenShader_->SetInt("bloomTexture", 1);
+		screenShader_->SetInt("bloom", settings.at("bloom"));
+		screenShader_->SetFloat("exposure", 1.0f);
+	
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, colorBuffers_[0]);
+	}
+
+	glBindVertexArray(quadVAO_);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glBindVertexArray(0);
+}
+
+void Renderer::DrawSkybox(const Camera& camera, glm::mat4& projection)
+{
+	glDepthFunc(GL_LEQUAL);          // allow skybox depth = 1.0 to pass
+    glDepthMask(GL_FALSE);           // disable writing to depth buffer
+
+    skyboxShader_->Use();
+    glm::mat4 viewNoTranslation = glm::mat4(glm::mat3(camera.GetViewMatrix())); // remove translation
+    skyboxShader_->SetMat4("view", viewNoTranslation);
+    skyboxShader_->SetMat4("projection", projection);
+
+    glBindVertexArray(skyboxVAO_);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture_);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+
+    glDepthMask(GL_TRUE);            // restore depth writing
+    glDepthFunc(GL_LESS);            // restore default depth test
+}
+
+void Renderer::PostProcessing()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);  // back to default framebuffer
 
 	bool horizontal = true, firstIteration = true;
 	unsigned int amount = 10;
@@ -351,17 +365,13 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
     screenShader_->Use();
 	screenShader_->SetInt("screenTexture", 0);
 	screenShader_->SetInt("bloomTexture", 1);
-	screenShader_->SetInt("bloom", settings.at("bloom"));
+	screenShader_->SetInt("bloom", true);
 	screenShader_->SetFloat("exposure", 1.0f);
 
     glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, colorBuffers_[0]);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, pingPongColorbuffers_[1]);
-
-	glBindVertexArray(quadVAO_);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glBindVertexArray(0);
 }
 
 unsigned int Renderer::LoadCubemap(std::vector<std::string> faces)

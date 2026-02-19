@@ -12,6 +12,16 @@ struct ModelWithReference
         : Id(id), model(std::move(m)) {}
 };
 
+struct ShotData
+{
+
+};
+
+struct PlayerData
+{
+
+};
+
 class Scene
 {
 public:
@@ -27,9 +37,14 @@ public:
 
     uint32_t currentTick = 0;
 
+    glm::vec3 currentFurthestPosition_;
+
 private:
     unsigned int nextId_;
     std::unordered_map<uint32_t, Model> models_;
+
+    std::unordered_map<uint32_t, ShotData> shotData_;
+    std::unordered_map<uint32_t, PlayerData> playerData_;
 };
 
 #endif

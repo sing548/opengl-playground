@@ -244,7 +244,9 @@ void Engine::ReconcileNetwork()
 
 void Engine::HandleLogic(float deltaTime)
 {
-    MoveModels();
+    physicsSystem_.Update(*scene_);
+    playerSystem_.Update(*scene_);
+    shotSystem_.Update(*scene_);
     
     bool adjust = settings_["adjust_camera"];
 
@@ -315,8 +317,8 @@ void Engine::AdjustCamera()
         float halfFovTan = tanf(fovyRadians * 0.5f);
 
         // Required heights in each axis
-        float requiredX = (abs(currentFurthestPosition.x) + 1.5f) / (halfFovTan * aspect);
-        float requiredZ = (abs(currentFurthestPosition.z) + 1.5f)/ halfFovTan;
+        float requiredX = (abs(scene_->currentFurthestPosition_.x) + 1.5f) / (halfFovTan * aspect);
+        float requiredZ = (abs(scene_->currentFurthestPosition_.z) + 1.5f)/ halfFovTan;
 
         // Take the larger
         float h = std::max(requiredX, requiredZ);
@@ -395,36 +397,6 @@ void Engine::RemoveModel(unsigned int id)
 {
     scene_->RemoveModel(id);
     removedModels.push_back(id);
-}
-
-void Engine::MoveModel(unsigned int id, const glm::vec3& change)
-{
-    Model& model = scene_->GetModelByReference(id);
-    glm::vec3 position = model.GetPosition();
-    position += change;
-    model.SetPosition(position);
-
-    if (abs(position.x) > this->currentFurthestPosition.x) this->currentFurthestPosition.x = abs(position.x);
-    if (abs(position.z) > this->currentFurthestPosition.z) this->currentFurthestPosition.z = abs(position.z);
-}
-
-void Engine::MoveModels()
-{
-    std::vector<unsigned int> deletes;
-             
-    currentFurthestPosition = glm::vec3(0.0f, 0.0f, 0.0f);
-    for (auto& [id, model] : scene_->GetModels())
-    {
-        glm::vec3 change = model.GetOrientation() * model.GetSpeed().x;
-        MoveModel(id, change);
-
-        auto position = model.GetPosition();
-        if ((abs(position.x) > 80 || abs(position.z) > 80) && model.type_ != ModelType::PLAYER)
-            deletes.push_back(id);
-    }
-
-    for (auto id : deletes)
-        RemoveModel(id);
 }
 
 void Engine::RotateModel(unsigned int id, const glm::vec3& change) 
