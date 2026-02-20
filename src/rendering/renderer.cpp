@@ -282,6 +282,26 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 		model.DrawHitbox(*hitboxShader_);
     	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
+
+	for (auto& [id, playerData] : scene.GetPlayerData())
+	{
+		if (playerData.lastHit > 0)
+		{
+			auto model = scene.GetModelByReference(id);
+			glm::mat4 modelMat = glm::mat4(1.0f);
+    		modelMat = glm::translate(modelMat, model.GetPosition());
+    		modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
+
+    		hitboxShader_->SetMat4("projection", projection);
+    		hitboxShader_->SetMat4("view", view);
+    		hitboxShader_->SetMat4("model", modelMat);
+
+    		// Draw unit sphere as wireframe
+    		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			model.DrawHitbox(*hitboxShader_);
+    		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		}
+	}
 	
 	if (this->showSkyBox_)
 	{

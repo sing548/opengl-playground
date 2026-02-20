@@ -21,13 +21,15 @@ unsigned int Scene::AddModel(Model& model, int id)
     }
     
     models_.try_emplace(modelId, model);
+
+    addedModels_.push_back(modelId);
+
     return modelId;
 }
 
-unsigned int Scene::AddModelWithId(Model& model, uint32_t id)
+void Scene::AddExtraModelToAddedIds(unsigned int id)
 {
-    models_.try_emplace(id, model);
-    return id;
+    addedModels_.push_back(id);
 }
 
 void Scene::RemoveModel(unsigned int id)
@@ -44,7 +46,14 @@ const std::unordered_map<uint32_t, Model>& Scene::GetModels() const
     return models_;
 }
 
-Model& Scene::GetModelByReference(unsigned int id) {
+Model& Scene::GetModelByReference(unsigned int id) 
+{
+    return models_.at(id);
+    throw std::out_of_range("No model found with given ID");
+}
+
+const Model& Scene::GetModelByReference(unsigned int id) const
+{
     return models_.at(id);
     throw std::out_of_range("No model found with given ID");
 }
@@ -60,4 +69,62 @@ const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> Scene::G
         }
     }
     return result;
+}
+
+PlayerData& Scene::GetPlayerData(uint32_t id)
+{
+    return playerData_.at(id);
+    throw std::out_of_range("No playerdata foundd with given ID");
+}
+
+std::unordered_map<uint32_t, PlayerData>& Scene::GetPlayerData()
+{
+    return playerData_;
+}
+
+const std::unordered_map<uint32_t, PlayerData>& Scene::GetPlayerData() const
+{
+    return playerData_;
+}
+
+void Scene::MarkModelForDelete(unsigned int id)
+{
+    removeMarkedModels_.push_back(id);
+}
+
+void Scene::RemoveMarkedModels()
+{
+    for (unsigned int id : removeMarkedModels_)
+        RemoveModel(id);
+    
+    removeMarkedModels_.clear();
+}
+
+const std::vector<unsigned int>& Scene::GetRemoveMarkedModels() const 
+{
+    return removeMarkedModels_;
+}
+
+const std::vector<unsigned int>& Scene::GetAddedModels() const
+{
+    return addedModels_;
+}
+
+void Scene::ClearAddedModels()
+{
+    addedModels_.clear();
+}
+
+void Scene::AddOrUpdatePlayerData(PlayerData pd)
+{
+    playerData_[pd.id] = std::move(pd);
+}
+
+void Scene::RemovePlayerData(uint32_t id)
+{
+    auto it = playerData_.find(id);
+    if (it != playerData_.end())
+    {
+        playerData_.erase(it);
+    }
 }

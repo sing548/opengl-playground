@@ -2,13 +2,16 @@
 #define PHYSICS_SYSTEM_H
 
 #include "../models/scene.h"
+#include "../window/window.h"
+
 
 class PhysicsSystem {
 public:
-    void Update(Scene& scene);
+    void Update(float dT, Scene& scene, bool checkHits, Window& window, bool handleDeletes);
 private:
-    void MoveModels(Scene& scene);
-    void MoveModel(Scene& scene, unsigned int id, const glm::vec3& change);
+    void MoveModels(float dT, Scene& scene);
+    void MoveModel(float dT, Scene& scene, unsigned int id, const glm::vec3& change);
+    void CheckHits(Scene& scene, bool handleDeletes);
 };
 
 #endif

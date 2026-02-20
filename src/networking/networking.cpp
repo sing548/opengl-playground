@@ -188,12 +188,12 @@ std::unordered_map<int, InputState>& Networking::GetInputStates()
 	return server_->GetLatestInputStates();
 }
 
-unsigned int Networking::UpdateScene(Scene& scene, AssetManager& assMan)
+std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(Scene& scene, AssetManager& assMan)
 {
 	GameState gs;
+	std::vector<uint32_t> killedPlayers;
 
-	if (client_->pendingStates.size() == 0) return 0;
-
+	if (client_->pendingStates.size() == 0) return { 0, killedPlayers };
 	{
 		std::lock_guard lock(client_->gsMutex);
 		gs = std::move(client_->pendingStates.front());
@@ -201,17 +201,21 @@ unsigned int Networking::UpdateScene(Scene& scene, AssetManager& assMan)
 	}
 
     if (gs.tick == 0) 
-		return 0;
+		return { 0, killedPlayers };
 	if (currentTick > gs.tick) 
-		return gs.playerId;
+		return { gs.playerId, killedPlayers };
 	
 	if (scene.currentTick >= gs.tick) 
-		return gs.playerId;
+		return { gs.playerId, killedPlayers };
 
 	scene.currentTick = gs.tick;
 
 	for (uint32_t id : gs.destroyedEntities)
     {
+		auto& players = scene.GetPlayerModels();
+		if (players.contains(id)) 
+			killedPlayers.push_back(id);
+			
         scene.RemoveModel(id);
     }
 
@@ -236,6 +240,13 @@ unsigned int Networking::UpdateScene(Scene& scene, AssetManager& assMan)
 	
 		Model model(Model::GetModelPath(type), pi, assMan, type, true, entity.radius);
 		scene.AddModel(model, entity.id);
+
+		if (model.type_ == ModelType::PLAYER)
+		{
+			PlayerData pd;
+			pd.id = entity.id;
+			scene.AddOrUpdatePlayerData(pd);
+		}
 	}
 
 	for (const auto& entity : gs.entities)
@@ -257,5 +268,5 @@ unsigned int Networking::UpdateScene(Scene& scene, AssetManager& assMan)
         m.SetSpeed(entity.speed_);
     }
  
-	return client_->playerId_;
+	return { client_->playerId_, killedPlayers };
 };

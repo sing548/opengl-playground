@@ -19,7 +19,9 @@ struct ShotData
 
 struct PlayerData
 {
-
+    uint32_t id;
+    float lastHit = 0;
+    int lifes = 10;
 };
 
 class Scene
@@ -29,11 +31,25 @@ public:
 
     bool ModelExists(unsigned int id);
     unsigned int AddModel(Model& model, int id = -1);
-    unsigned int AddModelWithId(Model& model, unsigned int id);
     const std::unordered_map<uint32_t, Model>& GetModels() const;
     const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> GetPlayerModels() const;
     Model& GetModelByReference(unsigned int id);
-    void RemoveModel(unsigned int Id);
+    const Model& GetModelByReference(unsigned int id) const;
+    void RemoveModel(unsigned int id);
+
+    void MarkModelForDelete(unsigned int id);
+    void RemoveMarkedModels();
+    const std::vector<unsigned int>& GetRemoveMarkedModels() const;
+
+    const std::vector<unsigned int>& GetAddedModels() const;
+    void ClearAddedModels();
+    void AddExtraModelToAddedIds(unsigned int id);
+        
+    PlayerData& GetPlayerData(uint32_t id);
+    std::unordered_map<uint32_t, PlayerData>& GetPlayerData();
+    const std::unordered_map<uint32_t, PlayerData>& GetPlayerData() const;
+    void AddOrUpdatePlayerData(PlayerData pd);
+    void RemovePlayerData(uint32_t id);
 
     uint32_t currentTick = 0;
 
@@ -45,6 +61,9 @@ private:
 
     std::unordered_map<uint32_t, ShotData> shotData_;
     std::unordered_map<uint32_t, PlayerData> playerData_;
+
+    std::vector<unsigned int> removeMarkedModels_;
+    std::vector<unsigned int> addedModels_;
 };
 
 #endif

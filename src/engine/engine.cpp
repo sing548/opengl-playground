@@ -66,6 +66,11 @@ Engine::Engine(int config, const char *serverAddr)
         }
         
         SetupScene(models);
+
+        PlayerData pd;
+        pd.id = 1;
+        pd.lastHit = 0;
+        scene_->AddOrUpdatePlayerData(pd);
         
         if (m_bServer)
             networking_ = new Networking(true, *scene_);
@@ -83,6 +88,14 @@ Engine::Engine(int config, const char *serverAddr)
 
         auto models = BasicLevel();
         SetupScene (models);
+
+        PlayerData pd;
+        pd.id = 1;
+        scene_->AddOrUpdatePlayerData(pd);
+
+        PlayerData pd2;
+        pd2.id = 2;
+        scene_->AddOrUpdatePlayerData(pd2);
     }
 }
 
@@ -147,9 +160,6 @@ void Engine::Run()
         accTime += deltaTime;
         fpsTime += deltaTime;
         logicTime += deltaTime;
-
-        removedModels.clear();
-        addedModels.clear();
         
         glfwPollEvents();
 
@@ -157,7 +167,6 @@ void Engine::Run()
         {
             ReconcileNetwork();
             CollectInputs(fixedDelta);
-            ExecuteInput(fixedDelta);
             HandleLogic(fixedDelta);
 
             accTime -= fixedDelta;
@@ -171,12 +180,15 @@ void Engine::Run()
     
             if (m_bNetworking && m_bServer)
             {
-               newClient = networking_->SendGameState(*scene_, addedModels, removedModels, fixedDelta);    
+               newClient = networking_->SendGameState(*scene_, scene_->GetAddedModels(), scene_->GetRemoveMarkedModels(), fixedDelta);    
             }
             else if (m_bNetworking && playerId_ >= 0)
             {
                 networking_->SendInputState(currentInputStates_.at(playerId_));
             }
+
+            scene_->RemoveMarkedModels();
+            scene_->ClearAddedModels();
 
             j++;
             // Logic/s counter in console
@@ -211,13 +223,29 @@ void Engine::ReconcileNetwork()
 {
     if (m_bNetworking && !m_bServer)
     {
-        auto playerId = networking_->UpdateScene(*scene_, *assMan_);
+        auto [playerId, playerModelRemoved] = networking_->UpdateScene(*scene_, *assMan_);
         if (playerId != 0)
         {
             playerId_ = playerId;
             auto state = InputState { playerId_, false, false, false, false, false, false  };
             currentInputStates_.try_emplace(playerId_, state);
             previousInputStates_.try_emplace(playerId_, state);
+        }
+
+        for (auto& id : playerModelRemoved)
+        {
+            auto i = currentInputStates_.find(id);
+            auto j = previousInputStates_.find(id);
+
+            if (i != currentInputStates_.end())
+                currentInputStates_.erase(i);
+            if (j != previousInputStates_.end())
+                previousInputStates_.erase(j);
+            
+            if (id == playerId_)
+                playerId_ = -1;
+            
+            scene_->RemovePlayerData(id);
         }
     }
     else if (m_bNetworking)
@@ -226,6 +254,9 @@ void Engine::ReconcileNetwork()
 
         for (const auto [id, state] : inputStates)
         {
+            if (std::ranges::find(killedPlayers_, id) != killedPlayers_.end()) 
+                continue;
+
             auto it = currentInputStates_.find(state.id);
             
             if (it == currentInputStates_.end())
@@ -244,50 +275,32 @@ void Engine::ReconcileNetwork()
 
 void Engine::HandleLogic(float deltaTime)
 {
-    physicsSystem_.Update(*scene_);
-    playerSystem_.Update(*scene_);
+    physicsSystem_.Update(deltaTime, *scene_, !m_bNetworking || m_bNetworking && m_bServer, *window_, (m_bNetworking && m_bServer) || !m_bNetworking);
+    auto removes = scene_->GetRemoveMarkedModels();
+    
+    for (auto& r : removes)
+    {
+        auto model = scene_->GetModelByReference(r);
+        if (model.type_ == ModelType::PLAYER)
+        {
+            auto i = currentInputStates_.find(r);
+            auto j = previousInputStates_.find(r);
+
+            currentInputStates_.erase(i);
+            previousInputStates_.erase(j);
+
+            killedPlayers_.push_back(r);
+        }
+    }
+
+    playerSystem_.Update(deltaTime, *scene_, *assMan_, currentInputStates_, previousInputStates_, playerId_, !(m_bNetworking && !m_bServer));
     shotSystem_.Update(*scene_);
+    cameraSystem_.Update();
     
     bool adjust = settings_["adjust_camera"];
 
     if (adjust)
         AdjustCamera();
-    
-    if (!m_bNetworking || m_bNetworking && m_bServer)
-        CheckHits();
-}
-
-void Engine::CheckHits()
-{
-    auto playerModels = scene_->GetPlayerModels();
-
-    for (auto& [id, other] : scene_->GetModels())
-    {
-        if (other.type_ == ModelType::PLAYER)
-            continue;
-        
-        glm::vec3 otherPos = other.GetPosition();
-        float otherRadius = other.GetRadius();
-
-        for (auto& [playerId, playerRef] : playerModels)
-        {
-            auto& player = playerRef.get();
-
-            if (playerId == id)
-                continue;
-                
-            glm::vec3 playerPos = player.GetPosition();
-            float playerRadius = player.GetRadius();
-
-            float dist = glm::length(otherPos - playerPos);
-            float radiusSum = otherRadius + playerRadius;
-
-            if (dist <= radiusSum)
-            {
-                glfwSetWindowShouldClose(window_->Get(), true);
-            }
-        }
-    }
 }
 
 void Engine::AdjustCamera()
@@ -339,23 +352,6 @@ void Engine::AdjustCamera()
     }
 }
 
-void Engine::Shoot(Model shooter)
-{
-    if (m_bNetworking && !m_bServer) return;
-
-    PhysicalInfo pi = PhysicalInfo();
-    pi.position_ = shooter.GetPosition() + shooter.GetOrientation();
-    pi.rotation_ = shooter.GetRotation();
-    pi.scale_ = glm::vec3(0.05f, 0.05f, 0.05f);
-    pi.orientation_ = shooter.GetOrientation();
-    pi.baseOrientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
-    pi.speed_ = shooter.GetSpeed() + glm::vec3(0.15f, 0.0f, 0.0f);
-
-    Model shot(Model::GetModelPath(ModelType::SHOT), pi, *assMan_, ModelType::SHOT, true, 0.05f);
-
-    AddModel(shot);
-}
-
 void Engine::AddNewPlayer(uint32_t id)
 {
     PhysicalInfo pi = PhysicalInfo();
@@ -366,43 +362,22 @@ void Engine::AddNewPlayer(uint32_t id)
     pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
     Model model(Model::GetModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
 
-    AddModel(model, id);
+    scene_->AddModel(model, id);
+
+    PlayerData pd;
+    pd.id = id;
+
+    scene_->AddOrUpdatePlayerData(pd);
     
     auto playerModels = scene_->GetPlayerModels();
 
     for (auto& [id, model] : playerModels)
     {
+        const std::vector<unsigned int> addedModels = scene_->GetAddedModels();
+
         if (std::find(addedModels.begin(), addedModels.end(), id) == addedModels.end())
-            addedModels.push_back(id);
+            scene_->AddExtraModelToAddedIds(id);
     }
-}
-
-void Engine::AddModel(Model& model, uint32_t id)
-{
-    unsigned int modelId;
-
-    if (id == 0)
-    {
-        modelId = scene_->AddModel(model);
-    }
-    else
-    {
-        modelId = scene_->AddModelWithId(model, id);
-    }
-    
-    addedModels.push_back(modelId);
-}
-
-void Engine::RemoveModel(unsigned int id)
-{
-    scene_->RemoveModel(id);
-    removedModels.push_back(id);
-}
-
-void Engine::RotateModel(unsigned int id, const glm::vec3& change) 
-{
-    Model& model = scene_->GetModelByReference(id);
-    model.SetRotation(model.GetRotation() + change);
 }
 
 void Engine::ChangeSetting(std::string key, bool value)
@@ -412,7 +387,7 @@ void Engine::ChangeSetting(std::string key, bool value)
 
 void Engine::CollectInputs(float deltaTime)
 {
-    if (playerId_ < 0) return;
+    if (playerId_ < 0 || std::ranges::find(killedPlayers_, playerId_) != killedPlayers_.end()) return;
     auto state = currentInputStates_.at(playerId_);
     auto previousState = previousInputStates_.at(playerId_);
     previousState = currentInputStates_.at(playerId_);
@@ -439,57 +414,6 @@ void Engine::CollectInputs(float deltaTime)
 
     currentInputStates_.at(playerId_) = state;
     previousInputStates_.at(playerId_) = previousState;
-}
-
-void Engine::ExecuteInput(float deltaTime)
-{
-    bool playerExists = scene_->ModelExists(playerId_);
-    if (playerId_ <= 0 || !playerExists) return;
-
-    for (auto& [playerId, state] : currentInputStates_)
-    {
-        if (state.left) 
-            RotateModel(playerId, {0.0f, glm::radians(2.1f), 0.0f});
-
-        if (state.right)
-            RotateModel(playerId, {0.0f, glm::radians(-2.1f), 0.0f});
-
-        if (state.forward) 
-        {
-            float acc = deltaTime * 0.15f;
-            glm::vec3 speed = scene_->GetModelByReference(playerId).GetSpeed();
-            speed.x += acc;
-
-            // Max Speed
-            if (0.2f > speed.x)
-                scene_->GetModelByReference(playerId).SetSpeed(speed);
-        } else 
-        {
-            float acc = deltaTime * 0.15f;
-            if (state.backward)
-                acc = deltaTime * .6f;
-            glm::vec3 speed = scene_->GetModelByReference(playerId).GetSpeed();
-
-            if (speed.x > 0) speed.x -= acc;
-            if (speed.x < 0) speed.x = 0;
-
-            scene_->GetModelByReference(playerId).SetSpeed(speed);
-        }
-
-        if (state.shootShot && playerId == playerId_)
-        {
-            Shoot(scene_->GetModelByReference(playerId));
-        }
-        else 
-        {
-            if (state.shootShot && previousInputStates_.at(playerId).shootShot != true)
-            {
-                previousInputStates_.at(playerId).shootShot = true;
-                Shoot(scene_->GetModelByReference(playerId));
-            }
-        }
-    }
-    
 }
 
 void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)

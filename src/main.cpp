@@ -77,8 +77,8 @@ int main(int argc, const char *argv[]) {
         else 
         {
             engine = new Engine(0);
-            auto models = engine->BasicLevel();
-            engine->SetupScene(models); 
+            //auto models = engine->BasicLevel();
+            //engine->SetupScene(models); 
         }
     }
     catch (const std::runtime_error e)

@@ -12,6 +12,7 @@
 #include "../models/asset-manager.h"
 #include "../networking/networking.h"
 
+#include "../systems/camera-system.h"
 #include "../systems/physics-system.h"
 #include "../systems/player-system.h"
 #include "../systems/shot-system.h"
@@ -47,6 +48,7 @@ private:
     PhysicsSystem physicsSystem_;
     PlayerSystem playerSystem_;
     ShotSystem shotSystem_;
+    CameraSystem cameraSystem_;
 
     void ChangeSetting(std::string key, bool value);
     glm::vec2 maxScreenSize_;
@@ -55,27 +57,20 @@ private:
     std::map<std::string, bool> settings_;
     std::unordered_map<int, InputState> previousInputStates_;
     std::unordered_map<int, InputState> currentInputStates_;
-    
-    std::vector<unsigned int> addedModels = std::vector<unsigned int>();
-    std::vector<unsigned int> removedModels = std::vector<unsigned int>();
+    std::vector<uint32_t> killedPlayers_;
 
     bool m_bNetworking = false;
     bool m_bServer = false;
     Networking* networking_ = nullptr;
 
     void HandleLogic(float deltaTime);
-    void CheckHits();
     void ReconcileNetwork();
     void CollectInputs(float deltaTime);
-    void ExecuteInput(float deltaTime);
     static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
     void AddNewPlayer(uint32_t id);
-    void AddModel(Model& model, uint32_t id = 0);
-    void RemoveModel(unsigned int id);
     void RotateModel(unsigned int id, const glm::vec3& change);
 
-    void Shoot(Model shooter);
     void AdjustCamera();
 };
 
