@@ -13,6 +13,7 @@
 #include "../networking/networking.h"
 
 #include "../systems/camera-system.h"
+#include "../systems/npc-system.h"
 #include "../systems/physics-system.h"
 #include "../systems/player-system.h"
 #include "../systems/shot-system.h"
@@ -45,6 +46,7 @@ private:
     std::unique_ptr<Scene> scene_;
     std::unique_ptr<AssetManager> assMan_;
 
+    NpcSystem npcSystem_; 
     PhysicsSystem physicsSystem_;
     PlayerSystem playerSystem_;
     ShotSystem shotSystem_;

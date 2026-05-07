@@ -125,7 +125,7 @@ std::vector<Model> Engine::BasicLevel()
     pi2.orientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
     pi2.baseOrientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
 
-    Model model2(Model::GetModelPath(ModelType::PLAYER), pi2, *assMan_, ModelType::PLAYER);
+    Model model2(Model::GetModelPath(ModelType::PLAYER), pi2, *assMan_, ModelType::NPC);
     models.push_back(model2);
 
     return models;
@@ -293,6 +293,7 @@ void Engine::HandleLogic(float deltaTime)
         }
     }
 
+    npcSystem_.Update(deltaTime, *scene_);
     playerSystem_.Update(deltaTime, *scene_, *assMan_, currentInputStates_, previousInputStates_, playerId_, !(m_bNetworking && !m_bServer));
     shotSystem_.Update(*scene_);
     cameraSystem_.Update();

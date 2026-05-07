@@ -33,7 +33,7 @@ void PhysicsSystem::MoveModel(float dT, Scene& scene, unsigned int id, const glm
 
 void PhysicsSystem::CheckHits(Scene& scene, bool handleDeletes)
 {
-    auto playerModels = scene.GetPlayerModels();
+    auto playerModels = scene.GetPhysicalModels();
 
     for (auto& [id, other] : scene.GetModels())
     {

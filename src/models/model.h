@@ -39,6 +39,7 @@ enum ModelType
 {
     PLAYER,
     SHOT,
+    NPC,
     Count
 };
 

@@ -32,7 +32,9 @@ public:
     bool ModelExists(unsigned int id);
     unsigned int AddModel(Model& model, int id = -1);
     const std::unordered_map<uint32_t, Model>& GetModels() const;
+    const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> GetNPCModels() const;
     const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> GetPlayerModels() const;
+    const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> GetPhysicalModels() const;
     Model& GetModelByReference(unsigned int id);
     const Model& GetModelByReference(unsigned int id) const;
     void RemoveModel(unsigned int id);

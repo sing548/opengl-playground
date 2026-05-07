@@ -71,6 +71,32 @@ const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> Scene::G
     return result;
 }
 
+const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> Scene::GetNPCModels() const
+{
+    std::unordered_map<uint32_t, std::reference_wrapper<const Model>> result;
+    for (auto& [id, modelRef] : models_)
+    {
+        if (modelRef.type_ == ModelType::NPC)
+        {
+            result.emplace(id, std::ref(modelRef));
+        }
+    }
+    return result;
+}
+
+const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> Scene::GetPhysicalModels() const
+{
+    std::unordered_map<uint32_t, std::reference_wrapper<const Model>> result;
+    for (auto& [id, modelRef] : models_)
+    {
+        if (modelRef.type_ == ModelType::PLAYER || modelRef.type_ == ModelType::NPC)
+        {
+            result.emplace(id, std::ref(modelRef));
+        }
+    }
+    return result;
+}
+
 PlayerData& Scene::GetPlayerData(uint32_t id)
 {
     return playerData_.at(id);
