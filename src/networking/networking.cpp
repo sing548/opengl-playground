@@ -83,6 +83,8 @@ Networking::Networking(bool bServer, const Scene& scene, const char *serverAddr)
 Networking::~Networking()
 {
 	running_ = false;
+	
+	if (server_) server_->Shutdown();
 
 	if (networkThread_.joinable())
 		networkThread_.join();
@@ -175,6 +177,8 @@ void Networking::BuildGameState(const Scene& scene, const std::vector<unsigned i
 void Networking::Shutdown()
 {
 	running_ = false;
+
+	if (server_) server_->Shutdown();
 };
 
 void Networking::SendInputState(InputState& state)

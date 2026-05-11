@@ -1,13 +1,13 @@
 #include "engine.h"
 
-Engine::Engine(int config, const char *serverAddr)
+Engine::Engine(EngineMode config, const char *serverAddr)
 {
-    if (config == 1)
+    if (config == EngineMode::Server)
     {
         m_bNetworking = true;
         m_bServer = true;
     }
-    else if (config == 2)
+    else if (config == EngineMode::Client)
     {
         m_bNetworking = true;
     }
@@ -29,8 +29,11 @@ Engine::Engine(int config, const char *serverAddr)
     
     inputManager_ = std::make_unique<InputManager>();
     window_ = std::make_unique<Window>(WIDTH, HEIGHT, std::move(camera_), inputManager_.get());
-    renderer_ = std::make_unique<Renderer>(WIDTH, HEIGHT, hitboxes, skyBox);
+    renderer_ = std::make_unique<Renderer>(WIDTH, HEIGHT);
     assMan_ = std::make_unique<AssetManager>();
+
+    const bool isAuthoritative = !m_bNetworking || m_bServer;
+    physicsSystem_ = PhysicsSystem(isAuthoritative);
 
     glfwSetWindowUserPointer(window_->Get(), this);
     glfwSetKeyCallback(window_->Get(), Engine::KeyCallback);
@@ -293,7 +296,7 @@ void Engine::ReconcileNetwork()
 
 void Engine::HandleLogic(float deltaTime)
 {
-    physicsSystem_.Update(deltaTime, *scene_, !m_bNetworking || m_bNetworking && m_bServer, *window_, (m_bNetworking && m_bServer) || !m_bNetworking);
+    physicsSystem_.Update(deltaTime, *scene_, *window_);
     auto removes = scene_->GetRemoveMarkedModels();
     
     for (auto& r : removes)

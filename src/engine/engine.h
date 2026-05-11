@@ -20,13 +20,19 @@
 #include "../systems/player-system.h"
 #include "../systems/shot-system.h"
 
+
+#include "../rendering/materials/model-material.h"
+#include "../rendering/materials/hitbox-material.h"
+
 #include <map>
 #include <thread>
+
+enum EngineMode { Standalone, Server, Client };
 
 class Engine {
 public:
 
-    Engine(int config, const char *serverAddr = nullptr);
+    Engine(EngineMode config, const char *serverAddr = nullptr);
     std::vector<Model> BasicLevel();
     void SetupScene(std::vector<Model>);
     void Run();

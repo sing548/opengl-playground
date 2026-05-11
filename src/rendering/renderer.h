@@ -3,17 +3,17 @@
 
 #include <memory>
 #include <filesystem>
+#include <map>
+
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "../models/scene.h"
-#include "../camera/camera.h"
+#include "../models/mesh.h"
 #include "../helpers/file-helper.h"
 #include "../rendering/render-list.h"
 
-#include "../rendering/materials/model-material.h"
-#include "../rendering/materials/hitbox-material.h"
+#include "../rendering/materials/material.h"
 
 #include "../rendering/sky/sky.h"
 
@@ -21,7 +21,6 @@ class Renderer
 {
 public:
     Renderer(unsigned int width, unsigned int height);
-    Renderer(unsigned int width, unsigned int height, bool showHitboxes, bool showSkyBox);
 
     void Draw(const RenderList& renderList, const FrameGlobals& globals, const std::map<std::string, bool>& settings);
 

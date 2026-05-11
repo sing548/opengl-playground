@@ -7,11 +7,15 @@
 
 class PhysicsSystem {
 public:
-    void Update(float dT, Scene& scene, bool checkHits, Window& window, bool handleDeletes);
+    PhysicsSystem() = default;
+    explicit PhysicsSystem(bool isAuthoratative);
+
+    void Update(float dT, Scene& scene, Window& window);
 private:
+    bool isAuthoratative_;
     void MoveModels(float dT, Scene& scene);
     void MoveModel(float dT, Scene& scene, unsigned int id, const glm::vec3& change);
-    void CheckHits(Scene& scene, bool handleDeletes);
+    void CheckHits(Scene& scene);
 };
 
 #endif

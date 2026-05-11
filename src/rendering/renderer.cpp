@@ -1,11 +1,6 @@
 #include "renderer.h"
 
 Renderer::Renderer(unsigned int width, unsigned int height)
-	: Renderer(width, height, false, true)
-{
-}
-
-Renderer::Renderer(unsigned int width, unsigned int height, bool showHitboxes, bool showSkyBox)
 {
 	std::string screenVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "screen.vert").string();
     std::string screenFrag = (std::filesystem::path(FileHelper::GetShaderDir()) / "screen.frag").string();

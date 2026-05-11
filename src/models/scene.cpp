@@ -49,13 +49,11 @@ const std::unordered_map<uint32_t, Model>& Scene::GetModels() const
 Model& Scene::GetModelByReference(unsigned int id) 
 {
     return models_.at(id);
-    throw std::out_of_range("No model found with given ID");
 }
 
 const Model& Scene::GetModelByReference(unsigned int id) const
 {
     return models_.at(id);
-    throw std::out_of_range("No model found with given ID");
 }
 
 const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> Scene::GetPlayerModels() const
@@ -100,7 +98,6 @@ const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> Scene::G
 PlayerData& Scene::GetPlayerData(uint32_t id)
 {
     return playerData_.at(id);
-    throw std::out_of_range("No playerdata foundd with given ID");
 }
 
 std::unordered_map<uint32_t, PlayerData>& Scene::GetPlayerData()

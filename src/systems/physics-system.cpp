@@ -1,9 +1,14 @@
 #include "physics-system.h"
 
-void PhysicsSystem::Update(float dT, Scene& scene, bool checkHits, Window& window, bool handleDeletes)
+PhysicsSystem::PhysicsSystem(bool isAuthoratative)
+{
+    isAuthoratative_ = isAuthoratative;
+}
+
+void PhysicsSystem::Update(float dT, Scene& scene, Window& window)
 {
     MoveModels(dT, scene);
-    CheckHits(scene, handleDeletes);
+    CheckHits(scene);
 }
 
 void PhysicsSystem::MoveModels(float dT, Scene& scene)
@@ -31,7 +36,7 @@ void PhysicsSystem::MoveModel(float dT, Scene& scene, unsigned int id, const glm
     if (abs(position.z) > scene.currentFurthestPosition_.z) scene.currentFurthestPosition_.z = abs(position.z);
 }
 
-void PhysicsSystem::CheckHits(Scene& scene, bool handleDeletes)
+void PhysicsSystem::CheckHits(Scene& scene)
 {
     auto playerModels = scene.GetPhysicalModels();
 
@@ -67,13 +72,13 @@ void PhysicsSystem::CheckHits(Scene& scene, bool handleDeletes)
                 // ToDo: Implement
                 scene.AddOrUpdatePlayerData(pd);
 
-                if (pd.lifes == 0 && handleDeletes)
+                if (pd.lifes == 0 && isAuthoratative_)
                 {
                     scene.MarkModelForDelete(playerId);
                     scene.RemovePlayerData(playerId);
                 }
 
-                if (other.type_ == ModelType::SHOT && handleDeletes)
+                if (other.type_ == ModelType::SHOT && isAuthoratative_)
                     scene.MarkModelForDelete(id);
                 //glfwSetWindowShouldClose(window.Get(), true);
             }

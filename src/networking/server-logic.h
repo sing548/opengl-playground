@@ -19,7 +19,9 @@
 class ServerLogic
 {
 public:
+    ~ServerLogic();
     void ServerLoop(int port, std::atomic<bool>& running);
+    void Shutdown();
     uint32_t UpdateGameState(std::unique_ptr<GameState> gs);
     void DistributeGameState(std::atomic<bool>& running);
     std::unordered_map<int, InputState>& GetLatestInputStates();

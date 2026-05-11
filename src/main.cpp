@@ -71,12 +71,12 @@ int main(int argc, const char *argv[]) {
 
     try {
         if (bServer)
-            engine = std::make_unique<Engine>(1);
+            engine = std::make_unique<Engine>(EngineMode::Server);
         else if (bClient)
-            engine = std::make_unique<Engine>(2, serverUrl);
+            engine = std::make_unique<Engine>(EngineMode::Client, serverUrl);
         else 
         {
-            engine = std::make_unique<Engine>(0);
+            engine = std::make_unique<Engine>(EngineMode::Standalone);
             //auto models = engine->BasicLevel();
             //engine->SetupScene(models); 
         }

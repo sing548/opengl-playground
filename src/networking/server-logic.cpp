@@ -8,6 +8,27 @@ SteamNetworkingMicroseconds g_logTimeZero;
 ServerLogic *ServerLogic::s_pCallbackInstance = nullptr;
 std::chrono::steady_clock::time_point gameStateUpdateTime = std::chrono::steady_clock::now();
 
+ServerLogic::~ServerLogic()
+{
+	for (auto& [conn, _] : m_mapClients)
+	{
+		m_pInterface->CloseConnection(conn, 0, "Server shutting down", true);
+	}
+	m_mapClients.clear();
+
+	if (m_hListenSock != k_HSteamListenSocket_Invalid)
+	{
+		m_pInterface->CloseListenSocket(m_hListenSock);
+		m_hListenSock = k_HSteamListenSocket_Invalid;
+	}
+
+	if (m_hPollGroup != k_HSteamNetPollGroup_Invalid)
+	{
+		m_pInterface->DestroyPollGroup(m_hPollGroup);
+		m_hPollGroup = k_HSteamNetPollGroup_Invalid;
+	}
+}
+
 void ServerLogic::ServerLoop(int port, std::atomic<bool>& running)
 {
     std::printf("Opening listening on port %d", port);
@@ -29,12 +50,19 @@ void ServerLogic::ServerLoop(int port, std::atomic<bool>& running)
 
     std::printf( "Server listening on port %d\n", port );
 	
-    while (running) {
+    while (running) 
+	{
         PollIncomingMessagesServer(running);
         PollConnectionStateChangesServer();
 		std::this_thread::sleep_for(std::chrono::milliseconds(30));
     }
 };
+
+void ServerLogic::Shutdown()
+{
+	std::lock_guard<std::mutex> lock(mtx_);
+	cv_.notify_all();
+}
 
 void ServerLogic::DistributeGameState(std::atomic<bool>& running)
 {
