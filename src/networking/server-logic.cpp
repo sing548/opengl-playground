@@ -363,7 +363,7 @@ void ServerLogic::SendGameStateToAllClients()
 	msgpack::packer<msgpack::sbuffer> pk(buffer);
 	pk.pack_array(2);
 	pk.pack_uint8(0);
-	pk.pack(gameState_);
+	pk.pack(*gameState_);
 
 	for (auto& c : m_mapClients)
 	{

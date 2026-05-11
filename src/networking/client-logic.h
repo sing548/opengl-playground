@@ -7,12 +7,13 @@
 #include <map>
 #include <thread>
 #include <atomic>
+#include <mutex>
 
 #include <steam/steam_api_common.h>
 #include <steam/steamnetworkingsockets.h>
 
 #include <steam/isteamnetworkingutils.h>
-#include "../networking/server-logic.h"
+#include "../networking/shared-strucs.h"
 
 #ifdef _WIN32
 	#include <windows.h> // Ug, for NukeProcess -- see below

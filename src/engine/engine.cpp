@@ -296,7 +296,6 @@ void Engine::ReconcileNetwork()
 
 void Engine::HandleLogic(float deltaTime)
 {
-    physicsSystem_.Update(deltaTime, *scene_);
     auto removes = scene_->GetRemoveMarkedModels();
     
     for (auto& r : removes)
@@ -306,14 +305,15 @@ void Engine::HandleLogic(float deltaTime)
         {
             auto i = currentInputStates_.find(r);
             auto j = previousInputStates_.find(r);
-
+            
             currentInputStates_.erase(i);
             previousInputStates_.erase(j);
-
+            
             killedPlayers_.push_back(r);
         }
     }
-
+    
+    physicsSystem_.Update(deltaTime, *scene_);
     npcSystem_.Update(deltaTime, *scene_);
     playerSystem_.Update(deltaTime, *scene_, *assMan_, currentInputStates_, previousInputStates_, playerId_, !(m_bNetworking && !m_bServer));
     shotSystem_.Update(*scene_);

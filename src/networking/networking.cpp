@@ -155,7 +155,7 @@ void Networking::BuildGameState(const Scene& scene, const std::vector<unsigned i
         }
         else
         {
-			if (model.type_ == ModelType::PLAYER)
+			if (model.type_ == ModelType::PLAYER || model.type_ == ModelType::NPC)
 			{
 				// ToDo: "Lightweight" state update ---
 				EntityState e;
@@ -239,6 +239,7 @@ std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(Scene& s
 		{
 			case 0: type = ModelType::PLAYER; 	break;
 			case 1: type = ModelType::SHOT;	break;
+			case 2: type = ModelType::NPC; break;
 			default: type = ModelType::SHOT;	break;
 		}
 	

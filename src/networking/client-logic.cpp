@@ -42,6 +42,8 @@ void ClientLogic::ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomi
 
 		if (messageReceived_)
 			std::this_thread::sleep_for(std::chrono::milliseconds(33));
+		else
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
     m_pInterface->CloseConnection( m_hConnection, 0, "Goodbye", true );
