@@ -296,7 +296,7 @@ void Engine::ReconcileNetwork()
 
 void Engine::HandleLogic(float deltaTime)
 {
-    physicsSystem_.Update(deltaTime, *scene_, *window_);
+    physicsSystem_.Update(deltaTime, *scene_);
     auto removes = scene_->GetRemoveMarkedModels();
     
     for (auto& r : removes)

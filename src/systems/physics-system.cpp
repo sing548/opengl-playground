@@ -1,11 +1,11 @@
 #include "physics-system.h"
 
-PhysicsSystem::PhysicsSystem(bool isAuthoratative)
+PhysicsSystem::PhysicsSystem(bool isAuthoritative)
 {
-    isAuthoratative_ = isAuthoratative;
+    isAuthoritative_ = isAuthoritative;
 }
 
-void PhysicsSystem::Update(float dT, Scene& scene, Window& window)
+void PhysicsSystem::Update(float dT, Scene& scene)
 {
     MoveModels(dT, scene);
     CheckHits(scene);
@@ -72,13 +72,13 @@ void PhysicsSystem::CheckHits(Scene& scene)
                 // ToDo: Implement
                 scene.AddOrUpdatePlayerData(pd);
 
-                if (pd.lifes == 0 && isAuthoratative_)
+                if (pd.lifes == 0 && isAuthoritative_)
                 {
                     scene.MarkModelForDelete(playerId);
                     scene.RemovePlayerData(playerId);
                 }
 
-                if (other.type_ == ModelType::SHOT && isAuthoratative_)
+                if (other.type_ == ModelType::SHOT && isAuthoritative_)
                     scene.MarkModelForDelete(id);
                 //glfwSetWindowShouldClose(window.Get(), true);
             }

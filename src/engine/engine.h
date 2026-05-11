@@ -9,8 +9,6 @@
 #include "../models/model.h"
 #include "../input-manager/input-manager.h"
 #include "../rendering/renderer.h"
-#include "../models/scene.h"
-#include "../models/model.h"
 #include "../models/asset-manager.h"
 #include "../networking/networking.h"
 
@@ -27,7 +25,7 @@
 #include <map>
 #include <thread>
 
-enum EngineMode { Standalone, Server, Client };
+enum class EngineMode { Standalone, Server, Client };
 
 class Engine {
 public:
