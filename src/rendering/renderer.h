@@ -10,6 +10,12 @@
 #include "../models/scene.h"
 #include "../camera/camera.h"
 #include "../helpers/file-helper.h"
+#include "../rendering/render-list.h"
+
+#include "../rendering/materials/model-material.h"
+#include "../rendering/materials/hitbox-material.h"
+
+#include "../rendering/sky/sky.h"
 
 class Renderer
 {
@@ -17,9 +23,7 @@ public:
     Renderer(unsigned int width, unsigned int height);
     Renderer(unsigned int width, unsigned int height, bool showHitboxes, bool showSkyBox);
 
-    void Draw(const Scene& scene, const Camera& camera, unsigned int width, unsigned int height, const std::map<std::string, bool>& settings);
-    void ToggleHitboxes();
-    void ToggleSkyBox();
+    void Draw(const RenderList& renderList, const FrameGlobals& globals, const std::map<std::string, bool>& settings);
 
 private:
     unsigned int frameFBO_;
@@ -29,17 +33,16 @@ private:
     unsigned int rbo_, quadVAO_, quadVBO_;
     unsigned int skyboxVAO_, skyboxVBO_;
     unsigned int cubemapTexture_;
-    bool showHitboxes_, showSkyBox_;
+
     glm::vec4 backgroundRGBA_;
     std::array<GLfloat, 4> sceneClear_;
     std::array<GLfloat, 4> black_; 
     std::unique_ptr<Shader> screenShader_;
-    std::unique_ptr<Shader> modelShader_;
-    std::unique_ptr<Shader> hitboxShader_;
-    std::unique_ptr<Shader> skyboxShader_;
     std::unique_ptr<Shader> blurShader_;
     
-    void DrawSkybox(const Camera& camera, glm::mat4& projection);
+    std::unique_ptr<Sky> sky_;
+    
+    void ApplyPassState(RenderPass pass);
     void PostProcessing();
     unsigned int LoadCubemap(std::vector<std::string> faces);
 };

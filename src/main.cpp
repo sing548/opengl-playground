@@ -67,16 +67,16 @@ int main(int argc, const char *argv[]) {
 		}
 	}
 
-    Engine* engine = nullptr;
+    std::unique_ptr<Engine> engine = nullptr;
 
     try {
         if (bServer)
-            engine = new Engine(1);
+            engine = std::make_unique<Engine>(1);
         else if (bClient)
-            engine = new Engine(2, serverUrl);
+            engine = std::make_unique<Engine>(2, serverUrl);
         else 
         {
-            engine = new Engine(0);
+            engine = std::make_unique<Engine>(0);
             //auto models = engine->BasicLevel();
             //engine->SetupScene(models); 
         }

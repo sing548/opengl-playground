@@ -20,7 +20,7 @@ Model::Model(float radius, PhysicalInfo pi, ModelType type) : gammaCorrection(fa
 Model::Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, bool gamma, float radius) : gammaCorrection(gamma), physicalInfo_(pi), radius_(radius), type_(type)
 {
     path_ = path;
-	meshes = assMan.LoadModel(path);
+	meshes_ = assMan.LoadModel(path);
 	
 	if (!hitboxSphereInitialized_)
 		CreateHitboxSphere();
@@ -29,7 +29,7 @@ Model::Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, Mod
 Model::Model(std::string_view const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, bool gamma, float radius) : gammaCorrection(gamma), physicalInfo_(pi), radius_(radius), type_(type)
 {
     path_ = path;
-    meshes = assMan.LoadModel(path_);
+    meshes_ = assMan.LoadModel(path_);
 
     if (!hitboxSphereInitialized_)
         CreateHitboxSphere();
@@ -37,8 +37,8 @@ Model::Model(std::string_view const &path, PhysicalInfo pi, AssetManager& assMan
 
 void Model::Draw(Shader shader)
 {
-	for (unsigned int i = 0; i < meshes.size(); i++)
-		meshes[i]->Draw(shader);
+	for (unsigned int i = 0; i < meshes_.size(); i++)
+		meshes_[i]->Draw(shader);
 }
 
 void Model::DrawHitbox(Shader shader)
@@ -89,6 +89,16 @@ std::string Model::GetPath() const
 float Model::GetRadius() const
 {
     return radius_;
+}
+
+const std::vector<std::shared_ptr<Mesh>>& Model::GetMeshes() const
+{
+    return meshes_;
+}
+
+const Mesh* Model::GetHitboxMesh()
+{
+    return hitboxSphere_;
 }
 
 void Model::SetPosition(glm::vec3 position)

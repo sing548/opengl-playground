@@ -21,9 +21,16 @@ find_package(OpenGL REQUIRED)
 find_package(assimp CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(msgpack-cxx CONFIG REQUIRED)
-find_package(Boost REQUIRED COMPONENTS system)
+# Note: msgpack-cxx's CMake config does a transitive find_dependency(Boost),
+# so Boost is resolved automatically — we don't use Boost directly.
 
-# GameNetworkingSockets (assuming submodule)
+# GameNetworkingSockets (submodule). Build only the shared lib we actually link;
+# tests/examples already default OFF but set explicitly for safety.
+set(BUILD_STATIC_LIB OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIB ON  CACHE BOOL "" FORCE)
+set(BUILD_TESTS      OFF CACHE BOOL "" FORCE)
+set(BUILD_EXAMPLES   OFF CACHE BOOL "" FORCE)
+set(BUILD_TOOLS      OFF CACHE BOOL "" FORCE)
 add_subdirectory(include/GameNetworkingSockets)
 
 # Define Executable
@@ -33,6 +40,9 @@ add_executable(OpenGLPlayground
     src/models/mesh.cpp
     src/models/model.cpp
     src/models/scene.cpp
+    src/rendering/materials/hitbox-material.cpp
+    src/rendering/materials/model-material.cpp
+    src/rendering/sky/sky.cpp
     src/rendering/renderer.cpp
     src/window/window.cpp
     src/main.cpp
@@ -52,24 +62,22 @@ add_executable(OpenGLPlayground
 )
 
 # Modern target-based includes
-target_include_directories(OpenGLPlayground PRIVATE 
-    include 
+target_include_directories(OpenGLPlayground PRIVATE
+    include
     include/stb
     include/GameNetworkingSockets/include
-    ${Boost_INCLUDE_DIRS}
 )
 
 # Linking
 # Note: glfw3 is the target name used by vcpkg
-target_link_libraries(OpenGLPlayground PRIVATE 
+target_link_libraries(OpenGLPlayground PRIVATE
     glfw
     OpenGL::GL
     assimp::assimp
-    OpenSSL::Crypto 
-    OpenSSL::SSL 
+    OpenSSL::Crypto
+    OpenSSL::SSL
     msgpack-cxx
     GameNetworkingSockets
-    ${Boost_LIBRARIES}
 )
 
 # Windows specific: Copy DLLs to the output folder automatically

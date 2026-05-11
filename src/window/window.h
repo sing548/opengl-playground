@@ -8,10 +8,7 @@
 #include <memory>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
-#include "../shaders/shader.h"
 #include "../camera/camera.h"
-#include "../models/model.h"
-#include "../models/scene.h"
 #include "../input-manager/input-manager.h"
 
 struct WindowSize

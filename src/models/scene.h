@@ -24,6 +24,11 @@ struct PlayerData
     int lifes = 10;
 };
 
+struct NpcData
+{
+    
+};
+
 class Scene
 {
 public:

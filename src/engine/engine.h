@@ -1,6 +1,8 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
+#include <glm/glm.hpp>
+
 #include "../window/window.h"
 #include "../camera/camera.h"
 #include "../models/scene.h"
@@ -45,6 +47,7 @@ private:
     std::unique_ptr<Renderer> renderer_;
     std::unique_ptr<Scene> scene_;
     std::unique_ptr<AssetManager> assMan_;
+    std::unique_ptr<Networking> networking_;
 
     NpcSystem npcSystem_; 
     PhysicsSystem physicsSystem_;
@@ -63,7 +66,6 @@ private:
 
     bool m_bNetworking = false;
     bool m_bServer = false;
-    Networking* networking_ = nullptr;
 
     void HandleLogic(float deltaTime);
     void ReconcileNetwork();
@@ -74,6 +76,16 @@ private:
     void RotateModel(unsigned int id, const glm::vec3& change);
 
     void AdjustCamera();
+
+
+    //------------------- TEMP, will be moved to more appropriate class ---------------------
+    std::unique_ptr<Shader> screenShader_;
+    std::unique_ptr<Shader> modelShader_;
+    std::unique_ptr<Shader> hitboxShader_;
+    std::tuple<RenderList, FrameGlobals> BuildRenderList();
+    void TempBuildRenderHelpers();
+    std::unique_ptr<ModelMaterial> modelMat_;
+    std::unique_ptr<HitboxMaterial> hitboxMat_;
 };
 
 #endif

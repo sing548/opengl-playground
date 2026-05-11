@@ -50,7 +50,6 @@ public:
     std::string path_;
     float radius_;
     
-    std::vector<std::shared_ptr<Mesh>> meshes;
     bool gammaCorrection;
 
     
@@ -69,6 +68,8 @@ public:
     glm::vec3 GetRotationSpeed() const;
     std::string GetPath() const;
     float GetRadius() const;
+    const std::vector<std::shared_ptr<Mesh>>& GetMeshes() const;
+    const static Mesh* GetHitboxMesh();
     
     void SetPosition(glm::vec3 position);
     void SetScale(glm::vec3 scale);
@@ -90,6 +91,7 @@ private:
     static const std::array<std::filesystem::path, static_cast<size_t>(ModelType::Count)> ModelPaths;
 
     PhysicalInfo physicalInfo_;
+    std::vector<std::shared_ptr<Mesh>> meshes_;
 };
 
 #endif

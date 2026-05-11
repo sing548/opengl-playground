@@ -6,8 +6,6 @@
     "glm",
     "assimp",
     "openssl",
-    "msgpack",
-    "boost",
-    "gamenetworkingsockets"
+    "msgpack"
   ]
 }

@@ -3,26 +3,16 @@
 Renderer::Renderer(unsigned int width, unsigned int height)
 	: Renderer(width, height, false, true)
 {
-    
 }
 
 Renderer::Renderer(unsigned int width, unsigned int height, bool showHitboxes, bool showSkyBox)
 {
 	std::string screenVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "screen.vert").string();
     std::string screenFrag = (std::filesystem::path(FileHelper::GetShaderDir()) / "screen.frag").string();
-    std::string modelVert  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.vert").string();
-    std::string modelFrag  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.frag").string();
-	std::string hitboxVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "hitbox.vert").string();
-	std::string hitboxFrag = (std::filesystem::path(FileHelper::GetShaderDir()) / "hitbox.frag").string();
-	std::string skyboxVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "skybox.vert").string();
-	std::string skyboxFrag = (std::filesystem::path(FileHelper::GetShaderDir()) / "skybox.frag").string();
 	std::string blurVert   = (std::filesystem::path(FileHelper::GetShaderDir()) / "blur.vert").string();
 	std::string blurFrag   = (std::filesystem::path(FileHelper::GetShaderDir()) / "blur.frag").string();
 	
-    screenShader_ = std::make_unique<Shader>(screenVert.c_str(), screenFrag.c_str());
-    modelShader_  = std::make_unique<Shader>(modelVert.c_str(), modelFrag.c_str());
-	hitboxShader_ = std::make_unique<Shader>(hitboxVert.c_str(), modelFrag.c_str());
-	skyboxShader_ = std::make_unique<Shader>(skyboxVert.c_str(), skyboxFrag.c_str());
+	screenShader_ = std::make_unique<Shader>(screenVert.c_str(), screenFrag.c_str());
 	blurShader_	  = std::make_unique<Shader>(blurVert.c_str(), blurFrag.c_str());
 
 	float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
@@ -114,66 +104,7 @@ Renderer::Renderer(unsigned int width, unsigned int height, bool showHitboxes, b
 	};
 	black_ = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-
-	showHitboxes_ = false;
-
-	/// SKYBOX
-
-	float skyboxVertices[] = {
-    // positions          
-    -1.0f,  1.0f, -1.0f,
-    -1.0f, -1.0f, -1.0f,
-     1.0f, -1.0f, -1.0f,
-     1.0f, -1.0f, -1.0f,
-     1.0f,  1.0f, -1.0f,
-    -1.0f,  1.0f, -1.0f,
-
-    -1.0f, -1.0f,  1.0f,
-    -1.0f, -1.0f, -1.0f,
-    -1.0f,  1.0f, -1.0f,
-    -1.0f,  1.0f, -1.0f,
-    -1.0f,  1.0f,  1.0f,
-    -1.0f, -1.0f,  1.0f,
-
-     1.0f, -1.0f, -1.0f,
-     1.0f, -1.0f,  1.0f,
-     1.0f,  1.0f,  1.0f,
-     1.0f,  1.0f,  1.0f,
-     1.0f,  1.0f, -1.0f,
-     1.0f, -1.0f, -1.0f,
-
-    -1.0f, -1.0f,  1.0f,
-    -1.0f,  1.0f,  1.0f,
-     1.0f,  1.0f,  1.0f,
-     1.0f,  1.0f,  1.0f,
-     1.0f, -1.0f,  1.0f,
-    -1.0f, -1.0f,  1.0f,
-
-    -1.0f,  1.0f, -1.0f,
-     1.0f,  1.0f, -1.0f,
-     1.0f,  1.0f,  1.0f,
-     1.0f,  1.0f,  1.0f,
-    -1.0f,  1.0f,  1.0f,
-    -1.0f,  1.0f, -1.0f,
-
-    -1.0f, -1.0f, -1.0f,
-    -1.0f, -1.0f,  1.0f,
-     1.0f, -1.0f, -1.0f,
-     1.0f, -1.0f, -1.0f,
-    -1.0f, -1.0f,  1.0f,
-     1.0f, -1.0f,  1.0f
-	};
-
-    glGenVertexArrays(1, &skyboxVAO_);
-    glGenBuffers(1, &skyboxVBO_);
-    glBindVertexArray(skyboxVAO_);
-    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO_);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-
 	std::string base = (std::filesystem::path(FileHelper::GetAssetsDir()) / "skybox" / "NASA2").string();
-
 	std::vector<std::string> faces
 	{
 	    (std::filesystem::path(base) / "posx.png").string(),
@@ -183,24 +114,10 @@ Renderer::Renderer(unsigned int width, unsigned int height, bool showHitboxes, b
 	    (std::filesystem::path(base) / "posz.png").string(),
 	    (std::filesystem::path(base) / "negz.png").string()
 	};
-
-	cubemapTexture_ = LoadCubemap(faces);
-
-	this->showHitboxes_ = showHitboxes;
-	this->showSkyBox_ = showSkyBox;
+	sky_ = std::make_unique<Sky>(faces);
 }
 
-void Renderer::ToggleHitboxes()
-{
-	this->showHitboxes_ = !this->showHitboxes_;
-}
-
-void Renderer::ToggleSkyBox()
-{
-	this->showSkyBox_ = !this->showSkyBox_;
-}
-
-void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width, unsigned int height, const std::map<std::string, bool>& settings)
+void Renderer::Draw(const RenderList& renderList, const FrameGlobals& globals, const std::map<std::string, bool>& settings)
 {
 	//ToDo: ECS (Entity Component System)
 	glEnable(GL_DEPTH_TEST);
@@ -210,112 +127,52 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 	glClearBufferfv(GL_COLOR, 1, black_.data());
 	glClear(GL_DEPTH_BUFFER_BIT);
 
-    modelShader_->Use();
-	
-	glm::vec3 dirLight(-1.0f, 0.0f, 0.0f);
+	std::vector<const DrawCommand*> sorted;
+	sorted.reserve(renderList.commands.size());
 
-	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)width / (float)height, 0.1f, 500.0f);
-	glm::mat4 view = camera.GetViewMatrix();
-	modelShader_->SetVec3("viewPos", camera.Position);
-	modelShader_->SetMat4("projection", projection);
-	modelShader_->SetMat4("view", view);
+	for (const auto& cmd : renderList.commands) sorted.push_back(&cmd);
+	std::stable_sort(sorted.begin(), sorted.end(),
+		[](const DrawCommand* a, const DrawCommand* b) {
+			return a->renderPass < b->renderPass;
+		});
 
-	modelShader_->SetVec3("dirLight.direction", dirLight);
-	modelShader_->SetVec3("dirLight.ambient", glm::vec3(0.2f, 0.22f, 0.25f));
-	modelShader_->SetVec3("dirLight.diffuse", glm::vec3(0.4f, 0.42f, 0.45f));
+	RenderPass lastPass = static_cast<RenderPass>(UINT16_MAX);
+	Material* lastMat = nullptr;
 
-	auto models = scene.GetModels();
-
-	int i = 0;
-	for (auto& [id, model] : models)
-	{
-		if (model.type_ == ModelType::SHOT) {
-			std::string pos = std::to_string(i);
-
-			modelShader_->SetVec3("pointLights[" + pos + "].position", model.GetPosition());
-
-			modelShader_->SetVec3("pointLights[" + pos + "].ambient", glm::vec3(0.0f, 0.0f, 0.0f));
-			modelShader_->SetVec3("pointLights[" + pos + "].diffuse", glm::vec3(0.2f, 0.0f, 0.0f));
-			modelShader_->SetVec3("pointLights[" + pos + "].specular", glm::vec3(1.0f, 0.0f, 0.0f));
-
-			modelShader_->SetFloat("pointLights[" + pos + "].constant", 1.0f);
-			modelShader_->SetFloat("pointLights[" + pos + "].linear", 0.09f);
-			modelShader_->SetFloat("pointLights[" + pos + "].quadratic", 0.032f);
-			i++;
+	for (const DrawCommand* cmd : sorted) {
+		if (cmd->renderPass != lastPass) {
+			ApplyPassState(cmd->renderPass);
+			lastPass = cmd->renderPass;
+			lastMat = nullptr;
 		}
-	}
-	
-	if (i > 256) i = 256;
-	modelShader_->SetInt("numPointLights", i - 2);
 
-	for (auto& [id, model] : models)
-	{
-		glm::mat4 modelProjection = glm::mat4(1.0f);
-		modelProjection = glm::translate(modelProjection, model.GetPosition());
-		modelProjection *=  glm::mat4_cast(glm::quat(model.GetRotation()));
-		modelProjection = glm::scale(modelProjection, model.GetScale());
-
-		modelShader_->SetMat4("model", modelProjection);
-
-		glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelProjection)));
-		modelShader_->SetMat3("normalMatrix", normalMatrix);
-		model.Draw(*modelShader_);
-	}
-
-	hitboxShader_->Use();
-	hitboxShader_->SetMat4("projection", projection);
-	hitboxShader_->SetMat4("view", view);
-
-	if (this->showHitboxes_)
-	for (auto& [id, model] : models)
-	{
-    	glm::mat4 modelMat = glm::mat4(1.0f);
-    	modelMat = glm::translate(modelMat, model.GetPosition());
-    	modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
-
-    	hitboxShader_->SetMat4("projection", projection);
-    	hitboxShader_->SetMat4("view", view);
-    	hitboxShader_->SetMat4("model", modelMat);
-
-    	// Draw unit sphere as wireframe
-    	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		model.DrawHitbox(*hitboxShader_);
-    	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	}
-
-	for (auto& [id, playerData] : scene.GetPlayerData())
-	{
-		if (playerData.lastHit > 0)
-		{
-			auto model = scene.GetModelByReference(id);
-			glm::mat4 modelMat = glm::mat4(1.0f);
-    		modelMat = glm::translate(modelMat, model.GetPosition());
-    		modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
-
-    		hitboxShader_->SetMat4("projection", projection);
-    		hitboxShader_->SetMat4("view", view);
-    		hitboxShader_->SetMat4("model", modelMat);
-
-    		// Draw unit sphere as wireframe
-    		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			model.DrawHitbox(*hitboxShader_);
-    		//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		if (cmd->material != lastMat)
+		{ 
+			cmd->material->ApplyFrame(globals);
+			lastMat = cmd->material;
 		}
+
+		cmd->material->ApplyInstance(cmd->transform, cmd->tint);
+		cmd->mesh->Draw(cmd->material->GetShader());
 	}
-	
-	if (this->showSkyBox_)
-	{
-		DrawSkybox(camera, projection);
+
+	if (settings.at("sky_box")) {
+		ApplyPassState(RenderPass::Skybox);
+		sky_->Render(globals);
 	}
 	
 	// ---------- Post-processing / Render to screen ----------
-
+	
 	if (settings.at("bloom"))
 	{
 		PostProcessing();
 	}
 	else
 	{
+		glDisable(GL_DEPTH_TEST);  
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		glDepthMask(GL_TRUE);
+
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
@@ -334,28 +191,35 @@ void Renderer::Draw(const Scene& scene, const Camera& camera, unsigned int width
 	glBindVertexArray(0);
 }
 
-void Renderer::DrawSkybox(const Camera& camera, glm::mat4& projection)
+void Renderer::ApplyPassState(RenderPass pass)
 {
-	glDepthFunc(GL_LEQUAL);          // allow skybox depth = 1.0 to pass
-    glDepthMask(GL_FALSE);           // disable writing to depth buffer
-
-    skyboxShader_->Use();
-    glm::mat4 viewNoTranslation = glm::mat4(glm::mat3(camera.GetViewMatrix())); // remove translation
-    skyboxShader_->SetMat4("view", viewNoTranslation);
-    skyboxShader_->SetMat4("projection", projection);
-
-    glBindVertexArray(skyboxVAO_);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture_);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-    glBindVertexArray(0);
-
-    glDepthMask(GL_TRUE);            // restore depth writing
-    glDepthFunc(GL_LESS);            // restore default depth test
+	switch (pass)
+	{
+		case RenderPass::Opaque:
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        	glEnable(GL_DEPTH_TEST);
+        	glDepthMask(GL_TRUE);
+			glDepthFunc(GL_LESS);  
+			break;
+		case RenderPass::Skybox:
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			glDepthFunc(GL_LEQUAL);
+			glDepthMask(GL_FALSE);
+			break;
+		case RenderPass::Debug:
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        	glEnable(GL_DEPTH_TEST);
+        	glDepthMask(GL_TRUE); 
+			glDepthFunc(GL_LESS);  
+			break;
+	}
 }
 
 void Renderer::PostProcessing()
 {
+	glDisable(GL_DEPTH_TEST);  
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDepthMask(GL_TRUE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);  // back to default framebuffer
 
 	bool horizontal = true, firstIteration = true;

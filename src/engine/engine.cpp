@@ -73,10 +73,10 @@ Engine::Engine(int config, const char *serverAddr)
         scene_->AddOrUpdatePlayerData(pd);
         
         if (m_bServer)
-            networking_ = new Networking(true, *scene_);
+            networking_ = std::make_unique<Networking>(true, *scene_);
         else
         {
-            networking_ = new Networking(false, *scene_, serverAddr);
+            networking_ = std::make_unique<Networking>(false, *scene_, serverAddr);
         }
     }
     else
@@ -97,6 +97,22 @@ Engine::Engine(int config, const char *serverAddr)
         pd2.id = 2;
         scene_->AddOrUpdatePlayerData(pd2);
     }
+
+    TempBuildRenderHelpers();
+}
+
+void Engine::TempBuildRenderHelpers()
+{
+    std::string modelVert  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.vert").string();
+    std::string modelFrag  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.frag").string();
+	std::string hitboxVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "hitbox.vert").string();
+	std::string hitboxFrag = (std::filesystem::path(FileHelper::GetShaderDir()) / "hitbox.frag").string();
+    
+    modelShader_  = std::make_unique<Shader>(modelVert.c_str(), modelFrag.c_str());
+	hitboxShader_ = std::make_unique<Shader>(hitboxVert.c_str(), hitboxFrag.c_str());
+
+    modelMat_ = std::make_unique<ModelMaterial>(modelShader_.get());
+	hitboxMat_ = std::make_unique<HitboxMaterial>(hitboxShader_.get());
 }
 
 AssetManager& Engine::GetAssMan()
@@ -200,7 +216,10 @@ void Engine::Run()
             }
         }
 
-        renderer_->Draw(*scene_, window_->GetCamera(), window_->GetSize().width, window_->GetSize().height, settings_);
+        auto [rL, fG] = BuildRenderList();
+        
+        renderer_->Draw(rL, fG, settings_);
+        
         window_->SwapBuffers();
 
         i++;
@@ -216,7 +235,6 @@ void Engine::Run()
         networking_->Shutdown();
 
     std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-    delete window_.get();
 }
 
 void Engine::ReconcileNetwork()
@@ -425,10 +443,12 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, 
     {
         // Hitboxes
         if (key == GLFW_KEY_F8 && action == GLFW_PRESS)
-            engine->renderer_->ToggleHitboxes();
+            engine->settings_["hitboxes"] = !engine->settings_["hitboxes"];
+            //engine->renderer_->ToggleHitboxes();
         // Skybox
         if (key == GLFW_KEY_F9 && action == GLFW_PRESS)
-            engine->renderer_->ToggleSkyBox();
+            engine->settings_["sky_box"] = !engine->settings_["sky_box"];
+            //engine->renderer_->ToggleSkyBox();
         // Camera
         if (key == GLFW_KEY_F10 && action == GLFW_PRESS)
             engine->settings_["adjust_camera"] = !engine->settings_["adjust_camera"];
@@ -460,3 +480,108 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, 
             glfwSetWindowShouldClose(window, true);
     }
 }
+
+std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
+{
+    glm::mat4 projection = glm::perspective(glm::radians(window_->GetCamera().Zoom), (float)window_->GetSize().width / (float)window_->GetSize().height, 0.1f, 500.0f);
+	glm::mat4 view = window_->GetCamera().GetViewMatrix();
+	auto& models = scene_->GetModels();
+
+	FrameGlobals fg;
+	
+	fg.view 	  = view;
+	fg.projection = projection;
+	fg.cameraPos  = window_->GetCamera().Position;
+	fg.time 	  = 0.0f;
+
+	for (auto& [id, model] : models)
+	{
+		if (model.type_ == ModelType::SHOT) {
+			PointLight pl;
+			pl.position = model.GetPosition();
+			fg.pointLights.push_back(pl);
+		}
+	}
+
+	RenderList rl;
+
+	for (auto& [id, model] : models)
+	{
+		glm::mat4 modelProjection = glm::mat4(1.0f);
+		modelProjection = glm::translate(modelProjection, model.GetPosition());
+		modelProjection *=  glm::mat4_cast(glm::quat(model.GetRotation()));
+		modelProjection = glm::scale(modelProjection, model.GetScale());
+
+		for (auto& mesh : model.GetMeshes())
+		{
+			DrawCommand dc;
+
+			dc.mesh = mesh.get();
+			dc.material = modelMat_.get();
+			dc.transform = modelProjection;
+			dc.tint = {1,1,1,1};
+			dc.renderPass = RenderPass::Opaque;
+
+			rl.commands.push_back(dc);
+		}
+
+		if (settings_["hitboxes"])
+		{
+			DrawCommand dc;
+
+			dc.mesh = model.GetHitboxMesh();
+			dc.material = hitboxMat_.get();
+			
+			glm::mat4 modelMat = glm::mat4(1.0f);
+    		modelMat = glm::translate(modelMat, model.GetPosition());
+    		modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
+
+			dc.transform = modelMat;
+			dc.tint = {1,1,1,1};
+			dc.renderPass = RenderPass::Debug;
+
+			rl.commands.push_back(dc);
+		}
+	}
+
+	for (auto& [id, playerData] : scene_->GetPlayerData())
+	{
+		if (playerData.lastHit > 0)
+		{
+			auto& model = scene_->GetModelByReference(id);
+			
+			DrawCommand dc;
+			dc.mesh = model.GetHitboxMesh();
+			dc.material = hitboxMat_.get();
+
+			glm::mat4 modelMat = glm::mat4(1.0f);
+    		modelMat = glm::translate(modelMat, model.GetPosition());
+    		modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
+
+			dc.transform = modelMat;
+			dc.tint = {1,1,1,1};
+			dc.renderPass = RenderPass::Opaque;
+
+			rl.commands.push_back(dc);
+		}
+	}
+
+	modelMat_->ApplyFrame(fg);
+
+	Material* lastMat = nullptr;
+
+	for (auto& dc : rl.commands)
+	{
+		if (dc.material != lastMat)
+		{ 
+			dc.material->ApplyFrame(fg);
+			lastMat = dc.material;
+		}
+
+		dc.material->ApplyInstance(dc.transform, dc.tint);
+
+		dc.mesh->Draw(dc.material->GetShader());
+	}
+
+    return std::tuple(rl, fg);
+};
