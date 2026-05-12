@@ -24,12 +24,11 @@ public:
     void Shutdown();
     uint32_t UpdateGameState(std::unique_ptr<GameState> gs);
     void DistributeGameState(std::atomic<bool>& running);
-    std::unordered_map<int, InputState>& GetLatestInputStates();
+    std::unordered_map<int, InputState> GetLatestInputStates();
 private:
     struct Client_t
 	{
         uint32_t id;
-		std::string m_sNick;
 	};
 
     std::unique_ptr<GameState> gameState_;
@@ -37,6 +36,8 @@ private:
     uint32_t shotTick = 0;
 
     std::mutex mtx_;
+    std::mutex inputMtx_;
+    std::mutex clientsMtx_;
     std::condition_variable cv_;
 
     std::chrono::steady_clock::time_point lastSendTime_;
@@ -52,7 +53,7 @@ private:
     uint64_t deltaSamples_ = 0;
     uint64_t tickSamples_ = 0;
 
-    uint32_t lastSyncedTick_ = 0;
+    std::atomic<uint32_t> lastSyncedTick_ = 0;
 
     bool newClientConnected_ = false;
     uint32_t lastConnectedClient_ = UINT16_MAX;
@@ -63,15 +64,13 @@ private:
     static std::map<HSteamNetConnection, Client_t> m_mapClients;
     static ServerLogic *s_pCallbackInstance;
     
-    void SendGameStateToAllClients();
-    void SendPackageToClient(unsigned int playerId, const msgpack::sbuffer &buffer);
+    void SendGameStateToAllClients(const GameState& stateToSend);
+    void SendPackageToClient(HSteamNetConnection conn, const msgpack::sbuffer& buffer);
     void PollIncomingMessagesServer(std::atomic<bool>& running);
     void PollConnectionStateChangesServer();
     void OnSteamNetConnectionStatusChangedServer( SteamNetConnectionStatusChangedCallback_t *pInfo );
     void SendStringToClient( HSteamNetConnection conn, const char *str );
     void SendStringToAllClients(const char* str, HSteamNetConnection except = k_HSteamNetConnection_Invalid);
-
-    void SetClientNick( HSteamNetConnection hConn, const char *nick, unsigned int id );
 
     static void SteamNetConnectionStatusChangedCallbackServer( SteamNetConnectionStatusChangedCallback_t *pInfo )
 	{

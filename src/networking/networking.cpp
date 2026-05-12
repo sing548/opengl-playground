@@ -187,7 +187,7 @@ void Networking::SendInputState(InputState& state)
 	client_->SendStateToServer(state);
 };
 
-std::unordered_map<int, InputState>& Networking::GetInputStates()
+std::unordered_map<int, InputState> Networking::GetInputStates()
 {
 	return server_->GetLatestInputStates();
 }

@@ -39,7 +39,7 @@ public:
     ~Networking();
 
     void SendInputState(InputState& state);
-    std::unordered_map<int, InputState>& GetInputStates();
+    std::unordered_map<int, InputState> GetInputStates();
     uint32_t SendGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels, float dT);
     std::tuple<unsigned int, std::vector<uint32_t>> UpdateScene(Scene& scene, AssetManager& assMan);
     void Shutdown();

@@ -79,7 +79,7 @@ void ServerLogic::DistributeGameState(std::atomic<bool>& running)
 		auto stateToSend = *gameState_;
 		lastSyncedTick_ = gameState_->tick;
 		lock.unlock();
-		SendGameStateToAllClients();
+		SendGameStateToAllClients(stateToSend);
 		lock.lock();
 		
 		gameState_.reset();
@@ -102,8 +102,6 @@ uint32_t ServerLogic::UpdateGameState(std::unique_ptr<GameState> gs)
 
 void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
 {
-    char temp[ 1024 ];
-
 	while ( running )
 	{
 		ISteamNetworkingMessage *pIncomingMsg = nullptr;
@@ -114,8 +112,12 @@ void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
 			std::cerr << "Error checking for messages" << std::endl;
 
 		assert( numMsgs == 1 && pIncomingMsg );
-		auto itClient = m_mapClients.find( pIncomingMsg->m_conn );
-		assert( itClient != m_mapClients.end() );
+
+		{
+			std::lock_guard<std::mutex> lock(clientsMtx_);
+			auto itClient = m_mapClients.find( pIncomingMsg->m_conn );
+			assert( itClient != m_mapClients.end() );
+		}		
 
 		msgpack::object_handle oh = msgpack::unpack(
 			static_cast<const char*>(pIncomingMsg->m_pData), pIncomingMsg->m_cbSize);
@@ -137,7 +139,7 @@ void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
 				InputState is;
 				payload.convert(is);
 
-				if (is.shootShot) shotTick = lastSyncedTick_;
+				if (is.shootShot) shotTick = lastSyncedTick_.load();
 
 				if (shotTick == lastSyncedTick_)
 				{
@@ -145,7 +147,10 @@ void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
 				}
 
 				is.tick = lastSyncedTick_;
-				inputStates_[is.id] = is;
+				{
+					std::lock_guard<std::mutex> lock(inputMtx_);
+					inputStates_[is.id] = is;
+				}
 				break;
 			}
 			case 1:
@@ -156,13 +161,6 @@ void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
 
 				// We don't need this anymore.
 				pIncomingMsg->Release();
-
-				// Check for known commands.  None of this example code is secure or robust.
-				// Don't write a real server like this, please.
-
-				// Assume it's just a ordinary chat message, dispatch to everybody else
-				sprintf( temp, "%s: %s", itClient->second.m_sNick.c_str(), cmd );
-        		std::cout << temp << std::endl;
 				break;
 			}
 			default:
@@ -174,9 +172,12 @@ void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
 	}
 };
 
-std::unordered_map<int, InputState>& ServerLogic::GetLatestInputStates()
+std::unordered_map<int, InputState> ServerLogic::GetLatestInputStates()
 {
-	return inputStates_;
+	std::lock_guard lock(inputMtx_);
+	auto out = std::move(inputStates_);
+	inputStates_.clear();
+	return out;
 };
 
 void ServerLogic::PollConnectionStateChangesServer()
@@ -187,8 +188,6 @@ void ServerLogic::PollConnectionStateChangesServer()
 
 void ServerLogic::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionStatusChangedCallback_t *pInfo )
 	{
-	char temp[1024];
-
 	// What's the state of the connection?
 	switch ( pInfo->m_info.m_eState )
 	{
@@ -203,27 +202,30 @@ void ServerLogic::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionSta
 			// before we accepted the connection.)
 			if ( pInfo->m_eOldState == k_ESteamNetworkingConnectionState_Connected )
 			{
-				// Locate the client.  Note that it should have been found, because this
-				// is the only codepath where we remove clients (except on shutdown),
-				// and connection change callbacks are dispatched in queue order.
-				auto itClient = m_mapClients.find( pInfo->m_hConn );
-				assert( itClient != m_mapClients.end() );
+				uint32_t id = 0;
+				{
+					std::lock_guard<std::mutex> lock(clientsMtx_);
+					// Locate the client.  Note that it should have been found, because this
+					// is the only codepath where we remove clients (except on shutdown),
+					// and connection change callbacks are dispatched in queue order.
+					auto itClient = m_mapClients.find( pInfo->m_hConn );
+					assert( itClient != m_mapClients.end() );
+					id   = itClient->second.id;
+					m_mapClients.erase( itClient );
+				}
 
-				// Select appropriate log messages
 				const char *pszDebugLogAction;
 				if ( pInfo->m_info.m_eState == k_ESteamNetworkingConnectionState_ProblemDetectedLocally )
 				{
 					pszDebugLogAction = "problem detected locally";
-					sprintf( temp, "Alas, %s hath fallen into shadow.  (%s)", itClient->second.m_sNick.c_str(), pInfo->m_info.m_szEndDebug );
-					std::printf("Departed id: %d", itClient->second.id);
+					std::printf("Departed id: %u", id);
 				}
 				else
 				{
 					// Note that here we could check the reason code to see if
 					// it was a "usual" connection or an "unusual" one.
 					pszDebugLogAction = "closed by peer";
-					sprintf( temp, "%s hath departed", itClient->second.m_sNick.c_str() );
-					std::printf("Departed id: %d", itClient->second.id);
+					std::printf("Departed id: %u", id);
 				}
 
 				// Spew something to our own log.  Note that because we put their nick
@@ -235,11 +237,6 @@ void ServerLogic::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionSta
 					pInfo->m_info.m_eEndReason,
 					pInfo->m_info.m_szEndDebug
 				);
-
-				m_mapClients.erase( itClient );
-
-				// Send a message so everybody else knows what happened
-				//SendStringToAllClients( temp );
 			}
 			else
 			{
@@ -258,9 +255,11 @@ void ServerLogic::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionSta
 
 		case k_ESteamNetworkingConnectionState_Connecting:
 		{
-			// This must be a new connection
-			assert( m_mapClients.find( pInfo->m_hConn ) == m_mapClients.end() );
-
+			{
+				std::lock_guard<std::mutex> lock(clientsMtx_);
+				// This must be a new connection
+				assert( m_mapClients.find( pInfo->m_hConn ) == m_mapClients.end() );
+			}
 			std::printf( "Connection request from %s", pInfo->m_info.m_szConnectionDescription );
 
 			// A client is attempting to connect
@@ -283,18 +282,12 @@ void ServerLogic::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionSta
 				break;
 			}
 
-			// Generate a random nick.  A random temporary nick
-			// is really dumb and not how you would write a real chat server.
-			// You would want them to have some sort of signon message,
-			// and you would keep their client in a state of limbo (connected,
-			// but not logged on) until them.  I'm trying to keep this example
-			// code really simple.
-			char nick[ 64 ];
 			unsigned int id = lastConnectedClient_;
 
-			std::cout << temp << std::endl;
-			m_mapClients[ pInfo->m_hConn ];
-			SetClientNick( pInfo->m_hConn, nick, id );
+			{
+				std::lock_guard<std::mutex> lock(clientsMtx_);
+				m_mapClients[ pInfo->m_hConn ];
+			}
 
 			msgpack::sbuffer buffer;
 			msgpack::packer<msgpack::sbuffer> pk(buffer);
@@ -303,7 +296,8 @@ void ServerLogic::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionSta
 			// ToDo: This is hacky, make this better in future
 			pk.pack(id - 1);
 
-			SendPackageToClient(id, buffer);
+			SendPackageToClient(pInfo->m_hConn, buffer);
+			//SendPackageToClient(id, buffer);
 
 			newClientConnected_ = id;
 			lastConnectedClient_--;
@@ -320,19 +314,8 @@ void ServerLogic::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionSta
 			break;
 	}
 };
-
-void ServerLogic::SetClientNick( HSteamNetConnection hConn, const char *nick, unsigned int id )
-	{
-
-		// Remember their nick
-		m_mapClients[hConn].m_sNick = nick;
-		m_mapClients[hConn].id = id;
-
-		// Set the connection name, too, which is useful for debugging
-		m_pInterface->SetConnectionName( hConn, nick);
-	}
 	
-void ServerLogic::SendGameStateToAllClients()
+void ServerLogic::SendGameStateToAllClients(const GameState& stateToSend)
 {
 	const auto now = std::chrono::steady_clock::now();
 
@@ -357,34 +340,31 @@ void ServerLogic::SendGameStateToAllClients()
         }
     }
 
+	
+	std::vector<HSteamNetConnection> conns;
+	{
+		std::lock_guard<std::mutex> lock(clientsMtx_);
+		conns.reserve(m_mapClients.size());
+		for (auto& c : m_mapClients) conns.push_back(c.first);
+	}
+	
 	std::lock_guard<std::mutex> lock(mtx_);
-
+	
 	msgpack::sbuffer buffer;
 	msgpack::packer<msgpack::sbuffer> pk(buffer);
 	pk.pack_array(2);
 	pk.pack_uint8(0);
-	pk.pack(*gameState_);
+	pk.pack(stateToSend);
 
-	for (auto& c : m_mapClients)
+	for (auto& conn : conns)
 	{
 		auto now = std::chrono::steady_clock::now();
-		SendPackageToClient(c.second.id, buffer);
+		SendPackageToClient(conn, buffer);
 	}
 }
 
-void ServerLogic::SendPackageToClient(unsigned int playerId, const msgpack::sbuffer &buffer)
+void ServerLogic::SendPackageToClient(HSteamNetConnection conn, const msgpack::sbuffer &buffer)
 {
-	auto t0 = std::chrono::steady_clock::now();
-	HSteamNetConnection conn;
-	
-	for (auto& c : m_mapClients) {
-		if (c.second.id == playerId) 
-		{
-			conn = c.first;
-			break;
-		}
-	}
-	
 	EResult res = m_pInterface->SendMessageToConnection( conn, buffer.data(), buffer.size(), k_nSteamNetworkingSend_Reliable, nullptr );
 
 	if (res != k_EResultOK)
@@ -397,8 +377,13 @@ void ServerLogic::SendStringToClient( HSteamNetConnection conn, const char *str 
 };
 
 void ServerLogic::SendStringToAllClients(const char* str, HSteamNetConnection except) { 
-    for (auto& c : m_mapClients) {
-        if (c.first != except)
-            SendStringToClient(c.first, str);
-    }
+	std::vector<HSteamNetConnection> conns;
+	{
+		std::lock_guard<std::mutex> lock(clientsMtx_);
+		for (auto& c : m_mapClients) {
+        	if (c.first != except) conns.push_back(c.first);
+		}
+	}
+	for (auto conn : conns)	SendStringToClient(conn, str);
+    
 };
