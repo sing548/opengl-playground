@@ -95,21 +95,6 @@ const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> Scene::G
     return result;
 }
 
-PlayerData& Scene::GetPlayerData(uint32_t id)
-{
-    return playerData_.at(id);
-}
-
-std::unordered_map<uint32_t, PlayerData>& Scene::GetPlayerData()
-{
-    return playerData_;
-}
-
-const std::unordered_map<uint32_t, PlayerData>& Scene::GetPlayerData() const
-{
-    return playerData_;
-}
-
 void Scene::MarkModelForDelete(unsigned int id)
 {
     removeMarkedModels_.push_back(id);
@@ -136,18 +121,4 @@ const std::vector<unsigned int>& Scene::GetAddedModels() const
 void Scene::ClearAddedModels()
 {
     addedModels_.clear();
-}
-
-void Scene::AddOrUpdatePlayerData(PlayerData pd)
-{
-    playerData_[pd.id] = std::move(pd);
-}
-
-void Scene::RemovePlayerData(uint32_t id)
-{
-    auto it = playerData_.find(id);
-    if (it != playerData_.end())
-    {
-        playerData_.erase(it);
-    }
 }

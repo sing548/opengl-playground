@@ -68,18 +68,18 @@ Engine::Engine(EngineMode config, const char *serverAddr)
             models.push_back(model);
         }
         
-        SetupScene(models);
+        SetupGameWorld(models);
 
         PlayerData pd;
         pd.id = 1;
         pd.lastHit = 0;
-        scene_->AddOrUpdatePlayerData(pd);
+        gameWorld_.AddOrUpdatePlayerData(pd);
         
         if (m_bServer)
-            networking_ = std::make_unique<Networking>(true, *scene_);
+            networking_ = std::make_unique<Networking>(true, gameWorld_.GetScene());
         else
         {
-            networking_ = std::make_unique<Networking>(false, *scene_, serverAddr);
+            networking_ = std::make_unique<Networking>(false, gameWorld_.GetScene(), serverAddr);
         }
     }
     else
@@ -90,15 +90,15 @@ Engine::Engine(EngineMode config, const char *serverAddr)
         previousInputStates_.try_emplace(playerId_, state);
 
         auto models = BasicLevel();
-        SetupScene (models);
+        SetupGameWorld (models);
 
         PlayerData pd;
         pd.id = 1;
-        scene_->AddOrUpdatePlayerData(pd);
+        gameWorld_.AddOrUpdatePlayerData(pd);
 
         PlayerData pd2;
         pd2.id = 2;
-        scene_->AddOrUpdatePlayerData(pd2);
+        gameWorld_.AddOrUpdatePlayerData(pd2);
     }
 
     TempBuildRenderHelpers();
@@ -150,12 +150,12 @@ std::vector<Model> Engine::BasicLevel()
     return models;
 }
 
-void Engine::SetupScene(std::vector<Model> models)
+void Engine::SetupGameWorld(std::vector<Model> models)
 {
-    scene_ = std::make_unique<Scene>();
+    gameWorld_ = GameWorld();
 
     for (auto& m : models) {
-        scene_->AddModel(m);
+        gameWorld_.GetScene().AddModel(m);
     }
 }
 
@@ -199,15 +199,15 @@ void Engine::Run()
     
             if (m_bNetworking && m_bServer)
             {
-               newClient = networking_->SendGameState(*scene_, scene_->GetAddedModels(), scene_->GetRemoveMarkedModels(), fixedDelta);    
+               newClient = networking_->SendGameState(gameWorld_.GetScene(), gameWorld_.GetScene().GetAddedModels(), gameWorld_.GetScene().GetRemoveMarkedModels(), fixedDelta);    
             }
             else if (m_bNetworking && playerId_ >= 0)
             {
                 networking_->SendInputState(currentInputStates_.at(playerId_));
             }
 
-            scene_->RemoveMarkedModels();
-            scene_->ClearAddedModels();
+            gameWorld_.GetScene().RemoveMarkedModels();
+            gameWorld_.GetScene().ClearAddedModels();
 
             j++;
             // Logic/s counter in console
@@ -244,7 +244,7 @@ void Engine::ReconcileNetwork()
 {
     if (m_bNetworking && !m_bServer)
     {
-        auto [playerId, playerModelRemoved] = networking_->UpdateScene(*scene_, *assMan_);
+        auto [playerId, playerModelRemoved] = networking_->UpdateScene(gameWorld_.GetScene(), *assMan_);
         if (playerId != 0)
         {
             playerId_ = playerId;
@@ -266,7 +266,7 @@ void Engine::ReconcileNetwork()
             if (id == playerId_)
                 playerId_ = -1;
             
-            scene_->RemovePlayerData(id);
+            gameWorld_.RemovePlayerData(id);
         }
     }
     else if (m_bNetworking)
@@ -296,11 +296,11 @@ void Engine::ReconcileNetwork()
 
 void Engine::HandleLogic(float deltaTime)
 {
-    auto removes = scene_->GetRemoveMarkedModels();
+    auto removes = gameWorld_.GetScene().GetRemoveMarkedModels();
     
     for (auto& r : removes)
     {
-        auto model = scene_->GetModelByReference(r);
+        auto model = gameWorld_.GetScene().GetModelByReference(r);
         if (model.type_ == ModelType::PLAYER)
         {
             auto i = currentInputStates_.find(r);
@@ -313,10 +313,10 @@ void Engine::HandleLogic(float deltaTime)
         }
     }
     
-    physicsSystem_.Update(deltaTime, *scene_);
-    npcSystem_.Update(deltaTime, *scene_);
-    playerSystem_.Update(deltaTime, *scene_, *assMan_, currentInputStates_, previousInputStates_, playerId_, !(m_bNetworking && !m_bServer));
-    shotSystem_.Update(*scene_);
+    physicsSystem_.Update(deltaTime, gameWorld_.GetScene());
+    npcSystem_.Update(deltaTime, gameWorld_.GetScene());
+    playerSystem_.Update(deltaTime, gameWorld_.GetScene(), *assMan_, currentInputStates_, previousInputStates_, playerId_, !(m_bNetworking && !m_bServer));
+    shotSystem_.Update(gameWorld_.GetScene());
     cameraSystem_.Update();
     
     bool adjust = settings_["adjust_camera"];
@@ -328,7 +328,7 @@ void Engine::HandleLogic(float deltaTime)
 void Engine::AdjustCamera()
 {
     if (settings_["third_person"] ) {
-        auto model = scene_->GetModelByReference(playerId_);
+        auto model = gameWorld_.GetScene().GetModelByReference(playerId_);
         glm::vec3 modelPos = model.GetPosition();
         
         // Offset from the model in its local orientation
@@ -352,8 +352,8 @@ void Engine::AdjustCamera()
         float halfFovTan = tanf(fovyRadians * 0.5f);
 
         // Required heights in each axis
-        float requiredX = (abs(scene_->currentFurthestPosition_.x) + 1.5f) / (halfFovTan * aspect);
-        float requiredZ = (abs(scene_->currentFurthestPosition_.z) + 1.5f)/ halfFovTan;
+        float requiredX = (abs(gameWorld_.GetScene().currentFurthestPosition_.x) + 1.5f) / (halfFovTan * aspect);
+        float requiredZ = (abs(gameWorld_.GetScene().currentFurthestPosition_.z) + 1.5f)/ halfFovTan;
 
         // Take the larger
         float h = std::max(requiredX, requiredZ);
@@ -384,21 +384,21 @@ void Engine::AddNewPlayer(uint32_t id)
     pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
     Model model(Model::GetModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
 
-    scene_->AddModel(model, id);
+    gameWorld_.GetScene().AddModel(model, id);
 
     PlayerData pd;
     pd.id = id;
 
-    scene_->AddOrUpdatePlayerData(pd);
+    gameWorld_.AddOrUpdatePlayerData(pd);
     
-    auto playerModels = scene_->GetPlayerModels();
+    auto playerModels = gameWorld_.GetScene().GetPlayerModels();
 
     for (auto& [id, model] : playerModels)
     {
-        const std::vector<unsigned int> addedModels = scene_->GetAddedModels();
+        const std::vector<unsigned int> addedModels = gameWorld_.GetScene().GetAddedModels();
 
         if (std::find(addedModels.begin(), addedModels.end(), id) == addedModels.end())
-            scene_->AddExtraModelToAddedIds(id);
+            gameWorld_.GetScene().AddExtraModelToAddedIds(id);
     }
 }
 
@@ -488,7 +488,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 {
     glm::mat4 projection = glm::perspective(glm::radians(window_->GetCamera().Zoom), (float)window_->GetSize().width / (float)window_->GetSize().height, 0.1f, 500.0f);
 	glm::mat4 view = window_->GetCamera().GetViewMatrix();
-	auto& models = scene_->GetModels();
+	auto& models = gameWorld_.GetScene().GetModels();
 
 	FrameGlobals fg;
 	
@@ -547,11 +547,11 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 		}
 	}
 
-	for (auto& [id, playerData] : scene_->GetPlayerData())
+	for (auto& [id, playerData] : gameWorld_.GetPlayerData())
 	{
 		if (playerData.lastHit > 0)
 		{
-			auto& model = scene_->GetModelByReference(id);
+			auto& model = gameWorld_.GetScene().GetModelByReference(id);
 			
 			DrawCommand dc;
 			dc.mesh = model.GetHitboxMesh();

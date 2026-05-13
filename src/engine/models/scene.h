@@ -12,23 +12,6 @@ struct ModelWithReference
         : Id(id), model(std::move(m)) {}
 };
 
-struct ShotData
-{
-
-};
-
-struct PlayerData
-{
-    uint32_t id;
-    float lastHit = 0;
-    int lifes = 10;
-};
-
-struct NpcData
-{
-    
-};
-
 class Scene
 {
 public:
@@ -51,12 +34,6 @@ public:
     const std::vector<unsigned int>& GetAddedModels() const;
     void ClearAddedModels();
     void AddExtraModelToAddedIds(unsigned int id);
-        
-    PlayerData& GetPlayerData(uint32_t id);
-    std::unordered_map<uint32_t, PlayerData>& GetPlayerData();
-    const std::unordered_map<uint32_t, PlayerData>& GetPlayerData() const;
-    void AddOrUpdatePlayerData(PlayerData pd);
-    void RemovePlayerData(uint32_t id);
 
     uint32_t currentTick = 0;
 
@@ -65,9 +42,6 @@ public:
 private:
     unsigned int nextId_;
     std::unordered_map<uint32_t, Model> models_;
-
-    std::unordered_map<uint32_t, ShotData> shotData_;
-    std::unordered_map<uint32_t, PlayerData> playerData_;
 
     std::vector<unsigned int> removeMarkedModels_;
     std::vector<unsigned int> addedModels_;

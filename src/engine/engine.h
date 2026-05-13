@@ -5,7 +5,6 @@
 
 #include "window/window.h"
 #include "camera/camera.h"
-#include "models/scene.h"
 #include "models/model.h"
 #include "input-manager/input-manager.h"
 #include "rendering/renderer.h"
@@ -17,7 +16,7 @@
 #include "../game/systems/physics-system.h"
 #include "../game/systems/player-system.h"
 #include "../game/systems/shot-system.h"
-
+#include "../game/game-world/game-world.h"
 
 #include "../engine/rendering/materials/model-material.h"
 #include "../engine/rendering/materials/hitbox-material.h"
@@ -32,7 +31,7 @@ public:
 
     Engine(EngineMode config, const char *serverAddr = nullptr);
     std::vector<Model> BasicLevel();
-    void SetupScene(std::vector<Model>);
+    void SetupGameWorld(std::vector<Model>);
     void Run();
     AssetManager& GetAssMan();
 
@@ -49,9 +48,10 @@ private:
     std::unique_ptr<InputManager> inputManager_;
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<Renderer> renderer_;
-    std::unique_ptr<Scene> scene_;
     std::unique_ptr<AssetManager> assMan_;
     std::unique_ptr<Networking> networking_;
+
+    GameWorld gameWorld_;
 
     NpcSystem npcSystem_; 
     PhysicsSystem physicsSystem_;

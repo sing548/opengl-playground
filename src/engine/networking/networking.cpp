@@ -1,5 +1,7 @@
 #include "networking.h"
 
+#include "../../game/game-world/game-world.h"
+
 Networking::Networking(bool bServer, const Scene& scene, const char *serverAddr)
 {
 	m_bServer = bServer;
@@ -250,7 +252,8 @@ std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(Scene& s
 		{
 			PlayerData pd;
 			pd.id = entity.id;
-			scene.AddOrUpdatePlayerData(pd);
+			// ToDo: This needs to change. Networking should not be in engine, but is for now
+			//scene.AddOrUpdatePlayerData(pd);
 		}
 	}
 
