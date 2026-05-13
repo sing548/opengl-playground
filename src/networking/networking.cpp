@@ -141,7 +141,7 @@ void Networking::BuildGameState(const Scene& scene, const std::vector<unsigned i
             // --- Full creation data ---
             EntityCreationState e;
             e.id                 = id;
-            e.type               = model.type_;
+            e.type               = static_cast<uint32_t>(model.type_);
             e.radius             = model.GetRadius();
             e.position_          = model.GetPosition();
             e.scale_             = model.GetScale();

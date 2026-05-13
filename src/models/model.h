@@ -35,7 +35,7 @@ struct PhysicalInfo {
     glm::vec3 rotationSpeed_;
 };
 
-enum ModelType
+enum class ModelType : uint32_t
 {
     PLAYER,
     SHOT,

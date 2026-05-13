@@ -19,7 +19,7 @@ private:
                       AssetManager& assMan,
                       std::unordered_map<int, InputState>& currentInputStates,
                       std::unordered_map<int, InputState>& previousInputStates,
-                      int plöayerId,
+                      int playerId,
                       bool shoot);
     void UpdatePlayerData(float dT, Scene& scene);
     void RotateModel(unsigned int id, Scene& scene, const glm::vec3& change);

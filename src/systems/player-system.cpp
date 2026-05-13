@@ -101,6 +101,5 @@ void PlayerSystem::UpdatePlayerData(float dT, Scene& scene)
     {
         if (playerData.lastHit > 0) playerData.lastHit -= dT;
         if (playerData.lastHit < 0) playerData.lastHit = 0;
-        scene.AddOrUpdatePlayerData(playerData);
     }
 }
