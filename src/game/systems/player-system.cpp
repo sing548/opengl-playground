@@ -26,10 +26,11 @@ void PlayerSystem::ExecuteInput(float dT,
                                 bool shoot)
 {
     bool playerExists = gameWorld.GetScene().ModelExists(playerId);
-    if (playerId <= 0 || !playerExists) return;
 
     for (auto& [id, state] : currentInputStates)
     {
+        if (!gameWorld.GetScene().ModelExists(id)) continue;
+
         if (state.left) 
             RotateModel(id, gameWorld.GetScene(), {0.0f, glm::radians(2.1f), 0.0f});
 
@@ -58,20 +59,20 @@ void PlayerSystem::ExecuteInput(float dT,
             gameWorld.GetScene().GetModelByReference(id).SetSpeed(speed);
         }
 
-        if (!shoot) return;
+        if (!shoot) continue;
 
-        if (state.shootShot && id == playerId)
+        /*if (state.shootShot && id == playerId)
         {
             Shoot(gameWorld, assMan, id);
         }
         else 
-        {
+        {*/
             if (state.shootShot && previousInputStates.at(id).shootShot != true)
             {
                 previousInputStates.at(id).shootShot = true;
                 Shoot(gameWorld, assMan, id);
             }
-        }
+        //}
     }
 }
 
@@ -84,7 +85,15 @@ void PlayerSystem::RotateModel(unsigned int id, Scene& scene, const glm::vec3& c
 void PlayerSystem::Shoot(GameWorld& gameWorld, AssetManager& assMan, uint32_t shooterId)
 {
     auto shooter = gameWorld.GetScene().GetModelByReference(shooterId);
-    spawner::SpawnShot(gameWorld, assMan, shooter.GetPosition() + shooter.GetOrientation(), shooter.GetRotation(), shooter.GetOrientation(), shooter.GetSpeed());
+    PhysicalInfo pi = PhysicalInfo();
+    pi.baseOrientation_ = shooter.GetBaseOrientation();
+	pi.orientation_ 	= shooter.GetOrientation();
+	pi.position_		= shooter.GetPosition();
+	pi.rotation_		= shooter.GetRotation();
+	pi.rotationSpeed_	= shooter.GetRotationSpeed();
+	pi.scale_			= shooter.GetScale();
+	pi.speed_			= shooter.GetSpeed();
+    spawner::SpawnShot(gameWorld, assMan, pi);
 }
 
 void PlayerSystem::UpdatePlayerData(float dT, GameWorld& gameWorld)

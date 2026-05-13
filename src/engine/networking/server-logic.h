@@ -33,7 +33,6 @@ private:
 
     std::unique_ptr<GameState> gameState_;
     std::unordered_map<int, InputState> inputStates_;
-    uint32_t shotTick = 0;
 
     std::mutex mtx_;
     std::mutex inputMtx_;

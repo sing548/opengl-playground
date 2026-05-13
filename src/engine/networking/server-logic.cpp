@@ -138,19 +138,21 @@ void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
 			{
 				InputState is;
 				payload.convert(is);
+				is.tick = lastSyncedTick_.load();
 
-				if (is.shootShot) shotTick = lastSyncedTick_.load();
+				std::lock_guard<std::mutex> lock(inputMtx_);
+				auto& slot = inputStates_[is.id];
 
-				if (shotTick == lastSyncedTick_)
-				{
-					is.shootShot = true;
-				}
-
-				is.tick = lastSyncedTick_;
-				{
-					std::lock_guard<std::mutex> lock(inputMtx_);
-					inputStates_[is.id] = is;
-				}
+				slot.id		  = is.id;
+				slot.tick	  = is.tick;
+				slot.left	  = is.left;
+				slot.right	  = is.right;
+				slot.forward  = is.forward;
+				slot.backward = is.backward;
+				slot.shoot	  = is.shoot;
+				
+				slot.shootShot = slot.shootShot || is.shootShot;
+				
 				break;
 			}
 			case 1:
@@ -299,6 +301,7 @@ void ServerLogic::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionSta
 			SendPackageToClient(pInfo->m_hConn, buffer);
 			//SendPackageToClient(id, buffer);
 
+			shotTick[id - 1] = 0;
 			newClientConnected_ = id;
 			lastConnectedClient_--;
 			break;

@@ -1,5 +1,6 @@
 #include "networking.h"
 
+#include "../../game/spawner/spawner.h"
 #include "../../game/game-world/game-world.h"
 
 Networking::Networking(bool bServer, const Scene& scene, const char *serverAddr)
@@ -237,27 +238,18 @@ std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(GameWorl
 		pi.scale_			= entity.scale_;
 		pi.speed_			= entity.speed_;
 	
-		ModelType type;
 		switch (entity.type) 
 		{
-			case 0: type = ModelType::PLAYER; 	break;
-			case 1: type = ModelType::SHOT;	break;
-			case 2: type = ModelType::NPC; break;
-			default: type = ModelType::SHOT;	break;
-		}
-	
-		Model model(Model::GetModelPath(type), pi, assMan, type, true, entity.radius);
-		gameWorld.GetScene().AddModel(model, entity.id);
-
-		if (model.type_ == ModelType::PLAYER)
-		{
-			PlayerData pd;
-			pd.id = entity.id;
-			gameWorld.AddOrUpdatePlayerData(pd);
-		}
-		else if (model.type_ == ModelType::SHOT)
-		{
-			gameWorld.AddShot(entity.id);
+			case 0: 
+				spawner::SpawnPlayer(gameWorld, assMan, pi, entity.id);
+				break;
+			case 1: 
+				spawner::SpawnShot(gameWorld, assMan, pi, glm::vec3(0.0f), false, entity.id);
+				break;
+			case 2: 
+				spawner::SpawnNpc(gameWorld, assMan, pi, entity.id);
+				break;
+			default: break;
 		}
 	}
 

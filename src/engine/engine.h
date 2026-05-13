@@ -30,8 +30,7 @@ class Engine {
 public:
 
     Engine(EngineMode config, const char *serverAddr = nullptr);
-    std::vector<Model> BasicLevel();
-    void SetupGameWorld(std::vector<Model>);
+    void BasicLevel();
     void Run();
     AssetManager& GetAssMan();
 

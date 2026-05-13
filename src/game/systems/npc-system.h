@@ -1,14 +1,17 @@
 #ifndef NPC_SYSTEM_H
 #define NPC_SYSTEM_H
 
-#include "../../engine/models/scene.h"
-#include "../../engine/window/window.h"
-
+class GameWorld;
+class AssetManager;
 
 class NpcSystem {
 public:
-    void Update(float dT, Scene& scene);
+    NpcSystem() = default;
+    explicit NpcSystem(bool isAuthoritative);
+
+    void Update(float dT, GameWorld& gameWorld, AssetManager& AssMan);
 private:
+    bool isAuthoritative_;
 };
 
 #endif

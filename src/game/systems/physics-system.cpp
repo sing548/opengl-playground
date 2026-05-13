@@ -69,21 +69,21 @@ void PhysicsSystem::CheckHits(GameWorld& gameWorld)
     {
         const Model& shot = scene.GetModelByReference(shotId);
 
-        for (auto& [playerId, npcData] : gameWorld.GetNpcData())
+        for (auto& [npcId, npcData] : gameWorld.GetNpcData())
         {
-            /*const Model& player = scene.GetModelByReference(playerId);
+            const Model& npc = scene.GetModelByReference(npcId);
 
-            if (!Collide(shot, player)) continue;
+            if (!Collide(shot, npc)) continue;
 
-            npcDaata.lastHit = 0.2f;
+            npcData.lastHit = 0.2f;
             npcData.lifes -= 1;
 
-            if (playerData.lifes == 0 && isAuthoritative_)
+            if (npcData.lifes == 0 && isAuthoritative_)
             {
-                gameWorld.MarkEntityForDelete(playerId);
+                gameWorld.MarkEntityForDelete(npcId);
             }
             else if (isAuthoritative_)
-                gameWorld.MarkEntityForDelete(shotId);*/
+                gameWorld.MarkEntityForDelete(shotId);
         }
     }
 }

@@ -1,5 +1,7 @@
 #include "engine.h"
 
+#include "../game/spawner/spawner.h"
+
 Engine::Engine(EngineMode config, const char *serverAddr)
 {
     if (config == EngineMode::Server)
@@ -33,6 +35,7 @@ Engine::Engine(EngineMode config, const char *serverAddr)
     assMan_ = std::make_unique<AssetManager>();
 
     const bool isAuthoritative = !m_bNetworking || m_bServer;
+    npcSystem_ = NpcSystem(isAuthoritative);
     physicsSystem_ = PhysicsSystem(isAuthoritative);
 
     glfwSetWindowUserPointer(window_->Get(), this);
@@ -48,16 +51,10 @@ Engine::Engine(EngineMode config, const char *serverAddr)
 
     if (m_bNetworking)
     {
-        playerId_ = m_bServer ? 1 : -1;
+        playerId_ = -1;
        
-
-        std::vector<Model> models = std::vector<Model>();
         if (m_bServer)
         {
-            auto state = InputState { playerId_, false, false, false, false, false, false  };
-            currentInputStates_.try_emplace(playerId_, state);
-            previousInputStates_.try_emplace(playerId_, state);
-
             PhysicalInfo pi = PhysicalInfo();
             pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
             pi.rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -65,16 +62,15 @@ Engine::Engine(EngineMode config, const char *serverAddr)
             pi.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
             pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
             Model model(Model::GetModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
-            models.push_back(model);
-        }
-        
-        SetupGameWorld(models);
 
-        PlayerData pd;
-        pd.id = 1;
-        pd.lastHit = 0;
-        gameWorld_.AddOrUpdatePlayerData(pd);
-        
+            playerId_ = spawner::SpawnPlayer(gameWorld_, *assMan_, pi);
+
+            auto state = InputState { playerId_, false, false, false, false, false, false  };
+            currentInputStates_.try_emplace(playerId_, state);
+            previousInputStates_.try_emplace(playerId_, state);
+
+        }
+    
         if (m_bServer)
             networking_ = std::make_unique<Networking>(true, gameWorld_.GetScene());
         else
@@ -84,21 +80,11 @@ Engine::Engine(EngineMode config, const char *serverAddr)
     }
     else
     {
-        playerId_ = 1;
+        BasicLevel();
+
         auto state = InputState { playerId_, false, false, false, false, false, false  };
         currentInputStates_.try_emplace(playerId_, state);
         previousInputStates_.try_emplace(playerId_, state);
-
-        auto models = BasicLevel();
-        SetupGameWorld (models);
-
-        PlayerData pd;
-        pd.id = 1;
-        gameWorld_.AddOrUpdatePlayerData(pd);
-
-        PlayerData pd2;
-        pd2.id = 2;
-        gameWorld_.AddOrUpdatePlayerData(pd2);
     }
 
     TempBuildRenderHelpers();
@@ -123,10 +109,8 @@ AssetManager& Engine::GetAssMan()
     return *assMan_;
 }
 
-std::vector<Model> Engine::BasicLevel()
+void Engine::BasicLevel()
 {
-    std::vector<Model> models = std::vector<Model>();
-
     PhysicalInfo pi = PhysicalInfo();
     pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
     pi.rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -134,8 +118,8 @@ std::vector<Model> Engine::BasicLevel()
     pi.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
     pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
 
-    Model model(Model::GetModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
-    models.push_back(model);
+    playerId_ = spawner::SpawnPlayer(gameWorld_, *assMan_, pi);
+
 
     PhysicalInfo pi2 = PhysicalInfo();
     pi2.position_ = glm::vec3(-20.0f, 0.0f, 0.0f);
@@ -144,17 +128,7 @@ std::vector<Model> Engine::BasicLevel()
     pi2.orientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
     pi2.baseOrientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
 
-    Model model2(Model::GetModelPath(ModelType::PLAYER), pi2, *assMan_, ModelType::NPC);
-    models.push_back(model2);
-
-    return models;
-}
-
-void Engine::SetupGameWorld(std::vector<Model> models)
-{
-    for (auto& m : models) {
-        gameWorld_.GetScene().AddModel(m);
-    }
+    spawner::SpawnNpc(gameWorld_, *assMan_, pi2);
 }
 
 void Engine::Run()
@@ -211,7 +185,7 @@ void Engine::Run()
             // Logic/s counter in console
             if (logicTime >= 1) 
             {
-                std::cout << "Current Logic/s: " << j / logicTime << std::endl;
+                //std::cout << "Current Logic/s: " << j / logicTime << std::endl;
                 j = 0;
                 logicTime = 0;
             }
@@ -226,7 +200,7 @@ void Engine::Run()
         i++;
         // FPS counter in console
         if (fpsTime >= 1) {
-            std::cout << "Current FPS: " << i / fpsTime << std::endl;
+            //std::cout << "Current FPS: " << i / fpsTime << std::endl;
             i = 0;
             fpsTime = 0;
         }
@@ -296,15 +270,20 @@ void Engine::HandleLogic(float deltaTime)
 {
     auto removed = gameWorld_.RemoveMarkedEntities();
     
-    for (auto& id : removed)
+    for (auto& id : removed.all)
     {
         currentInputStates_.erase(id);
         previousInputStates_.erase(id);
         if (id == playerId_) playerId_ = -1;
     }
+
+    for (uint32_t id : removed.players)
+    {
+        killedPlayers_.push_back(id);
+    }
     
     physicsSystem_.Update(deltaTime, gameWorld_);
-    npcSystem_.Update(deltaTime, gameWorld_.GetScene());
+    npcSystem_.Update(deltaTime, gameWorld_, *assMan_);
     playerSystem_.Update(deltaTime, gameWorld_, *assMan_, currentInputStates_, previousInputStates_, playerId_, !(m_bNetworking && !m_bServer));
     shotSystem_.Update(gameWorld_.GetScene());
     cameraSystem_.Update();
@@ -372,16 +351,10 @@ void Engine::AddNewPlayer(uint32_t id)
     pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
     pi.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
     pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
-    Model model(Model::GetModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
 
-    gameWorld_.GetScene().AddModel(model, id);
-
-    PlayerData pd;
-    pd.id = id;
-
-    gameWorld_.AddOrUpdatePlayerData(pd);
+    spawner::SpawnPlayer(gameWorld_, *assMan_, pi, id);
     
-    auto playerData = gameWorld_.GetPlayerData();
+    const auto& playerData = gameWorld_.GetPlayerData();
 
     for (auto& [id, model] : playerData)
     {
@@ -400,6 +373,8 @@ void Engine::ChangeSetting(std::string key, bool value)
 void Engine::CollectInputs(float deltaTime)
 {
     if (playerId_ < 0 || std::ranges::find(killedPlayers_, playerId_) != killedPlayers_.end()) return;
+    if (!currentInputStates_.contains(playerId_)) return;
+
     auto state = currentInputStates_.at(playerId_);
     auto previousState = previousInputStates_.at(playerId_);
     previousState = currentInputStates_.at(playerId_);
@@ -558,6 +533,28 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			rl.commands.push_back(dc);
 		}
 	}
+
+    for (auto& [id, npcData] : gameWorld_.GetNpcData())
+    {
+        if (npcData.lastHit > 0)
+		{
+			auto& model = gameWorld_.GetScene().GetModelByReference(id);
+			
+			DrawCommand dc;
+			dc.mesh = model.GetHitboxMesh();
+			dc.material = hitboxMat_.get();
+
+			glm::mat4 modelMat = glm::mat4(1.0f);
+    		modelMat = glm::translate(modelMat, model.GetPosition());
+    		modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
+
+			dc.transform = modelMat;
+			dc.tint = {1,1,1,1};
+			dc.renderPass = RenderPass::Opaque;
+
+			rl.commands.push_back(dc);
+		}
+    }
 
 	modelMat_->ApplyFrame(fg);
 
