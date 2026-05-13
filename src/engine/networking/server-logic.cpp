@@ -152,7 +152,7 @@ void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
 				slot.shoot	  = is.shoot;
 				
 				slot.shootShot = slot.shootShot || is.shootShot;
-				
+
 				break;
 			}
 			case 1:
@@ -301,7 +301,6 @@ void ServerLogic::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionSta
 			SendPackageToClient(pInfo->m_hConn, buffer);
 			//SendPackageToClient(id, buffer);
 
-			shotTick[id - 1] = 0;
 			newClientConnected_ = id;
 			lastConnectedClient_--;
 			break;

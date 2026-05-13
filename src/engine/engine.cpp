@@ -214,6 +214,8 @@ void Engine::Run()
 
 void Engine::ReconcileNetwork()
 {
+    if (m_bNetworking) killedPlayers_.clear();
+    
     if (m_bNetworking && !m_bServer)
     {
         auto [playerId, playerModelRemoved] = networking_->UpdateScene(gameWorld_, *assMan_);
