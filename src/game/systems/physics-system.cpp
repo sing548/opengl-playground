@@ -1,14 +1,16 @@
 #include "physics-system.h"
 
+#include "../game-world/game-world.h"
+
 PhysicsSystem::PhysicsSystem(bool isAuthoritative)
 {
     isAuthoritative_ = isAuthoritative;
 }
 
-void PhysicsSystem::Update(float dT, Scene& scene)
+void PhysicsSystem::Update(float dT, GameWorld& gameWorld)
 {
-    MoveModels(dT, scene);
-    CheckHits(scene);
+    MoveModels(dT, gameWorld.GetScene());
+    CheckHits(gameWorld);
 }
 
 void PhysicsSystem::MoveModels(float dT, Scene& scene)
@@ -36,11 +38,11 @@ void PhysicsSystem::MoveModel(float dT, Scene& scene, unsigned int id, const glm
     if (abs(position.z) > scene.currentFurthestPosition_.z) scene.currentFurthestPosition_.z = abs(position.z);
 }
 
-void PhysicsSystem::CheckHits(Scene& scene)
+void PhysicsSystem::CheckHits(GameWorld& gameWorld)
 {
-    auto playerModels = scene.GetPhysicalModels();
+    auto playerModels = gameWorld.GetScene().GetPhysicalModels();
 
-    for (auto& [id, other] : scene.GetModels())
+    for (auto& [id, other] : gameWorld.GetScene().GetModels())
     {
         if (other.type_ == ModelType::PLAYER)
             continue;
@@ -64,22 +66,21 @@ void PhysicsSystem::CheckHits(Scene& scene)
             if (dist <= radiusSum)
             {
 
-                PlayerData pd = scene.GetPlayerData(playerId);
+                PlayerData pd = gameWorld.GetPlayerData(playerId);
                 pd.id = playerId;
                 pd.lastHit = 0.2;
                 pd.lifes -= 1;
 
-                // ToDo: Implement
-                scene.AddOrUpdatePlayerData(pd);
+                gameWorld.AddOrUpdatePlayerData(pd);
 
                 if (pd.lifes == 0 && isAuthoritative_)
                 {
-                    scene.MarkModelForDelete(playerId);
-                    scene.RemovePlayerData(playerId);
+                    gameWorld.GetScene().MarkModelForDelete(playerId);
+                    gameWorld.RemovePlayerData(playerId);
                 }
 
                 if (other.type_ == ModelType::SHOT && isAuthoritative_)
-                    scene.MarkModelForDelete(id);
+                    gameWorld.GetScene().MarkModelForDelete(id);
                 //glfwSetWindowShouldClose(window.Get(), true);
             }
         }

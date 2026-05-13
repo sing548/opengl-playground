@@ -152,8 +152,6 @@ std::vector<Model> Engine::BasicLevel()
 
 void Engine::SetupGameWorld(std::vector<Model> models)
 {
-    gameWorld_ = GameWorld();
-
     for (auto& m : models) {
         gameWorld_.GetScene().AddModel(m);
     }
@@ -244,7 +242,7 @@ void Engine::ReconcileNetwork()
 {
     if (m_bNetworking && !m_bServer)
     {
-        auto [playerId, playerModelRemoved] = networking_->UpdateScene(gameWorld_.GetScene(), *assMan_);
+        auto [playerId, playerModelRemoved] = networking_->UpdateScene(gameWorld_, *assMan_);
         if (playerId != 0)
         {
             playerId_ = playerId;
@@ -313,9 +311,9 @@ void Engine::HandleLogic(float deltaTime)
         }
     }
     
-    physicsSystem_.Update(deltaTime, gameWorld_.GetScene());
+    physicsSystem_.Update(deltaTime, gameWorld_);
     npcSystem_.Update(deltaTime, gameWorld_.GetScene());
-    playerSystem_.Update(deltaTime, gameWorld_.GetScene(), *assMan_, currentInputStates_, previousInputStates_, playerId_, !(m_bNetworking && !m_bServer));
+    playerSystem_.Update(deltaTime, gameWorld_, *assMan_, currentInputStates_, previousInputStates_, playerId_, !(m_bNetworking && !m_bServer));
     shotSystem_.Update(gameWorld_.GetScene());
     cameraSystem_.Update();
     

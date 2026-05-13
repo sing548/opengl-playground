@@ -194,7 +194,8 @@ std::unordered_map<int, InputState> Networking::GetInputStates()
 	return server_->GetLatestInputStates();
 }
 
-std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(Scene& scene, AssetManager& assMan)
+// ToDo: This needs to change. Logic for this should not be in engine part of project, but game. Engine should just provide data-exchange layer
+std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(GameWorld& gameWorld, AssetManager& assMan)
 {
 	GameState gs;
 	std::vector<uint32_t> killedPlayers;
@@ -211,18 +212,18 @@ std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(Scene& s
 	if (currentTick > gs.tick) 
 		return { gs.playerId, killedPlayers };
 	
-	if (scene.currentTick >= gs.tick) 
+	if (gameWorld.GetScene().currentTick >= gs.tick) 
 		return { gs.playerId, killedPlayers };
 
-	scene.currentTick = gs.tick;
+	gameWorld.GetScene().currentTick = gs.tick;
 
 	for (uint32_t id : gs.destroyedEntities)
     {
-		auto& players = scene.GetPlayerModels();
+		auto& players = gameWorld.GetScene().GetPlayerModels();
 		if (players.contains(id)) 
 			killedPlayers.push_back(id);
 			
-        scene.RemoveModel(id);
+        gameWorld.GetScene().RemoveModel(id);
     }
 
 	for (auto &entity : gs.createdEntities)
@@ -246,26 +247,25 @@ std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(Scene& s
 		}
 	
 		Model model(Model::GetModelPath(type), pi, assMan, type, true, entity.radius);
-		scene.AddModel(model, entity.id);
+		gameWorld.GetScene().AddModel(model, entity.id);
 
 		if (model.type_ == ModelType::PLAYER)
 		{
 			PlayerData pd;
 			pd.id = entity.id;
-			// ToDo: This needs to change. Networking should not be in engine, but is for now
-			//scene.AddOrUpdatePlayerData(pd);
+			gameWorld.AddOrUpdatePlayerData(pd);
 		}
 	}
 
 	for (const auto& entity : gs.entities)
     {
-        if (!scene.ModelExists(entity.id))
+        if (!gameWorld.GetScene().ModelExists(entity.id))
         {
             std::cout << "Entity not loaded: " << entity.id << std::endl;
             continue;
         }
 
-        auto& m = scene.GetModelByReference(entity.id);
+        auto& m = gameWorld.GetScene().GetModelByReference(entity.id);
 
         m.SetBaseOrientation(entity.baseOrientation_);
         m.SetOrientation(entity.orientation_);

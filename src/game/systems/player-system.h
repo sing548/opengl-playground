@@ -4,10 +4,12 @@
 #include "../../engine/models/scene.h"
 #include "../../engine/networking/shared-strucs.h"
 
+class GameWorld;
+
 class PlayerSystem {
 public:
     void Update(float dT,
-                Scene& scene,
+                GameWorld& gameWorld,
                 AssetManager& assMan,
                 std::unordered_map<int, InputState>& currentInputStates,
                 std::unordered_map<int, InputState>& previousInputStates,
@@ -15,15 +17,15 @@ public:
                 bool shoot);
 private:
     void ExecuteInput(float dT,
-                      Scene& scene,
+                      GameWorld& gameWorld,
                       AssetManager& assMan,
                       std::unordered_map<int, InputState>& currentInputStates,
                       std::unordered_map<int, InputState>& previousInputStates,
                       int playerId,
                       bool shoot);
-    void UpdatePlayerData(float dT, Scene& scene);
+    void UpdatePlayerData(float dT, GameWorld& gameWorld);
     void RotateModel(unsigned int id, Scene& scene, const glm::vec3& change);
-    void Shoot(Scene& scene, AssetManager& assMan, uint32_t shooterId);
+    void Shoot(GameWorld& gameWorld, AssetManager& assMan, uint32_t shooterId);
 };
 
 #endif

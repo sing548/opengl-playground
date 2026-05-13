@@ -52,6 +52,7 @@ add_executable(OpenGLPlayground
     src/engine/rendering/renderer.cpp
     src/engine/engine.cpp
     src/game/game-world/game-world.cpp
+    src/game/spawner/spawner.cpp
     src/game/systems/camera-system.cpp
     src/game/systems/npc-system.cpp
     src/game/systems/physics-system.cpp

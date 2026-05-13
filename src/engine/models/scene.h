@@ -3,15 +3,6 @@
 
 #include "model.h"
 
-struct ModelWithReference
-{
-    unsigned int Id;
-    Model model;
-
-    ModelWithReference(unsigned int id, Model&& m)
-        : Id(id), model(std::move(m)) {}
-};
-
 class Scene
 {
 public:

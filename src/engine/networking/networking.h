@@ -30,6 +30,7 @@
 #include <steam/steam_api.h>
 #endif
 
+class GameWorld;
 
 class Networking 
 {
@@ -41,7 +42,7 @@ public:
     void SendInputState(InputState& state);
     std::unordered_map<int, InputState> GetInputStates();
     uint32_t SendGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels, float dT);
-    std::tuple<unsigned int, std::vector<uint32_t>> UpdateScene(Scene& scene, AssetManager& assMan);
+    std::tuple<unsigned int, std::vector<uint32_t>> UpdateScene(GameWorld& gameWorld, AssetManager& assMan);
     void Shutdown();
     uint32_t currentTick = 0;
 private:
