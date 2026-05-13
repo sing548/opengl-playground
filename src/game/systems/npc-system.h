@@ -1,8 +1,8 @@
 #ifndef NPC_SYSTEM_H
 #define NPC_SYSTEM_H
 
-#include "../models/scene.h"
-#include "../window/window.h"
+#include "../../engine/models/scene.h"
+#include "../../engine/window/window.h"
 
 
 class NpcSystem {

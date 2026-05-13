@@ -3,24 +3,24 @@
 
 #include <glm/glm.hpp>
 
-#include "../window/window.h"
-#include "../camera/camera.h"
-#include "../models/scene.h"
-#include "../models/model.h"
-#include "../input-manager/input-manager.h"
-#include "../rendering/renderer.h"
-#include "../models/asset-manager.h"
-#include "../networking/networking.h"
+#include "window/window.h"
+#include "camera/camera.h"
+#include "models/scene.h"
+#include "models/model.h"
+#include "input-manager/input-manager.h"
+#include "rendering/renderer.h"
+#include "models/asset-manager.h"
+#include "networking/networking.h"
 
-#include "../systems/camera-system.h"
-#include "../systems/npc-system.h"
-#include "../systems/physics-system.h"
-#include "../systems/player-system.h"
-#include "../systems/shot-system.h"
+#include "../game/systems/camera-system.h"
+#include "../game/systems/npc-system.h"
+#include "../game/systems/physics-system.h"
+#include "../game/systems/player-system.h"
+#include "../game/systems/shot-system.h"
 
 
-#include "../rendering/materials/model-material.h"
-#include "../rendering/materials/hitbox-material.h"
+#include "../engine/rendering/materials/model-material.h"
+#include "../engine/rendering/materials/hitbox-material.h"
 
 #include <map>
 #include <thread>

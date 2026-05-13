@@ -1,8 +1,8 @@
 #ifndef PLAYER_SYSTEM_H
 #define PLAYER_SYSTEM_H
 
-#include "../models/scene.h"
-#include "../networking/shared-strucs.h"
+#include "../../engine/models/scene.h"
+#include "../../engine/networking/shared-strucs.h"
 
 class PlayerSystem {
 public:

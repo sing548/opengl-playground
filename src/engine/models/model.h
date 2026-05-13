@@ -35,6 +35,7 @@ struct PhysicalInfo {
     glm::vec3 rotationSpeed_;
 };
 
+// ToDo: Move in future to make Split engine/game clearer
 enum class ModelType : uint32_t
 {
     PLAYER,
@@ -84,6 +85,7 @@ public:
     static Mesh* hitboxSphere_;
     static bool hitboxSphereInitialized_;
 
+    // ToDo: Move in future to make Split engine/game clearer
     static std::string GetModelPath(ModelType type);
     
 private:

@@ -35,28 +35,29 @@ add_subdirectory(include/GameNetworkingSockets)
 
 # Define Executable
 add_executable(OpenGLPlayground
-    src/camera/camera.cpp
-    src/models/asset-manager.cpp
-    src/models/mesh.cpp
-    src/models/model.cpp
-    src/models/scene.cpp
-    src/rendering/materials/hitbox-material.cpp
-    src/rendering/materials/model-material.cpp
-    src/rendering/sky/sky.cpp
-    src/rendering/renderer.cpp
-    src/window/window.cpp
-    src/main.cpp
+    src/engine/camera/camera.cpp
+    src/engine/window/window.cpp
+    src/engine/helpers/file-helper.cpp
+    src/engine/input-manager/input-manager.cpp
+    src/engine/models/asset-manager.cpp
+    src/engine/models/mesh.cpp
+    src/engine/models/model.cpp
+    src/engine/models/scene.cpp
+    src/engine/networking/client-logic.cpp
+    src/engine/networking/server-logic.cpp
+    src/engine/networking/networking.cpp
+    src/engine/rendering/materials/hitbox-material.cpp
+    src/engine/rendering/materials/model-material.cpp
+    src/engine/rendering/sky/sky.cpp
+    src/engine/rendering/renderer.cpp
     src/engine/engine.cpp
-    src/input-manager/input-manager.cpp
-    src/networking/networking.cpp
-    src/networking/client-logic.cpp
-    src/networking/server-logic.cpp
-    src/helpers/file-helper.cpp
-    src/systems/camera-system.cpp
-    src/systems/npc-system.cpp
-    src/systems/physics-system.cpp
-    src/systems/player-system.cpp
-    src/systems/shot-system.cpp
+    src/game/systems/camera-system.cpp
+    src/game/systems/npc-system.cpp
+    src/game/systems/physics-system.cpp
+    src/game/systems/player-system.cpp
+    src/game/systems/shot-system.cpp
+
+    src/main.cpp
     include/glad/glad.c
     include/stb/stb_image.cpp
 )

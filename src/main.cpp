@@ -3,11 +3,11 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "window/window.h"
-#include "shaders/shader.h"
-#include "models/model.h"
-#include "models/scene.h"
-#include "rendering/renderer.h"
+#include "engine/window/window.h"
+#include "engine/shaders/shader.h"
+#include "engine/models/model.h"
+#include "engine/models/scene.h"
+#include "engine/rendering/renderer.h"
 #include "engine/engine.h"
 
 int main(int argc, const char *argv[]) {
