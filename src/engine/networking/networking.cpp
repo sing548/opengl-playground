@@ -219,11 +219,11 @@ std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(GameWorl
 
 	for (uint32_t id : gs.destroyedEntities)
     {
-		auto& players = gameWorld.GetScene().GetPlayerModels();
+		auto& players = gameWorld.GetPlayerData();
 		if (players.contains(id)) 
 			killedPlayers.push_back(id);
 			
-        gameWorld.GetScene().RemoveModel(id);
+        gameWorld.MarkEntityForDelete(id);
     }
 
 	for (auto &entity : gs.createdEntities)
@@ -254,6 +254,10 @@ std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(GameWorl
 			PlayerData pd;
 			pd.id = entity.id;
 			gameWorld.AddOrUpdatePlayerData(pd);
+		}
+		else if (model.type_ == ModelType::SHOT)
+		{
+			gameWorld.AddShot(entity.id);
 		}
 	}
 

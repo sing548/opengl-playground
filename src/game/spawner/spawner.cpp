@@ -21,7 +21,7 @@ namespace spawner
         auto id = gameWorld.GetScene().AddModel(shot);
         
         // ToDo: Uncomment after implementing system
-        //gameWorld.AddShot(id);
+        gameWorld.AddShot(id);
 
         return id;
     }

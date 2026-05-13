@@ -56,45 +56,6 @@ const Model& Scene::GetModelByReference(unsigned int id) const
     return models_.at(id);
 }
 
-const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> Scene::GetPlayerModels() const
-{
-    std::unordered_map<uint32_t, std::reference_wrapper<const Model>> result;
-    for (auto& [id, modelRef] : models_)
-    {
-        if (modelRef.type_ == ModelType::PLAYER)
-        {
-            result.emplace(id, std::ref(modelRef));
-        }
-    }
-    return result;
-}
-
-const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> Scene::GetNPCModels() const
-{
-    std::unordered_map<uint32_t, std::reference_wrapper<const Model>> result;
-    for (auto& [id, modelRef] : models_)
-    {
-        if (modelRef.type_ == ModelType::NPC)
-        {
-            result.emplace(id, std::ref(modelRef));
-        }
-    }
-    return result;
-}
-
-const std::unordered_map<uint32_t, std::reference_wrapper<const Model>> Scene::GetPhysicalModels() const
-{
-    std::unordered_map<uint32_t, std::reference_wrapper<const Model>> result;
-    for (auto& [id, modelRef] : models_)
-    {
-        if (modelRef.type_ == ModelType::PLAYER || modelRef.type_ == ModelType::NPC)
-        {
-            result.emplace(id, std::ref(modelRef));
-        }
-    }
-    return result;
-}
-
 void Scene::MarkModelForDelete(unsigned int id)
 {
     removeMarkedModels_.push_back(id);

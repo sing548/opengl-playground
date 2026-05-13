@@ -8,7 +8,7 @@
 
 struct ShotData
 {
-
+    uint32_t id;
 };
 
 struct PlayerData
@@ -28,6 +28,9 @@ public:
     auto& GetScene() { return scene_;};
     const auto& GetScene() const { return scene_; };
 
+    void MarkEntityForDelete(uint32_t id);
+    std::vector<uint32_t> RemoveMarkedEntities();
+
     // NOTE: This won't scale indefinetely. Once it grows, switch pattern
     auto& GetPlayerData(uint32_t id) { return playerData_.at(id); };
     const auto& GetPlayerData(uint32_t id) const { return playerData_.at(id); };
@@ -46,12 +49,11 @@ public:
 
 
     void AddOrUpdatePlayerData(PlayerData pd);
-    void RemovePlayerData(uint32_t id);
 
     uint32_t AddPlayer(uint32_t id);
     uint32_t AddNPC(uint32_t id);
     uint32_t AddShot(uint32_t id);
-    void     RemoceEntity(uint32_t id);
+    void     RemoveEntity(uint32_t id);
 
     bool IsPlayer(uint32_t id) const { return playerData_.contains(id); };
     bool IsNPC(uint32_t id) const { return npcData_.contains(id); };

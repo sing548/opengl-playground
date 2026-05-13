@@ -88,11 +88,28 @@ if(WIN32)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 endif()
 
+# Sanitizers in Debug builds (Linux/macOS; GCC and Clang only)
+option(ENABLE_SANITIZERS "Enable ASan + UBSan in Debug builds" ON)
+
+if(ENABLE_SANITIZERS AND NOT MSVC
+   AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_options(OpenGLPlayground PRIVATE
+        -fsanitize=address,undefined
+        -fno-sanitize=vptr  
+        -fno-omit-frame-pointer
+        -fno-sanitize-recover=all      # abort on first error, don't just print
+    )
+    target_link_options(OpenGLPlayground PRIVATE
+        -fsanitize=address,undefined
+        -fno-sanitize=vptr  
+    )
+endif()
+
 # Asset/Shader Handling
-file(GLOB SHADERS "src/shaders/*.vert" "src/shaders/*.frag")
+file(GLOB SHADERS CONFIGURE_DEPENDS "src/engine/shaders/*.vert" "src/engine/shaders/*.frag")
 
 foreach(SHADER_FILE ${SHADERS})
-    get_filename_component(FILE_NAME ${SHADER_FILE} NAME)
+    get_filename_component(FILE_NAME  ${SHADER_FILE} NAME)
     configure_file(${SHADER_FILE} ${CMAKE_CURRENT_BINARY_DIR}/shaders/${FILE_NAME} COPYONLY)
 endforeach()
 

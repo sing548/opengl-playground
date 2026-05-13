@@ -9,21 +9,21 @@ PhysicsSystem::PhysicsSystem(bool isAuthoritative)
 
 void PhysicsSystem::Update(float dT, GameWorld& gameWorld)
 {
-    MoveModels(dT, gameWorld.GetScene());
+    MoveModels(dT, gameWorld);
     CheckHits(gameWorld);
 }
 
-void PhysicsSystem::MoveModels(float dT, Scene& scene)
+void PhysicsSystem::MoveModels(float dT, GameWorld& gameWorld)
 {
-    scene.currentFurthestPosition_ = glm::vec3(0.0f, 0.0f, 0.0f);
-    for (auto& [id, model] : scene.GetModels())
+    gameWorld.GetScene().currentFurthestPosition_ = glm::vec3(0.0f, 0.0f, 0.0f);
+    for (auto& [id, model] : gameWorld.GetScene().GetModels())
     {
         glm::vec3 change = model.GetOrientation() * model.GetSpeed().x;
-        MoveModel(dT, scene, id, change);
+        MoveModel(dT, gameWorld.GetScene(), id, change);
 
         auto position = model.GetPosition();
         if ((abs(position.x) > 80 || abs(position.z) > 80) && model.type_ != ModelType::PLAYER)
-            scene.MarkModelForDelete(id);
+            gameWorld.MarkEntityForDelete(id);
     }
 }
 
@@ -40,49 +40,56 @@ void PhysicsSystem::MoveModel(float dT, Scene& scene, unsigned int id, const glm
 
 void PhysicsSystem::CheckHits(GameWorld& gameWorld)
 {
-    auto playerModels = gameWorld.GetScene().GetPhysicalModels();
+    Scene& scene = gameWorld.GetScene();
 
-    for (auto& [id, other] : gameWorld.GetScene().GetModels())
+    for (auto& [shotId, _] : gameWorld.GetShotData())
     {
-        if (other.type_ == ModelType::PLAYER)
-            continue;
-        
-        glm::vec3 otherPos = other.GetPosition();
-        float otherRadius = other.GetRadius();
+        const Model& shot = scene.GetModelByReference(shotId);
 
-        for (auto& [playerId, playerRef] : playerModels)
+        for (auto& [playerId, playerData] : gameWorld.GetPlayerData())
         {
-            auto& player = playerRef.get();
+            const Model& player = scene.GetModelByReference(playerId);
 
-            if (playerId == id)
-                continue;
-                
-            glm::vec3 playerPos = player.GetPosition();
-            float playerRadius = player.GetRadius();
+            if (!Collide(shot, player)) continue;
 
-            float dist = glm::length(otherPos - playerPos);
-            float radiusSum = otherRadius + playerRadius;
+            playerData.lastHit = 0.2f;
+            playerData.lifes -= 1;
 
-            if (dist <= radiusSum)
+            if (playerData.lifes == 0 && isAuthoritative_)
             {
-
-                PlayerData pd = gameWorld.GetPlayerData(playerId);
-                pd.id = playerId;
-                pd.lastHit = 0.2;
-                pd.lifes -= 1;
-
-                gameWorld.AddOrUpdatePlayerData(pd);
-
-                if (pd.lifes == 0 && isAuthoritative_)
-                {
-                    gameWorld.GetScene().MarkModelForDelete(playerId);
-                    gameWorld.RemovePlayerData(playerId);
-                }
-
-                if (other.type_ == ModelType::SHOT && isAuthoritative_)
-                    gameWorld.GetScene().MarkModelForDelete(id);
-                //glfwSetWindowShouldClose(window.Get(), true);
+                gameWorld.MarkEntityForDelete(playerId);
             }
+            
+            gameWorld.MarkEntityForDelete(shotId);
+            
         }
     }
+
+    for (auto& [shotId, _] : gameWorld.GetShotData())
+    {
+        const Model& shot = scene.GetModelByReference(shotId);
+
+        for (auto& [playerId, npcData] : gameWorld.GetNpcData())
+        {
+            /*const Model& player = scene.GetModelByReference(playerId);
+
+            if (!Collide(shot, player)) continue;
+
+            npcDaata.lastHit = 0.2f;
+            npcData.lifes -= 1;
+
+            if (playerData.lifes == 0 && isAuthoritative_)
+            {
+                gameWorld.MarkEntityForDelete(playerId);
+            }
+            else if (isAuthoritative_)
+                gameWorld.MarkEntityForDelete(shotId);*/
+        }
+    }
+}
+
+bool PhysicsSystem::Collide(const Model& a, const Model& b)
+{
+    float d = glm::length(a.GetPosition() - b.GetPosition());
+    return d <= a.GetRadius() + b.GetRadius();
 }

@@ -204,7 +204,7 @@ void Engine::Run()
                 networking_->SendInputState(currentInputStates_.at(playerId_));
             }
 
-            gameWorld_.GetScene().RemoveMarkedModels();
+            //gameWorld_.RemoveMarkedEntities();
             gameWorld_.GetScene().ClearAddedModels();
 
             j++;
@@ -264,7 +264,7 @@ void Engine::ReconcileNetwork()
             if (id == playerId_)
                 playerId_ = -1;
             
-            gameWorld_.RemovePlayerData(id);
+            //gameWorld_.RemovePlayerData(id);
         }
     }
     else if (m_bNetworking)
@@ -294,21 +294,13 @@ void Engine::ReconcileNetwork()
 
 void Engine::HandleLogic(float deltaTime)
 {
-    auto removes = gameWorld_.GetScene().GetRemoveMarkedModels();
+    auto removed = gameWorld_.RemoveMarkedEntities();
     
-    for (auto& r : removes)
+    for (auto& id : removed)
     {
-        auto model = gameWorld_.GetScene().GetModelByReference(r);
-        if (model.type_ == ModelType::PLAYER)
-        {
-            auto i = currentInputStates_.find(r);
-            auto j = previousInputStates_.find(r);
-            
-            currentInputStates_.erase(i);
-            previousInputStates_.erase(j);
-            
-            killedPlayers_.push_back(r);
-        }
+        currentInputStates_.erase(id);
+        previousInputStates_.erase(id);
+        if (id == playerId_) playerId_ = -1;
     }
     
     physicsSystem_.Update(deltaTime, gameWorld_);
@@ -326,7 +318,7 @@ void Engine::HandleLogic(float deltaTime)
 void Engine::AdjustCamera()
 {
     if (settings_["third_person"] ) {
-        auto model = gameWorld_.GetScene().GetModelByReference(playerId_);
+        const auto& model = gameWorld_.GetScene().GetModelByReference(playerId_);
         glm::vec3 modelPos = model.GetPosition();
         
         // Offset from the model in its local orientation
@@ -389,9 +381,9 @@ void Engine::AddNewPlayer(uint32_t id)
 
     gameWorld_.AddOrUpdatePlayerData(pd);
     
-    auto playerModels = gameWorld_.GetScene().GetPlayerModels();
+    auto playerData = gameWorld_.GetPlayerData();
 
-    for (auto& [id, model] : playerModels)
+    for (auto& [id, model] : playerData)
     {
         const std::vector<unsigned int> addedModels = gameWorld_.GetScene().GetAddedModels();
 

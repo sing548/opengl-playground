@@ -14,9 +14,10 @@ public:
     void Update(float dT, GameWorld& gameWorld);
 private:
     bool isAuthoritative_;
-    void MoveModels(float dT, Scene& scene);
+    void MoveModels(float dT, GameWorld& gameWorld);
     void MoveModel(float dT, Scene& Scene, unsigned int id, const glm::vec3& change);
     void CheckHits(GameWorld& gameWorld);
+    bool Collide(const Model& a, const Model& b);
 };
 
 #endif
