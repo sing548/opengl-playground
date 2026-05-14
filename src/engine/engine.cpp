@@ -126,7 +126,7 @@ void Engine::BasicLevel()
     pi2.rotation_ = glm::vec3(0.0f, glm::radians(180.0f), 0.0f);
     pi2.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
     pi2.orientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
-    pi2.baseOrientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
+    pi2.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
 
     spawner::SpawnNpc(gameWorld_, *assMan_, pi2);
 }
