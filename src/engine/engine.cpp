@@ -26,6 +26,8 @@ Engine::Engine(EngineMode config, const char *serverAddr)
     settings_["hitboxes"] = hitboxes;
     bool bloom = true;
     settings_["bloom"] = bloom;
+    bool simpleFlight = true;
+    settings_["simple_flight"] = simpleFlight;
 
     camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 60.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0F, -90.0F);
     
@@ -56,12 +58,9 @@ Engine::Engine(EngineMode config, const char *serverAddr)
         if (m_bServer)
         {
             PhysicalInfo pi = PhysicalInfo();
-            pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
-            pi.rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
-            pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
-            pi.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
-            pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
-            Model model(Model::GetModelPath(ModelType::PLAYER), pi, *assMan_, ModelType::PLAYER);
+            pi.position = glm::vec3(20.0f, 0.0f, 0.0f);
+            pi.rotation = glm::quat(1, 0, 0, 0);
+            pi.scale = glm::vec3(0.2f, 0.2f, 0.2f);
 
             playerId_ = spawner::SpawnPlayer(gameWorld_, *assMan_, pi);
 
@@ -112,21 +111,17 @@ AssetManager& Engine::GetAssMan()
 void Engine::BasicLevel()
 {
     PhysicalInfo pi = PhysicalInfo();
-    pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
-    pi.rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
-    pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
-    pi.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
-    pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
+    pi.position = glm::vec3(20.0f, 0.0f, 0.0f);
+    pi.rotation = glm::quat(1, 0, 0, 0);
+    pi.scale = glm::vec3(0.2f, 0.2f, 0.2f);
 
     playerId_ = spawner::SpawnPlayer(gameWorld_, *assMan_, pi);
 
 
     PhysicalInfo pi2 = PhysicalInfo();
-    pi2.position_ = glm::vec3(-20.0f, 0.0f, 0.0f);
-    pi2.rotation_ = glm::vec3(0.0f, glm::radians(180.0f), 0.0f);
-    pi2.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
-    pi2.orientation_ = glm::vec3(1.0f, 0.0f, 0.0f);
-    pi2.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
+    pi2.position = glm::vec3(-20.0f, 0.0f, 0.0f);
+    pi2.rotation = glm::angleAxis(glm::radians(180.0f), glm::vec3(0,1,0));
+    pi2.scale = glm::vec3(0.2f, 0.2f, 0.2f);
 
     spawner::SpawnNpc(gameWorld_, *assMan_, pi2);
 }
@@ -286,7 +281,7 @@ void Engine::HandleLogic(float deltaTime)
     
     physicsSystem_.Update(deltaTime, gameWorld_);
     npcSystem_.Update(deltaTime, gameWorld_, *assMan_);
-    playerSystem_.Update(deltaTime, gameWorld_, *assMan_, currentInputStates_, previousInputStates_, playerId_, !(m_bNetworking && !m_bServer));
+    playerSystem_.Update(deltaTime, gameWorld_, *assMan_, currentInputStates_, previousInputStates_, playerId_, !(m_bNetworking && !m_bServer), settings_);
     shotSystem_.Update(gameWorld_.GetScene());
     cameraSystem_.Update();
     
@@ -303,7 +298,7 @@ void Engine::AdjustCamera()
         glm::vec3 modelPos = model.GetPosition();
         
         // Offset from the model in its local orientation
-        glm::vec3 offset = model.GetOrientation() * glm::vec3(-8.0f, -8.0f, -8.0f);
+        glm::vec3 offset = model.GetForward() * glm::vec3(-8.0f, -8.0f, -8.0f);
         glm::vec3 cameraPos = modelPos + offset + glm::vec3(0.0f, 1.5f, 0.0f);
     
         // Update camera position
@@ -323,8 +318,8 @@ void Engine::AdjustCamera()
         float halfFovTan = tanf(fovyRadians * 0.5f);
 
         // Required heights in each axis
-        float requiredX = (abs(gameWorld_.GetScene().currentFurthestPosition_.x) + 1.5f) / (halfFovTan * aspect);
-        float requiredZ = (abs(gameWorld_.GetScene().currentFurthestPosition_.z) + 1.5f)/ halfFovTan;
+        float requiredX = (abs(gameWorld_.GetScene().currentFurthestPosition.x) + 1.5f) / (halfFovTan * aspect);
+        float requiredZ = (abs(gameWorld_.GetScene().currentFurthestPosition.z) + 1.5f)/ halfFovTan;
 
         // Take the larger
         float h = std::max(requiredX, requiredZ);
@@ -348,11 +343,9 @@ void Engine::AdjustCamera()
 void Engine::AddNewPlayer(uint32_t id)
 {
     PhysicalInfo pi = PhysicalInfo();
-    pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
-    pi.rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
-    pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
-    pi.orientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
-    pi.baseOrientation_ = glm::vec3(-1.0f, 0.0f, 0.0f);
+    pi.position = glm::vec3(20.0f, 0.0f, 0.0f);
+    pi.rotation = glm::quat(1, 0, 0, 0);
+    pi.scale = glm::vec3(0.2f, 0.2f, 0.2f);
 
     spawner::SpawnPlayer(gameWorld_, *assMan_, pi, id);
     
@@ -411,6 +404,9 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, 
 
     if (engine) 
     {
+        // Simple Flight
+        if (key == GLFW_KEY_F7 && action == GLFW_PRESS)
+            engine->settings_["simple_flight"] = !engine->settings_["simple_flight"];
         // Hitboxes
         if (key == GLFW_KEY_F8 && action == GLFW_PRESS)
             engine->settings_["hitboxes"] = !engine->settings_["hitboxes"];

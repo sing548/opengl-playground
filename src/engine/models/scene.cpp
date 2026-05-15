@@ -2,12 +2,12 @@
 
 Scene::Scene() : nextId_(1) {}
 
-bool Scene::ModelExists(unsigned int id)
+bool Scene::ModelExists(uint32_t id)
 {
     return models_.find(id) != models_.end();
 }
 
-unsigned int Scene::AddModel(Model& model, int id)
+uint32_t Scene::AddModel(Model& model, int id)
 {
     uint32_t modelId;
 
@@ -27,12 +27,12 @@ unsigned int Scene::AddModel(Model& model, int id)
     return modelId;
 }
 
-void Scene::AddExtraModelToAddedIds(unsigned int id)
+void Scene::AddExtraModelToAddedIds(uint32_t id)
 {
     addedModels_.push_back(id);
 }
 
-void Scene::RemoveModel(unsigned int id)
+void Scene::RemoveModel(uint32_t id)
 {
     auto it = models_.find(id);
     if (it != models_.end())
@@ -46,35 +46,35 @@ const std::unordered_map<uint32_t, Model>& Scene::GetModels() const
     return models_;
 }
 
-Model& Scene::GetModelByReference(unsigned int id) 
+Model& Scene::GetModelByReference(uint32_t id) 
 {
     return models_.at(id);
 }
 
-const Model& Scene::GetModelByReference(unsigned int id) const
+const Model& Scene::GetModelByReference(uint32_t id) const
 {
     return models_.at(id);
 }
 
-void Scene::MarkModelForDelete(unsigned int id)
+void Scene::MarkModelForDelete(uint32_t id)
 {
     removeMarkedModels_.push_back(id);
 }
 
 void Scene::RemoveMarkedModels()
 {
-    for (unsigned int id : removeMarkedModels_)
+    for (uint32_t id : removeMarkedModels_)
         RemoveModel(id);
     
     removeMarkedModels_.clear();
 }
 
-const std::vector<unsigned int>& Scene::GetRemoveMarkedModels() const 
+const std::vector<uint32_t>& Scene::GetRemoveMarkedModels() const 
 {
     return removeMarkedModels_;
 }
 
-const std::vector<unsigned int>& Scene::GetAddedModels() const
+const std::vector<uint32_t>& Scene::GetAddedModels() const
 {
     return addedModels_;
 }

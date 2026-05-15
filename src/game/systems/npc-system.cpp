@@ -28,14 +28,14 @@ void NpcSystem::Update(float dT, GameWorld& gameWorld, AssetManager& assMan)
         auto& playerModel = gameWorld.GetScene().GetModelByReference(closestPlayer.value());
 
         auto toPlayer = glm::normalize(playerModel.GetPosition() - npc.GetPosition());
-        auto facing  = glm::normalize(npc.GetOrientation());
+        auto facing  = glm::normalize(npc.GetForward());
 
         auto dot = glm::clamp(glm::dot(facing, toPlayer), -1.0f, 1.0f);
         auto angle = glm::acos(dot);
 
         if (angle > glm ::radians(1.0f))
         {
-            float maxStep   = glm::radians(1.0f); // turn speed per step
+            float maxStep   = glm::radians(1.0f);
             float stepAngle = glm::min(angle, maxStep);
             auto axis = glm::normalize(glm::cross(facing, toPlayer));
 
@@ -50,14 +50,12 @@ void NpcSystem::Update(float dT, GameWorld& gameWorld, AssetManager& assMan)
         if (npcData.lastShot <= 0) 
         {
             PhysicalInfo pi = PhysicalInfo();
-            pi.baseOrientation_ = npc.GetBaseOrientation();
-		    pi.orientation_ 	= npc.GetOrientation();
-		    pi.position_		= npc.GetPosition();
-		    pi.rotation_		= npc.GetRotation();
-		    pi.rotationSpeed_	= npc.GetRotationSpeed();
-		    pi.scale_			= npc.GetScale();
-		    pi.speed_			= npc.GetSpeed();
-            spawner::SpawnShot(gameWorld, assMan, pi); 
+		    pi.position		= npc.GetPosition();
+		    pi.rotation		= npc.GetRotation();
+		    pi.angularVelocity	= npc.GetRotationSpeed();
+		    pi.scale			= npc.GetScale();
+		    pi.velocity			= npc.GetVelocity();
+            spawner::SpawnShot(gameWorld, assMan, pi, npc.GetForward()); 
 
             npcData.lastShot = 1.0f;
         }

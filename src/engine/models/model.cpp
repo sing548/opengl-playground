@@ -10,14 +10,15 @@ const std::array<std::filesystem::path, static_cast<size_t>(ModelType::Count)>  
 };
 
 
-Model::Model(float radius, PhysicalInfo pi, ModelType type) : gammaCorrection(false), 
-	physicalInfo_ (pi), radius_(radius), type_(type)
+Model::Model(float radius, PhysicalInfo pi, ModelType type, glm::vec3 baseOrientation) : gammaCorrection(false), 
+	physicalInfo_ (pi), radius_(radius), type_(type), baseOrientation_(baseOrientation)
 {
 	if (!hitboxSphereInitialized_)
 		CreateHitboxSphere();
 }
 
-Model::Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, bool gamma, float radius) : gammaCorrection(gamma), physicalInfo_(pi), radius_(radius), type_(type)
+Model::Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, glm::vec3 baseOrientation, bool gamma, float radius) 
+    : gammaCorrection(gamma), physicalInfo_(pi), radius_(radius), type_(type), baseOrientation_(baseOrientation)
 {
     path_ = path;
 	meshes_ = assMan.LoadModel(path);
@@ -26,7 +27,8 @@ Model::Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, Mod
 		CreateHitboxSphere();
 }
 
-Model::Model(std::string_view const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, bool gamma, float radius) : gammaCorrection(gamma), physicalInfo_(pi), radius_(radius), type_(type)
+Model::Model(std::string_view const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, glm::vec3 baseOrientation, bool gamma, float radius) 
+    : gammaCorrection(gamma), physicalInfo_(pi), radius_(radius), type_(type), baseOrientation_(baseOrientation)
 {
     path_ = path;
     meshes_ = assMan.LoadModel(path_);
@@ -46,51 +48,6 @@ void Model::DrawHitbox(Shader shader)
 	hitboxSphere_->Draw(shader);
 }
 
-glm::vec3 Model::GetPosition() const
-{
-	return physicalInfo_.position_;
-}
-
-glm::vec3 Model::GetScale() const
-{
-	return physicalInfo_.scale_;
-}
-
-glm::vec3 Model::GetRotation() const
-{
-	return physicalInfo_.rotation_;
-}
-
-glm::vec3 Model::GetOrientation() const
-{
-	return physicalInfo_.orientation_;
-}
-
-glm::vec3 Model::GetBaseOrientation() const
-{
-    return physicalInfo_.baseOrientation_;
-}
-
-glm::vec3 Model::GetSpeed() const
-{ 
-	return physicalInfo_.speed_;
-}
-
-glm::vec3 Model::GetRotationSpeed() const
-{
-	return physicalInfo_.rotationSpeed_;
-}
-
-std::string Model::GetPath() const
-{
-    return path_;
-}
-
-float Model::GetRadius() const
-{
-    return radius_;
-}
-
 const std::vector<std::shared_ptr<Mesh>>& Model::GetMeshes() const
 {
     return meshes_;
@@ -99,47 +56,6 @@ const std::vector<std::shared_ptr<Mesh>>& Model::GetMeshes() const
 const Mesh* Model::GetHitboxMesh()
 {
     return hitboxSphere_;
-}
-
-void Model::SetPosition(glm::vec3 position)
-{
-	this->physicalInfo_.position_ = position;
-}
-
-void Model::SetScale(glm::vec3 scale) 
-{
-	this->physicalInfo_.scale_ = scale;
-}
-
-void Model::SetRotation(glm::vec3 rotation)
-{
-	physicalInfo_.rotation_ = rotation;
-
-    // Convert Euler angles to quaternion
-    glm::quat q = glm::quat(physicalInfo_.rotation_);
-
-    // Rotate the *original mesh-facing direction*
-    physicalInfo_.orientation_ = q * physicalInfo_.baseOrientation_;
-}
-
-void Model::SetOrientation(glm::vec3 orientation)
-{
-    this->physicalInfo_.orientation_ = orientation;
-}
-
-void Model::SetBaseOrientation(glm::vec3 orientation)
-{
-	this->physicalInfo_.baseOrientation_ = orientation;
-}
-
-void Model::SetSpeed(glm::vec3 speed)
-{
-	this->physicalInfo_.speed_ = speed;
-}
-
-void Model::SetRotationSpeed(glm::vec3 speed)
-{
-	this->physicalInfo_.rotationSpeed_ = speed;
 }
 
 void Model::CreateHitboxSphere()

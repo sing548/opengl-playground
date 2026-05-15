@@ -146,13 +146,11 @@ void Networking::BuildGameState(const Scene& scene, const std::vector<unsigned i
             e.id                 = id;
             e.type               = static_cast<uint32_t>(model.type_);
             e.radius             = model.GetRadius();
-            e.position_          = model.GetPosition();
-            e.scale_             = model.GetScale();
-            e.rotation_          = model.GetRotation();
-            e.orientation_       = model.GetOrientation();
-            e.baseOrientation_   = model.GetBaseOrientation();
-            e.speed_             = model.GetSpeed();
-            e.rotationSpeed_     = model.GetRotationSpeed();
+            e.position           = model.GetPosition();
+            e.scale              = model.GetScale();
+            e.rotation           = model.GetRotation();
+            e.velocity           = model.GetVelocity();
+            e.angularVelocity    = model.GetRotationSpeed();
 
             gameState_->createdEntities.push_back(e);
         }
@@ -162,14 +160,12 @@ void Networking::BuildGameState(const Scene& scene, const std::vector<unsigned i
 			{
 				// ToDo: "Lightweight" state update ---
 				EntityState e;
-				e.id                 = id;
-				e.position_          = model.GetPosition();
-				e.scale_             = model.GetScale();
-				e.rotation_          = model.GetRotation();
-				e.orientation_       = model.GetOrientation();
-				e.baseOrientation_   = model.GetBaseOrientation();
-				e.speed_             = model.GetSpeed();
-				e.rotationSpeed_     = model.GetRotationSpeed();
+				e.id                = id;
+				e.position          = model.GetPosition();
+				e.scale             = model.GetScale();
+				e.rotation          = model.GetRotation();
+				e.velocity          = model.GetVelocity();
+				e.angularVelocity   = model.GetRotationSpeed();
 	
 				gameState_->entities.push_back(e);
 			}
@@ -230,13 +226,11 @@ std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(GameWorl
 	for (auto &entity : gs.createdEntities)
 	{
 		PhysicalInfo pi;
-		pi.baseOrientation_ = entity.baseOrientation_;
-		pi.orientation_ 	= entity.orientation_;
-		pi.position_		= entity.position_;
-		pi.rotation_		= entity.rotation_;
-		pi.rotationSpeed_	= entity.rotationSpeed_;
-		pi.scale_			= entity.scale_;
-		pi.speed_			= entity.speed_;
+		pi.position			= entity.position;
+		pi.rotation			= entity.rotation;
+		pi.angularVelocity	= entity.angularVelocity;
+		pi.scale			= entity.scale;
+		pi.velocity			= entity.velocity;
 	
 		switch (entity.type) 
 		{
@@ -244,7 +238,7 @@ std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(GameWorl
 				spawner::SpawnPlayer(gameWorld, assMan, pi, entity.id);
 				break;
 			case 1: 
-				spawner::SpawnShot(gameWorld, assMan, pi, glm::vec3(0.0f), false, entity.id);
+				spawner::SpawnShotFromNetwork(gameWorld, assMan, pi, entity.id);
 				break;
 			case 2: 
 				spawner::SpawnNpc(gameWorld, assMan, pi, entity.id);
@@ -263,13 +257,11 @@ std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(GameWorl
 
         auto& m = gameWorld.GetScene().GetModelByReference(entity.id);
 
-        m.SetBaseOrientation(entity.baseOrientation_);
-        m.SetOrientation(entity.orientation_);
-        m.SetPosition(entity.position_);
-        m.SetRotation(entity.rotation_);
-        m.SetRotationSpeed(entity.rotationSpeed_);
-        m.SetScale(entity.scale_);
-        m.SetSpeed(entity.speed_);
+        m.SetPosition(entity.position);
+        m.SetRotation(entity.rotation);
+        m.SetRotationSpeed(entity.angularVelocity);
+        m.SetScale(entity.scale);
+        m.SetVelocity(entity.velocity);
     }
  
 	return { client_->playerId_, killedPlayers };

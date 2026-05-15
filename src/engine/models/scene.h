@@ -9,7 +9,7 @@ public:
     Scene();
 
     bool ModelExists(unsigned int id);
-    unsigned int AddModel(Model& model, int id = -1);
+    unsigned int AddModel(Model& model, int id = 0);
     const std::unordered_map<uint32_t, Model>& GetModels() const;
     Model& GetModelByReference(unsigned int id);
     const Model& GetModelByReference(unsigned int id) const;
@@ -25,7 +25,7 @@ public:
 
     uint32_t currentTick = 0;
 
-    glm::vec3 currentFurthestPosition_;
+    glm::vec3 currentFurthestPosition;
 
 private:
     unsigned int nextId_;

@@ -15,10 +15,10 @@ void PhysicsSystem::Update(float dT, GameWorld& gameWorld)
 
 void PhysicsSystem::MoveModels(float dT, GameWorld& gameWorld)
 {
-    gameWorld.GetScene().currentFurthestPosition_ = glm::vec3(0.0f, 0.0f, 0.0f);
+    gameWorld.GetScene().currentFurthestPosition = glm::vec3(0.0f, 0.0f, 0.0f);
     for (auto& [id, model] : gameWorld.GetScene().GetModels())
     {
-        glm::vec3 change = model.GetOrientation() * model.GetSpeed().x;
+        glm::vec3 change = model.GetVelocity();
         MoveModel(dT, gameWorld.GetScene(), id, change);
 
         auto position = model.GetPosition();
@@ -31,11 +31,11 @@ void PhysicsSystem::MoveModel(float dT, Scene& scene, unsigned int id, const glm
 {
     Model& model = scene.GetModelByReference(id);
     glm::vec3 position = model.GetPosition();
-    position += change;
+    position += change * dT * 60.0f;
     model.SetPosition(position);
 
-    if (abs(position.x) > scene.currentFurthestPosition_.x) scene.currentFurthestPosition_.x = abs(position.x);
-    if (abs(position.z) > scene.currentFurthestPosition_.z) scene.currentFurthestPosition_.z = abs(position.z);
+    if (abs(position.x) > scene.currentFurthestPosition.x) scene.currentFurthestPosition.x = abs(position.x);
+    if (abs(position.z) > scene.currentFurthestPosition.z) scene.currentFurthestPosition.z = abs(position.z);
 }
 
 void PhysicsSystem::CheckHits(GameWorld& gameWorld)

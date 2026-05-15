@@ -25,13 +25,11 @@
 #include <string_view>
 
 struct PhysicalInfo {
-    glm::vec3 position_;
-    glm::vec3 scale_;
-    glm::vec3 rotation_;
-    glm::vec3 orientation_;
-    glm::vec3 baseOrientation_;
-    glm::vec3 speed_;
-    glm::vec3 rotationSpeed_;
+    glm::vec3 position          {0.0f};
+    glm::vec3 scale             {1.0f};
+    glm::quat rotation          {1, 0, 0, 0};
+    glm::vec3 velocity          {0.0f};
+    glm::vec3 angularVelocity   {0.0f};
 };
 
 // ToDo: Move in future to make Split engine/game clearer
@@ -53,31 +51,30 @@ public:
     bool gammaCorrection;
 
     
-    Model(float radius, PhysicalInfo pi, ModelType type);
-    Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, bool gamma = false, float radius = 0.7);
-    Model(std::string_view const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, bool gamma = false, float radius = 0.7);
+    Model(float radius, PhysicalInfo pi, ModelType type, glm::vec3 baseOrientation);
+    Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, glm::vec3 baseOrientation, bool gamma = false, float radius = 0.7);
+    Model(std::string_view const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, glm::vec3 baseOrientation, bool gamma = false, float radius = 0.7);
     
     void Draw(Shader shader);
     void DrawHitbox(Shader shader);
-    glm::vec3 GetPosition() const;
-    glm::vec3 GetScale() const;
-    glm::vec3 GetRotation() const;
-    glm::vec3 GetOrientation() const;
-    glm::vec3 GetBaseOrientation() const;
-    glm::vec3 GetSpeed() const;
-    glm::vec3 GetRotationSpeed() const;
-    std::string GetPath() const;
-    float GetRadius() const;
+    glm::vec3 GetPosition() const { return physicalInfo_.position; };
+    glm::vec3 GetScale() const { return physicalInfo_.scale; };
+    glm::quat GetRotation() const { return physicalInfo_.rotation; };
+    glm::vec3 GetForward() const { return GetRotation() * baseOrientation_; };
+    glm::vec3 GetBaseOrientation() const { return baseOrientation_; };
+    glm::vec3 GetVelocity() const { return physicalInfo_.velocity; };
+    glm::vec3 GetRotationSpeed() const { return physicalInfo_.angularVelocity; };
+    std::string GetPath() const { return path_; };
+    float GetRadius() const { return radius_; };
     const std::vector<std::shared_ptr<Mesh>>& GetMeshes() const;
     const static Mesh* GetHitboxMesh();
     
-    void SetPosition(glm::vec3 position);
-    void SetScale(glm::vec3 scale);
-    void SetRotation(glm::vec3 rotation);
-    void SetOrientation(glm::vec3);
-    void SetBaseOrientation(glm::vec3 orientation);
-    void SetSpeed(glm::vec3 speed);
-    void SetRotationSpeed(glm::vec3 speed);
+    void SetPosition(glm::vec3 position) { physicalInfo_.position = position; };
+    void SetScale(glm::vec3 scale) { physicalInfo_.scale = scale; };
+    void SetRotation(glm::quat rotation) { physicalInfo_.rotation = rotation; };
+    void RotateBy(glm::quat delta) { physicalInfo_.rotation = delta * physicalInfo_.rotation; };
+    void SetVelocity(glm::vec3 speed) { physicalInfo_.velocity = speed; };
+    void SetRotationSpeed(glm::vec3 speed) { physicalInfo_.angularVelocity = speed; };
     
     void CreateHitboxSphere();
     
@@ -91,6 +88,7 @@ private:
 
     static const std::array<std::filesystem::path, static_cast<size_t>(ModelType::Count)> ModelPaths;
 
+    glm::vec3 baseOrientation_;
     PhysicalInfo physicalInfo_;
     std::vector<std::shared_ptr<Mesh>> meshes_;
 };

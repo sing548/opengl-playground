@@ -9,9 +9,10 @@ void PlayerSystem::Update(float dT,
                           std::unordered_map<int, InputState>& currentInputStates,
                           std::unordered_map<int, InputState>& previousInputStates,
                           int playerId,
-                          bool shoot)
+                          bool shoot,
+                          const std::map<std::string, bool>& settings)
 {
-    ExecuteInput(dT, gameWorld, assMan, currentInputStates, previousInputStates, playerId, shoot);
+    ExecuteInput(dT, gameWorld, assMan, currentInputStates, previousInputStates, playerId, shoot, settings.at("simple_flight"));
     UpdatePlayerData(dT, gameWorld);
 }
 
@@ -23,77 +24,86 @@ void PlayerSystem::ExecuteInput(float dT,
                                 std::unordered_map<int, InputState>& currentInputStates,
                                 std::unordered_map<int, InputState>& previousInputStates,
                                 int playerId,
-                                bool shoot)
-{
-    bool playerExists = gameWorld.GetScene().ModelExists(playerId);
-
+                                bool shoot,
+                                bool lockRAndV)
+{ 
+    
     for (auto& [id, state] : currentInputStates)
     {
         if (!gameWorld.GetScene().ModelExists(id)) continue;
+        auto& model = gameWorld.GetScene().GetModelByReference(id);
 
         if (state.left) 
-            RotateModel(id, gameWorld.GetScene(), {0.0f, glm::radians(2.1f), 0.0f});
+            RotateModel(id, gameWorld.GetScene(), glm::angleAxis(glm::radians(2.1f), glm::vec3(0, 1, 0)), lockRAndV);
 
         if (state.right)
-            RotateModel(id, gameWorld.GetScene(), {0.0f, glm::radians(-2.1f), 0.0f});
+            RotateModel(id, gameWorld.GetScene(), glm::angleAxis(glm::radians(-2.1f), glm::vec3(0, 1, 0)), lockRAndV);
 
         if (state.forward) 
         {
             float acc = dT * 0.15f;
-            glm::vec3 speed = gameWorld.GetScene().GetModelByReference(id).GetSpeed();
-            speed.x += acc;
+            glm::vec3 speed = model.GetVelocity();
+            speed += acc * model.GetForward();
 
-            // Max Speed
-            if (0.2f > speed.x)
-                gameWorld.GetScene().GetModelByReference(id).SetSpeed(speed);
+            // Max Speed - ToDo: Think about re-implementing
+
+            model.SetVelocity(speed);
         } else 
         {
             float acc = dT * 0.15f;
             if (state.backward)
                 acc = dT * .6f;
-            glm::vec3 speed = gameWorld.GetScene().GetModelByReference(id).GetSpeed();
+
+            glm::vec3 speed = gameWorld.GetScene().GetModelByReference(id).GetVelocity();
 
             if (speed.x > 0) speed.x -= acc;
-            if (speed.x < 0) speed.x = 0;
+            if (speed.x < 0) speed.x += acc;
+            if (abs(speed.x) < 0) speed.x = 0;
 
-            gameWorld.GetScene().GetModelByReference(id).SetSpeed(speed);
+            if (speed.y > 0) speed.y -= acc;
+            if (speed.y < 0) speed.y += acc;
+            if (abs(speed.y) < 0) speed.x = 0;
+
+            if (speed.z > 0) speed.z -= acc;
+            if (speed.z < 0) speed.z += acc;
+            if (abs(speed.z) < 0) speed.x = 0;
+
+            gameWorld.GetScene().GetModelByReference(id).SetVelocity(speed);
         }
 
         if (!shoot) continue;
 
-        /*if (state.shootShot && id == playerId)
+        if (state.shootShot && previousInputStates.at(id).shootShot != true)
         {
+            previousInputStates.at(id).shootShot = true;
             Shoot(gameWorld, assMan, id);
         }
-        else 
-        {*/
-            if (state.shootShot && previousInputStates.at(id).shootShot != true)
-            {
-                previousInputStates.at(id).shootShot = true;
-                Shoot(gameWorld, assMan, id);
-            }
-        //}
     }
 }
 
-void PlayerSystem::RotateModel(unsigned int id, Scene& scene, const glm::vec3& change) 
+void PlayerSystem::RotateModel(unsigned int id, Scene& scene, const glm::quat& change, bool lockRAndV) 
 {
     Model& model = scene.GetModelByReference(id);
-    model.SetRotation(model.GetRotation() + change);
+    model.RotateBy(change);
+
+    if (lockRAndV)
+    {
+        glm::vec3 velocity = model.GetVelocity();
+        velocity = change * velocity;
+        model.SetVelocity(velocity);
+    }
 }
 
 void PlayerSystem::Shoot(GameWorld& gameWorld, AssetManager& assMan, uint32_t shooterId)
 {
     auto shooter = gameWorld.GetScene().GetModelByReference(shooterId);
-    PhysicalInfo pi = PhysicalInfo();
-    pi.baseOrientation_ = shooter.GetBaseOrientation();
-	pi.orientation_ 	= shooter.GetOrientation();
-	pi.position_		= shooter.GetPosition();
-	pi.rotation_		= shooter.GetRotation();
-	pi.rotationSpeed_	= shooter.GetRotationSpeed();
-	pi.scale_			= shooter.GetScale();
-	pi.speed_			= shooter.GetSpeed();
-    spawner::SpawnShot(gameWorld, assMan, pi);
+    PhysicalInfo pi     = PhysicalInfo();
+	pi.position		    = shooter.GetPosition();
+	pi.rotation		    = shooter.GetRotation();
+	pi.angularVelocity	= shooter.GetRotationSpeed();
+	pi.scale			= shooter.GetScale();
+	pi.velocity			= shooter.GetVelocity();
+    spawner::SpawnShot(gameWorld, assMan, pi, shooter.GetForward(), shooter.GetVelocity());
 }
 
 void PlayerSystem::UpdatePlayerData(float dT, GameWorld& gameWorld)
