@@ -11,6 +11,8 @@ void PhysicsSystem::Update(float dT, GameWorld& gameWorld)
 {
     MoveModels(dT, gameWorld);
     CheckHits(gameWorld);
+
+    CorrectZOffset(gameWorld.GetScene());    
 }
 
 void PhysicsSystem::MoveModels(float dT, GameWorld& gameWorld)
@@ -63,12 +65,7 @@ void PhysicsSystem::CheckHits(GameWorld& gameWorld)
             gameWorld.MarkEntityForDelete(shotId);
             
         }
-    }
-
-    for (auto& [shotId, _] : gameWorld.GetShotData())
-    {
-        const Model& shot = scene.GetModelByReference(shotId);
-
+    
         for (auto& [npcId, npcData] : gameWorld.GetNpcData())
         {
             const Model& npc = scene.GetModelByReference(npcId);
@@ -86,10 +83,80 @@ void PhysicsSystem::CheckHits(GameWorld& gameWorld)
                 gameWorld.MarkEntityForDelete(shotId);
         }
     }
+
+    auto& players = gameWorld.GetPlayerData();
+    for (auto a = players.begin(); a != players.end(); ++a)
+        for (auto b = std::next(a); b != players.end(); ++b)
+            TryCollide(scene, a->first, b->first);
+
+    auto& npcs = gameWorld.GetNpcData();
+    for (auto a = npcs.begin(); a != npcs.end(); ++a)
+        for (auto b = std::next(a); b != npcs.end(); ++b)
+            TryCollide(scene, a->first, b->first);
+
+    for (auto& [playerId, _] : players)
+        for (auto& [npcId, _] : npcs)
+            TryCollide(scene, playerId, npcId);
 }
 
 bool PhysicsSystem::Collide(const Model& a, const Model& b)
 {
     float d = glm::length(a.GetPosition() - b.GetPosition());
     return d <= a.GetRadius() + b.GetRadius();
+}
+
+void PhysicsSystem::TryCollide(Scene& scene, uint32_t idA, uint32_t idB)
+{
+    auto& modelA = scene.GetModelByReference(idA);
+    auto& modelB = scene.GetModelByReference(idB);
+
+    if (Collide(modelA, modelB))
+    {
+        glm::vec3 n = modelB.GetPosition() - modelA.GetPosition();
+        float dist = glm::length(n);
+
+        if (dist < 1e-6f) return;
+
+        n /= dist;
+
+        float overlap = (modelA.GetRadius() - modelB.GetRadius()) - dist;
+
+        if (overlap > 0)
+        {
+            modelA.SetPosition(modelA.GetPosition() - n + (overlap * 0.5f));
+            modelB.SetPosition(modelB.GetPosition() - n + (overlap * 0.5f));
+        }
+
+        glm::vec3 veloA = modelA.GetVelocity();
+        glm::vec3 veloB = modelB.GetVelocity();
+
+        auto veloAN = glm::dot(veloA, n);
+        auto veloBN = glm::dot(veloB, n);
+
+        if (veloAN - veloBN <= 0) return;
+
+        modelA.SetVelocity(veloA + (veloBN - veloAN) * n);
+        modelB.SetVelocity(veloB + (veloAN - veloBN) * n);
+    }
+}
+
+void PhysicsSystem::CorrectZOffset(Scene& scene)
+{
+    for (auto& model : scene.GetModels())
+    {
+        auto velo = model.second.GetVelocity();
+        auto pos = model.second.GetPosition();
+
+        if (velo.y > 0 || velo.y < 0) 
+        {
+            velo.y = 0.0f;
+            model.second.SetVelocity(velo);
+        }
+
+        if (pos.y > 0 || pos.y < 0)
+        {
+            pos.y = 0.0f;
+            model.second.SetPosition(pos);
+        }
+    }
 }

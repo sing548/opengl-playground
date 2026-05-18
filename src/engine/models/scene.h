@@ -10,6 +10,7 @@ public:
 
     bool ModelExists(unsigned int id);
     unsigned int AddModel(Model& model, int id = 0);
+    std::unordered_map<uint32_t, Model>& GetModels() { return models_; };
     const std::unordered_map<uint32_t, Model>& GetModels() const;
     Model& GetModelByReference(unsigned int id);
     const Model& GetModelByReference(unsigned int id) const;

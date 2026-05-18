@@ -68,6 +68,13 @@ void PlayerSystem::ExecuteInput(float dT,
             if (speed.z < 0) speed.z += acc;
             if (abs(speed.z) < 0) speed.x = 0;
 
+            if (glm::length(speed) < .05) 
+            {
+                speed.x = 0.0f;
+                speed.y = 0.0f;
+                speed.z = 0.0f;
+            }
+
             gameWorld.GetScene().GetModelByReference(id).SetVelocity(speed);
         }
 
