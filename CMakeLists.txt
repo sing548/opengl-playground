@@ -43,15 +43,15 @@ add_executable(OpenGLPlayground
     src/engine/models/mesh.cpp
     src/engine/models/model.cpp
     src/engine/models/scene.cpp
-    src/engine/networking/client-logic.cpp
-    src/engine/networking/server-logic.cpp
-    src/engine/networking/networking.cpp
+    src/engine/networking/client-transport.cpp
+    src/engine/networking/server-transport.cpp
     src/engine/rendering/materials/hitbox-material.cpp
     src/engine/rendering/materials/model-material.cpp
     src/engine/rendering/sky/sky.cpp
     src/engine/rendering/renderer.cpp
     src/engine/engine.cpp
     src/game/game-world/game-world.cpp
+    src/game/networking/network-bridge/network-bridge.cpp
     src/game/spawner/spawner.cpp
     src/game/systems/camera-system.cpp
     src/game/systems/npc-system.cpp

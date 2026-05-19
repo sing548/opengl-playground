@@ -9,7 +9,6 @@
 #include "input-manager/input-manager.h"
 #include "rendering/renderer.h"
 #include "models/asset-manager.h"
-#include "networking/networking.h"
 
 #include "../game/systems/camera-system.h"
 #include "../game/systems/npc-system.h"
@@ -26,6 +25,8 @@
 
 enum class EngineMode { Standalone, Server, Client };
 
+class NetworkBridge;
+
 class Engine {
 public:
 
@@ -38,8 +39,8 @@ private:
     const unsigned int WIDTH = 1920;
     const unsigned int HEIGHT = 1080;
 
-    unsigned int lastShot = 0;
-    bool shotReleased = true;
+    float shotCooldown_ = 0;
+    bool shotReleased_ = true;
 
     int playerId_;
 
@@ -48,7 +49,7 @@ private:
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<Renderer> renderer_;
     std::unique_ptr<AssetManager> assMan_;
-    std::unique_ptr<Networking> networking_;
+    std::unique_ptr<NetworkBridge> networkBridge_;
 
     GameWorld gameWorld_;
 
@@ -72,6 +73,8 @@ private:
 
     void HandleLogic(float deltaTime);
     void ReconcileNetwork();
+    void UpdateServerNetworking();
+    void UpdateClientNetworking();
     void CollectInputs(float deltaTime);
     static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
@@ -79,8 +82,7 @@ private:
     void RotateModel(unsigned int id, const glm::vec3& change);
 
     void AdjustCamera();
-
-
+    
     //------------------- TEMP, will be moved to more appropriate class ---------------------
     std::unique_ptr<Shader> screenShader_;
     std::unique_ptr<Shader> modelShader_;

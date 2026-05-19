@@ -1,6 +1,7 @@
 #include "engine.h"
 
 #include "../game/spawner/spawner.h"
+#include "../game/networking/network-bridge/network-bridge.h"
 
 Engine::Engine(EngineMode config, const char *serverAddr)
 {
@@ -58,9 +59,9 @@ Engine::Engine(EngineMode config, const char *serverAddr)
         if (m_bServer)
         {
             PhysicalInfo pi = PhysicalInfo();
-            pi.position = glm::vec3(20.0f, 0.0f, 0.0f);
-            pi.rotation = glm::quat(1, 0, 0, 0);
-            pi.scale = glm::vec3(0.2f, 0.2f, 0.2f);
+            pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
+            pi.rotation_ = glm::quat(1, 0, 0, 0);
+            pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
 
             playerId_ = spawner::SpawnPlayer(gameWorld_, *assMan_, pi);
 
@@ -71,10 +72,10 @@ Engine::Engine(EngineMode config, const char *serverAddr)
         }
     
         if (m_bServer)
-            networking_ = std::make_unique<Networking>(true, gameWorld_.GetScene());
+            networkBridge_ = std::make_unique<NetworkBridge>(true, gameWorld_.GetScene());
         else
         {
-            networking_ = std::make_unique<Networking>(false, gameWorld_.GetScene(), serverAddr);
+            networkBridge_ = std::make_unique<NetworkBridge>(false, gameWorld_.GetScene(), serverAddr);
         }
     }
     else
@@ -111,17 +112,16 @@ AssetManager& Engine::GetAssMan()
 void Engine::BasicLevel()
 {
     PhysicalInfo pi = PhysicalInfo();
-    pi.position = glm::vec3(20.0f, 0.0f, 0.0f);
-    pi.rotation = glm::quat(1, 0, 0, 0);
-    pi.scale = glm::vec3(0.2f, 0.2f, 0.2f);
+    pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
+    pi.rotation_ = glm::quat(1, 0, 0, 0);
+    pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
 
     playerId_ = spawner::SpawnPlayer(gameWorld_, *assMan_, pi);
 
-
     PhysicalInfo pi2 = PhysicalInfo();
-    pi2.position = glm::vec3(-20.0f, 0.0f, 0.0f);
-    pi2.rotation = glm::angleAxis(glm::radians(180.0f), glm::vec3(0,1,0));
-    pi2.scale = glm::vec3(0.2f, 0.2f, 0.2f);
+    pi2.position_ = glm::vec3(-20.0f, 0.0f, 0.0f);
+    pi2.rotation_ = glm::angleAxis(glm::radians(180.0f), glm::vec3(0,1,0));
+    pi2.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
 
     spawner::SpawnNpc(gameWorld_, *assMan_, pi2);
 }
@@ -166,11 +166,11 @@ void Engine::Run()
     
             if (m_bNetworking && m_bServer)
             {
-               newClient = networking_->SendGameState(gameWorld_.GetScene(), gameWorld_.GetScene().GetAddedModels(), gameWorld_.GetScene().GetRemoveMarkedModels(), fixedDelta);    
+               newClient = networkBridge_->SendGameState(gameWorld_.GetScene(), gameWorld_.GetScene().GetAddedModels(), gameWorld_.GetScene().GetRemoveMarkedModels(), fixedDelta);    
             }
             else if (m_bNetworking && playerId_ >= 0)
             {
-                networking_->SendInputState(currentInputStates_.at(playerId_));
+                networkBridge_->SendInputState(currentInputStates_.at(playerId_));
             }
 
             //gameWorld_.RemoveMarkedEntities();
@@ -201,8 +201,8 @@ void Engine::Run()
         }
     }
     
-    if (networking_ != nullptr)
-        networking_->Shutdown();
+    if (networkBridge_ != nullptr)
+        networkBridge_->Shutdown();
 
     std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
 }
@@ -213,53 +213,62 @@ void Engine::ReconcileNetwork()
     
     if (m_bNetworking && !m_bServer)
     {
-        auto [playerId, playerModelRemoved] = networking_->UpdateScene(gameWorld_, *assMan_);
-        if (playerId != 0)
-        {
-            playerId_ = playerId;
-            auto state = InputState { playerId_, false, false, false, false, false, false  };
-            currentInputStates_.try_emplace(playerId_, state);
-            previousInputStates_.try_emplace(playerId_, state);
-        }
-
-        for (auto& id : playerModelRemoved)
-        {
-            auto i = currentInputStates_.find(id);
-            auto j = previousInputStates_.find(id);
-
-            if (i != currentInputStates_.end())
-                currentInputStates_.erase(i);
-            if (j != previousInputStates_.end())
-                previousInputStates_.erase(j);
-            
-            if (id == playerId_)
-                playerId_ = -1;
-            
-            //gameWorld_.RemovePlayerData(id);
-        }
+        UpdateClientNetworking();
     }
     else if (m_bNetworking)
     {
-        auto inputStates = networking_->GetInputStates();
+        UpdateServerNetworking();
+    }
+}
 
-        for (const auto [id, state] : inputStates)
+void Engine::UpdateServerNetworking()
+{
+    auto inputStates = networkBridge_->GetInputStates();
+
+    for (const auto [id, state] : inputStates)
+    {
+        if (std::ranges::find(killedPlayers_, id) != killedPlayers_.end()) 
+            continue;
+
+        auto it = currentInputStates_.find(state.id);
+        
+        if (it == currentInputStates_.end())
         {
-            if (std::ranges::find(killedPlayers_, id) != killedPlayers_.end()) 
-                continue;
-
-            auto it = currentInputStates_.find(state.id);
-            
-            if (it == currentInputStates_.end())
-            {
-                previousInputStates_[state.id] = state;
-            }
-            else if (previousInputStates_.at(state.id).tick - 1 < networking_->currentTick)
-            {
-                previousInputStates_.at(state.id) = currentInputStates_.at(state.id);
-            }
-
-            currentInputStates_[state.id] = state;
+            previousInputStates_[state.id] = state;
         }
+        else if (previousInputStates_.at(state.id).tick - 1 < networkBridge_->currentTick)
+        {
+            previousInputStates_.at(state.id) = currentInputStates_.at(state.id);
+        }
+
+        currentInputStates_[state.id] = state;
+    }
+}
+
+void Engine::UpdateClientNetworking()
+{
+    auto [playerId, playerModelRemoved] = networkBridge_->UpdateScene(gameWorld_, *assMan_);
+
+    if (playerId != 0)
+    {
+        playerId_ = playerId;
+        auto state = InputState { playerId_, false, false, false, false, false, false  };
+        currentInputStates_.try_emplace(playerId_, state);
+        previousInputStates_.try_emplace(playerId_, state);
+    }
+
+    for (auto& id : playerModelRemoved)
+    {
+        auto i = currentInputStates_.find(id);
+        auto j = previousInputStates_.find(id);
+
+        if (i != currentInputStates_.end())
+            currentInputStates_.erase(i);
+        if (j != previousInputStates_.end())
+            previousInputStates_.erase(j);
+        
+        if (id == playerId_)
+            playerId_ = -1;
     }
 }
 
@@ -293,7 +302,9 @@ void Engine::HandleLogic(float deltaTime)
 
 void Engine::AdjustCamera()
 {
-    if (settings_["third_person"] ) {
+    if (settings_["third_person"]) {
+        if (playerId_ < 0 || !gameWorld_.GetScene().ModelExists(playerId_)) return;
+
         const auto& model = gameWorld_.GetScene().GetModelByReference(playerId_);
         glm::vec3 modelPos = model.GetPosition();
         
@@ -343,20 +354,20 @@ void Engine::AdjustCamera()
 void Engine::AddNewPlayer(uint32_t id)
 {
     PhysicalInfo pi = PhysicalInfo();
-    pi.position = glm::vec3(20.0f, 0.0f, 0.0f);
-    pi.rotation = glm::quat(1, 0, 0, 0);
-    pi.scale = glm::vec3(0.2f, 0.2f, 0.2f);
+    pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
+    pi.rotation_ = glm::quat(1, 0, 0, 0);
+    pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
 
     spawner::SpawnPlayer(gameWorld_, *assMan_, pi, id);
     
     const auto& playerData = gameWorld_.GetPlayerData();
 
-    for (auto& [id, model] : playerData)
+    for (auto& [pId, _] : playerData)
     {
         const std::vector<unsigned int> addedModels = gameWorld_.GetScene().GetAddedModels();
 
-        if (std::find(addedModels.begin(), addedModels.end(), id) == addedModels.end())
-            gameWorld_.GetScene().AddExtraModelToAddedIds(id);
+        if (std::find(addedModels.begin(), addedModels.end(), pId) == addedModels.end())
+            gameWorld_.GetScene().AddExtraModelToAddedIds(pId);
     }
 }
 
@@ -370,9 +381,9 @@ void Engine::CollectInputs(float deltaTime)
     if (playerId_ < 0 || std::ranges::find(killedPlayers_, playerId_) != killedPlayers_.end()) return;
     if (!currentInputStates_.contains(playerId_)) return;
 
-    auto state = currentInputStates_.at(playerId_);
-    auto previousState = previousInputStates_.at(playerId_);
-    previousState = currentInputStates_.at(playerId_);
+    previousInputStates_.at(playerId_) = currentInputStates_.at(playerId_);
+    
+    InputState state = currentInputStates_.at(playerId_);
 
     state.left      = glfwGetKey(window_->Get(), GLFW_KEY_A) == GLFW_PRESS;
     state.right     = glfwGetKey(window_->Get(), GLFW_KEY_D) == GLFW_PRESS;
@@ -381,21 +392,27 @@ void Engine::CollectInputs(float deltaTime)
     state.shoot     = glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS;
     state.shootShot = false;
 
-    bool shootPressed  =  state.shoot && !previousState.shoot;
-    bool shootReleased = !state.shoot &&  previousState.shoot;
+    const InputState& previousState = previousInputStates_.at(playerId_);
 
-    if (lastShot > 0)
+    if (shotCooldown_ > 0.0f) shotCooldown_ = std::max(0.0f, shotCooldown_ - deltaTime);
+
+    bool shootPressed  =  state.shoot && !previousState.shoot;
+
+    if (shotCooldown_ <= 0.0f)
     {
-        lastShot -= deltaTime > lastShot ? lastShot : deltaTime;
-    }
-    
-    if (shootPressed && lastShot == 0) {
-        state.shootShot = true;
-        lastShot = 5;              
+        if (shootPressed)
+        {
+            state.shootShot = true;
+            shotCooldown_ = 0.1f;
+        }
+        else if (state.shoot)
+        {
+            state.shootShot = true;
+            shotCooldown_ = 0.5f;
+        }
     }
 
     currentInputStates_.at(playerId_) = state;
-    previousInputStates_.at(playerId_) = previousState;
 }
 
 void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)

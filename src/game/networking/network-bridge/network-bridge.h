@@ -14,10 +14,7 @@
 #include <steam/steamnetworkingsockets.h>
 #include <steam/isteamnetworkingutils.h>
 
-#include "../networking/client-logic.h"
-#include "../networking/server-logic.h"
-#include "../models/scene.h"
-#include "../networking/shared-strucs.h"
+#include "../../../engine/networking/shared-strucs.h"
 
 #ifdef _WIN32
 	#include <windows.h> // Ug, for NukeProcess -- see below
@@ -31,13 +28,15 @@
 #endif
 
 class GameWorld;
+class ServerTransport;
+class ClientTransport;
 
-class Networking 
+class NetworkBridge 
 {
 
 public:
-    Networking(bool bServer, const Scene& scene, const char *serverAddr = nullptr);
-    ~Networking();
+    NetworkBridge(bool bServer, const Scene& scene, const char *serverAddr = nullptr);
+    ~NetworkBridge();
 
     void SendInputState(InputState& state);
     std::unordered_map<int, InputState> GetInputStates();
@@ -55,13 +54,13 @@ private:
 
     bool m_bServer;
     InputState inputState_;
-    std::unique_ptr<ServerLogic> server_;
+    std::unique_ptr<ServerTransport> server_;
     std::unique_ptr<GameState> gameState_;
     std::vector<unsigned int> addedModels_;
     std::vector<unsigned int> removedModels_;
 
     bool firstLoad_ = true;
-    std::unique_ptr<ClientLogic> client_;
+    std::unique_ptr<ClientTransport> client_;
 
     std::thread networkThread_;
     std::thread distributionThread_;

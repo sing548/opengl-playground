@@ -1,18 +1,18 @@
-#include "client-logic.h"
+#include "client-transport.h"
 
-ClientLogic *ClientLogic::s_pCallbackInstance = nullptr;
-ISteamNetworkingSockets* ClientLogic::m_pInterface = nullptr;
-HSteamNetConnection ClientLogic::m_hConnection = k_HSteamNetConnection_Invalid;
+ClientTransport *ClientTransport::s_pCallbackInstance = nullptr;
+ISteamNetworkingSockets* ClientTransport::m_pInterface = nullptr;
+HSteamNetConnection ClientTransport::m_hConnection = k_HSteamNetConnection_Invalid;
 
-ClientLogic::ClientLogic()
+ClientTransport::ClientTransport()
 {
 }
 
-ClientLogic::~ClientLogic()
+ClientTransport::~ClientTransport()
 {
 };
 
-void ClientLogic::ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomic<bool>& running)
+void ClientTransport::ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomic<bool>& running)
 {
     // Select instance to use.  For now we'll always use the default.
 	m_pInterface = SteamNetworkingSockets();
@@ -39,17 +39,13 @@ void ClientLogic::ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomi
 		
 		PollIncomingMessagesClient(running);
 		PollConnectionStateChangesClient();
-
-		if (messageReceived_)
-			std::this_thread::sleep_for(std::chrono::milliseconds(33));
-		else
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
     m_pInterface->CloseConnection( m_hConnection, 0, "Goodbye", true );
 };
 
-void ClientLogic::PollIncomingMessagesClient(std::atomic<bool>& running)
+void ClientTransport::PollIncomingMessagesClient(std::atomic<bool>& running)
 {
     ISteamNetworkingMessage* pIncomingMsg = nullptr;
 
@@ -86,7 +82,7 @@ void ClientLogic::PollIncomingMessagesClient(std::atomic<bool>& running)
 				GameState gs;
 				payload.convert(gs);
 				int newTick = gs.tick;
-				if (newTick - previoustick != 1)
+				if (previoustick != 0 && newTick - previoustick != 1)
         			std::cout <<   "Skipped tick(1) between: " << previoustick << " and " << newTick << std::endl;
 
 				previoustick = newTick;
@@ -111,18 +107,18 @@ void ClientLogic::PollIncomingMessagesClient(std::atomic<bool>& running)
     }
 }
 
-const GameState& ClientLogic::GetLatestGameState() const
+const GameState& ClientTransport::GetLatestGameState() const
 {
 	return gameState_;
 }
 
-void ClientLogic::PollConnectionStateChangesClient()
+void ClientTransport::PollConnectionStateChangesClient()
 {
 	s_pCallbackInstance = this;
 	m_pInterface->RunCallbacks();
 }
 
-void ClientLogic::OnSteamNetConnectionStatusChangedClient( SteamNetConnectionStatusChangedCallback_t *pInfo, std::atomic<bool>& running )
+void ClientTransport::OnSteamNetConnectionStatusChangedClient( SteamNetConnectionStatusChangedCallback_t *pInfo, std::atomic<bool>& running )
 {
 	assert( pInfo->m_hConn == m_hConnection || m_hConnection == k_HSteamNetConnection_Invalid );
 
@@ -182,7 +178,7 @@ void ClientLogic::OnSteamNetConnectionStatusChangedClient( SteamNetConnectionSta
 	}
 }
 
-void ClientLogic::SendStateToServer(const InputState& state)
+void ClientTransport::SendStateToServer(const InputState& state)
 {
 	msgpack::sbuffer buffer;
 	msgpack::packer<msgpack::sbuffer> pk(buffer);
@@ -193,7 +189,7 @@ void ClientLogic::SendStateToServer(const InputState& state)
 	SendBufferToServer(buffer);
 };
 
-void ClientLogic::SendBufferToServer(const msgpack::sbuffer& buffer)
+void ClientTransport::SendBufferToServer(const msgpack::sbuffer& buffer)
 {
 	m_pInterface->SendMessageToConnection( m_hConnection, buffer.data(), buffer.size(), k_nSteamNetworkingSend_Reliable, nullptr );
 };

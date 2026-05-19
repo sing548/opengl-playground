@@ -16,10 +16,10 @@
 
 #include "../networking/shared-strucs.h"
 
-class ServerLogic
+class ServerTransport
 {
 public:
-    ~ServerLogic();
+    ~ServerTransport();
     void ServerLoop(int port, std::atomic<bool>& running);
     void Shutdown();
     uint32_t UpdateGameState(std::unique_ptr<GameState> gs);
@@ -28,7 +28,7 @@ public:
 private:
     struct Client_t
 	{
-        uint32_t id;
+        uint32_t id = 0;
 	};
 
     std::unique_ptr<GameState> gameState_;
@@ -61,7 +61,7 @@ private:
     static HSteamListenSocket m_hListenSock;
     static ISteamNetworkingSockets *m_pInterface;
     static std::map<HSteamNetConnection, Client_t> m_mapClients;
-    static ServerLogic *s_pCallbackInstance;
+    static ServerTransport *s_pCallbackInstance;
     
     void SendGameStateToAllClients(const GameState& stateToSend);
     void SendPackageToClient(HSteamNetConnection conn, const msgpack::sbuffer& buffer);

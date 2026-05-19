@@ -60,10 +60,9 @@ struct EntityCreationState {
 
 struct GameState {
     uint32_t tick = 0;
-    unsigned int playerId = 0;
     std::vector<EntityState> entities;
     std::vector<uint32_t> destroyedEntities;
     std::vector<EntityCreationState> createdEntities;
 
-    MSGPACK_DEFINE(tick, playerId, entities, destroyedEntities, createdEntities);
+    MSGPACK_DEFINE(tick, entities, destroyedEntities, createdEntities);
 };

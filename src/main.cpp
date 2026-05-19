@@ -9,6 +9,7 @@
 #include "engine/models/scene.h"
 #include "engine/rendering/renderer.h"
 #include "engine/engine.h"
+#include "game/networking/network-bridge/network-bridge.h"
 
 int main(int argc, const char *argv[]) {
 

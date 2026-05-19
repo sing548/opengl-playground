@@ -58,15 +58,12 @@ void PlayerSystem::ExecuteInput(float dT,
 
             if (speed.x > 0) speed.x -= acc;
             if (speed.x < 0) speed.x += acc;
-            if (abs(speed.x) < 0) speed.x = 0;
 
             if (speed.y > 0) speed.y -= acc;
             if (speed.y < 0) speed.y += acc;
-            if (abs(speed.y) < 0) speed.x = 0;
 
             if (speed.z > 0) speed.z -= acc;
             if (speed.z < 0) speed.z += acc;
-            if (abs(speed.z) < 0) speed.x = 0;
 
             if (glm::length(speed) < .05) 
             {
@@ -104,12 +101,12 @@ void PlayerSystem::RotateModel(unsigned int id, Scene& scene, const glm::quat& c
 void PlayerSystem::Shoot(GameWorld& gameWorld, AssetManager& assMan, uint32_t shooterId)
 {
     auto shooter = gameWorld.GetScene().GetModelByReference(shooterId);
-    PhysicalInfo pi     = PhysicalInfo();
-	pi.position		    = shooter.GetPosition();
-	pi.rotation		    = shooter.GetRotation();
-	pi.angularVelocity	= shooter.GetRotationSpeed();
-	pi.scale			= shooter.GetScale();
-	pi.velocity			= shooter.GetVelocity();
+    PhysicalInfo pi         = PhysicalInfo();
+	pi.position_		    = shooter.GetPosition();
+	pi.rotation_		    = shooter.GetRotation();
+	pi.angularVelocity_	    = shooter.GetRotationSpeed();
+	pi.scale_			    = shooter.GetScale();
+	pi.velocity_    		= shooter.GetVelocity();
     spawner::SpawnShot(gameWorld, assMan, pi, shooter.GetForward(), shooter.GetVelocity());
 }
 

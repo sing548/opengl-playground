@@ -11,9 +11,9 @@ namespace spawner
         glm::vec3 shotBaseOrientation = glm::vec3(1.0f, 0.0f, 0.0f);
         float speedBoost = 0.15f;
         
-        pi.position = pi.position + shooterForward;
-        pi.velocity = shooterSpeed + shooterForward * speedBoost;   
-        pi.scale = glm::vec3(0.05f);
+        pi.position_ = pi.position_ + shooterForward;
+        pi.velocity_ = shooterSpeed + shooterForward * speedBoost;   
+        pi.scale_ = glm::vec3(0.05f);
 
         Model shot(Model::GetModelPath(ModelType::SHOT), pi, assMan, ModelType::SHOT, shotBaseOrientation, true, 0.05f);
         id = gameWorld.GetScene().AddModel(shot, id);

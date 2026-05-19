@@ -1,9 +1,11 @@
-#include "networking.h"
+#include "network-bridge.h"
 
-#include "../../game/spawner/spawner.h"
-#include "../../game/game-world/game-world.h"
+#include "../../../game/spawner/spawner.h"
+#include "../../../game/game-world/game-world.h"
+#include "../../../engine/networking/client-transport.h"
+#include "../../../engine/networking/server-transport.h"
 
-Networking::Networking(bool bServer, const Scene& scene, const char *serverAddr)
+NetworkBridge::NetworkBridge(bool bServer, const Scene& scene, const char *serverAddr)
 {
 	m_bServer = bServer;
     #ifdef STEAMNETWORKINGSOCKETS_OPENSOURCE
@@ -32,7 +34,7 @@ Networking::Networking(bool bServer, const Scene& scene, const char *serverAddr)
 	running_ = true;
     if (bServer)
     {
-		server_ = std::make_unique<ServerLogic>();
+		server_ = std::make_unique<ServerTransport>();
 		gameState_ = std::make_unique<GameState>();
 		
 		server_->UpdateGameState(std::move(gameState_));
@@ -64,7 +66,7 @@ Networking::Networking(bool bServer, const Scene& scene, const char *serverAddr)
     }
     else
     {
-		client_ = std::make_unique<ClientLogic>();
+		client_ = std::make_unique<ClientTransport>();
 
         networkThread_ = std::thread([this, serverAddr]() {
             try
@@ -83,7 +85,7 @@ Networking::Networking(bool bServer, const Scene& scene, const char *serverAddr)
     }
 };
 
-Networking::~Networking()
+NetworkBridge::~NetworkBridge()
 {
 	running_ = false;
 	
@@ -96,7 +98,7 @@ Networking::~Networking()
 		distributionThread_.join();
 };
 
-uint32_t Networking::SendGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels, float dT)
+uint32_t NetworkBridge::SendGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels, float dT)
 {
 	uint32_t newClientId = 0;
 	const auto now = std::chrono::steady_clock::now();
@@ -124,7 +126,7 @@ uint32_t Networking::SendGameState(const Scene& scene, const std::vector<unsigne
 	return 0;
 }
 
-void Networking::BuildGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels)
+void NetworkBridge::BuildGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels)
 {	
     gameState_ = std::make_unique<GameState>();
     gameState_->tick = currentTick;
@@ -173,45 +175,44 @@ void Networking::BuildGameState(const Scene& scene, const std::vector<unsigned i
     }
 }
 
-void Networking::Shutdown()
+void NetworkBridge::Shutdown()
 {
 	running_ = false;
 
 	if (server_) server_->Shutdown();
 };
 
-void Networking::SendInputState(InputState& state)
+void NetworkBridge::SendInputState(InputState& state)
 {
 	state.tick = currentTick;
 	client_->SendStateToServer(state);
 };
 
-std::unordered_map<int, InputState> Networking::GetInputStates()
+std::unordered_map<int, InputState> NetworkBridge::GetInputStates()
 {
 	return server_->GetLatestInputStates();
 }
 
-// ToDo: This needs to change. Logic for this should not be in engine part of project, but game. Engine should just provide data-exchange layer
-std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(GameWorld& gameWorld, AssetManager& assMan)
+std::tuple<unsigned int, std::vector<uint32_t>> NetworkBridge::UpdateScene(GameWorld& gameWorld, AssetManager& assMan)
 {
 	GameState gs;
 	std::vector<uint32_t> killedPlayers;
-
-	if (client_->pendingStates.size() == 0) return { 0, killedPlayers };
+	
 	{
 		std::lock_guard lock(client_->gsMutex);
+		if (client_->pendingStates.size() == 0) return { 0, killedPlayers };
 		gs = std::move(client_->pendingStates.front());
 		client_->pendingStates.pop_front();
 	}
 
     if (gs.tick == 0) 
 		return { 0, killedPlayers };
-	if (currentTick > gs.tick) 
+	/*if (currentTick > gs.tick) 
 		return { gs.playerId, killedPlayers };
 	
 	if (gameWorld.GetScene().currentTick >= gs.tick) 
 		return { gs.playerId, killedPlayers };
-
+*/
 	gameWorld.GetScene().currentTick = gs.tick;
 
 	for (uint32_t id : gs.destroyedEntities)
@@ -226,11 +227,11 @@ std::tuple<unsigned int, std::vector<uint32_t>> Networking::UpdateScene(GameWorl
 	for (auto &entity : gs.createdEntities)
 	{
 		PhysicalInfo pi;
-		pi.position			= entity.position;
-		pi.rotation			= entity.rotation;
-		pi.angularVelocity	= entity.angularVelocity;
-		pi.scale			= entity.scale;
-		pi.velocity			= entity.velocity;
+		pi.position_			= entity.position;
+		pi.rotation_			= entity.rotation;
+		pi.angularVelocity_		= entity.angularVelocity;
+		pi.scale_				= entity.scale;
+		pi.velocity_			= entity.velocity;
 	
 		switch (entity.type) 
 		{

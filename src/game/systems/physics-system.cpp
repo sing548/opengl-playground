@@ -44,8 +44,9 @@ void PhysicsSystem::CheckHits(GameWorld& gameWorld)
 {
     Scene& scene = gameWorld.GetScene();
 
-    for (auto& [shotId, _] : gameWorld.GetShotData())
+    for (auto& [shotId, shotData] : gameWorld.GetShotData())
     {
+        bool shotConsumed = false;
         const Model& shot = scene.GetModelByReference(shotId);
 
         for (auto& [playerId, playerData] : gameWorld.GetPlayerData())
@@ -55,16 +56,21 @@ void PhysicsSystem::CheckHits(GameWorld& gameWorld)
             if (!Collide(shot, player)) continue;
 
             playerData.lastHit = 0.2f;
-            playerData.lifes -= 1;
 
-            if (playerData.lifes == 0 && isAuthoritative_)
+            if (isAuthoritative_)
             {
-                gameWorld.MarkEntityForDelete(playerId);
+                playerData.lifes -= 1;
+
+                if (playerData.lifes <= 0)
+                    gameWorld.MarkEntityForDelete(playerId);
+
+                gameWorld.MarkEntityForDelete(shotId);
             }
-            
-            gameWorld.MarkEntityForDelete(shotId);
-            
+            shotConsumed = true;
+            break;
         }
+
+        if (shotConsumed) continue;
     
         for (auto& [npcId, npcData] : gameWorld.GetNpcData())
         {
@@ -73,14 +79,17 @@ void PhysicsSystem::CheckHits(GameWorld& gameWorld)
             if (!Collide(shot, npc)) continue;
 
             npcData.lastHit = 0.2f;
-            npcData.lifes -= 1;
 
-            if (npcData.lifes == 0 && isAuthoritative_)
+            if (isAuthoritative_)
             {
-                gameWorld.MarkEntityForDelete(npcId);
-            }
-            else if (isAuthoritative_)
+                npcData.lifes -= 1;
+    
+                if (npcData.lifes <= 0)
+                    gameWorld.MarkEntityForDelete(npcId);
                 gameWorld.MarkEntityForDelete(shotId);
+            }
+            shotConsumed = true;
+            break;
         }
     }
 

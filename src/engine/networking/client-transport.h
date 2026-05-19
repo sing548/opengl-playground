@@ -27,11 +27,11 @@
 #endif
 
 
-class ClientLogic  {
+class ClientTransport  {
 
 public:
-    ClientLogic();
-    ~ClientLogic();
+    ClientTransport();
+    ~ClientTransport();
     void ClientLoop(const SteamNetworkingIPAddr &serverAddr, std::atomic<bool>& running);
     const GameState& GetLatestGameState() const;
     
@@ -43,15 +43,12 @@ public:
     void SendStateToServer(const InputState& state);
 
 private:
-    static ClientLogic *s_pCallbackInstance;
+    static ClientTransport *s_pCallbackInstance;
     static HSteamNetConnection m_hConnection;
     static ISteamNetworkingSockets *m_pInterface;
     GameState gameState_;
 
     int previoustick = 0;
-
-
-    bool messageReceived_ = false;
 
     void PollConnectionStateChangesClient();
     void PollIncomingMessagesClient(std::atomic<bool>& running);

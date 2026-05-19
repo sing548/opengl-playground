@@ -1,14 +1,14 @@
-#include "server-logic.h"
+#include "server-transport.h"
 
-HSteamNetPollGroup ServerLogic::m_hPollGroup = k_HSteamNetPollGroup_Invalid;  // Initialize poll group to invalid value
-HSteamListenSocket ServerLogic::m_hListenSock = k_HSteamNetPollGroup_Invalid;  // Initialize listen socket to invalid valeu
-ISteamNetworkingSockets* ServerLogic::m_pInterface = nullptr;  // Initialize pointer to null
-std::map<HSteamNetConnection, ServerLogic::Client_t> ServerLogic::m_mapClients;  // Initialize map of clients
+HSteamNetPollGroup ServerTransport::m_hPollGroup = k_HSteamNetPollGroup_Invalid;  // Initialize poll group to invalid value
+HSteamListenSocket ServerTransport::m_hListenSock = k_HSteamNetPollGroup_Invalid;  // Initialize listen socket to invalid valeu
+ISteamNetworkingSockets* ServerTransport::m_pInterface = nullptr;  // Initialize pointer to null
+std::map<HSteamNetConnection, ServerTransport::Client_t> ServerTransport::m_mapClients;  // Initialize map of clients
 SteamNetworkingMicroseconds g_logTimeZero;
-ServerLogic *ServerLogic::s_pCallbackInstance = nullptr;
+ServerTransport *ServerTransport::s_pCallbackInstance = nullptr;
 std::chrono::steady_clock::time_point gameStateUpdateTime = std::chrono::steady_clock::now();
 
-ServerLogic::~ServerLogic()
+ServerTransport::~ServerTransport()
 {
 	for (auto& [conn, _] : m_mapClients)
 	{
@@ -29,7 +29,7 @@ ServerLogic::~ServerLogic()
 	}
 }
 
-void ServerLogic::ServerLoop(int port, std::atomic<bool>& running)
+void ServerTransport::ServerLoop(int port, std::atomic<bool>& running)
 {
     std::printf("Opening listening on port %d", port);
     m_pInterface = SteamNetworkingSockets();
@@ -58,13 +58,13 @@ void ServerLogic::ServerLoop(int port, std::atomic<bool>& running)
     }
 };
 
-void ServerLogic::Shutdown()
+void ServerTransport::Shutdown()
 {
 	std::lock_guard<std::mutex> lock(mtx_);
 	cv_.notify_all();
 }
 
-void ServerLogic::DistributeGameState(std::atomic<bool>& running)
+void ServerTransport::DistributeGameState(std::atomic<bool>& running)
 {
     std::unique_lock<std::mutex> lock(mtx_);
 
@@ -86,7 +86,7 @@ void ServerLogic::DistributeGameState(std::atomic<bool>& running)
     }
 }
 
-uint32_t ServerLogic::UpdateGameState(std::unique_ptr<GameState> gs)
+uint32_t ServerTransport::UpdateGameState(std::unique_ptr<GameState> gs)
 {
 	std::lock_guard<std::mutex> lock(mtx_);
 	gameState_ = std::move(gs);
@@ -100,7 +100,7 @@ uint32_t ServerLogic::UpdateGameState(std::unique_ptr<GameState> gs)
 	return returnValue;
 }
 
-void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
+void ServerTransport::PollIncomingMessagesServer(std::atomic<bool>& running)
 {
 	while ( running )
 	{
@@ -162,7 +162,6 @@ void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
 				const char *cmd = sCmd.c_str();
 
 				// We don't need this anymore.
-				pIncomingMsg->Release();
 				break;
 			}
 			default:
@@ -171,10 +170,12 @@ void ServerLogic::PollIncomingMessagesServer(std::atomic<bool>& running)
 				return;
 			}
 		}
+
+		pIncomingMsg->Release();
 	}
 };
 
-std::unordered_map<int, InputState> ServerLogic::GetLatestInputStates()
+std::unordered_map<int, InputState> ServerTransport::GetLatestInputStates()
 {
 	std::lock_guard lock(inputMtx_);
 	auto out = std::move(inputStates_);
@@ -182,13 +183,13 @@ std::unordered_map<int, InputState> ServerLogic::GetLatestInputStates()
 	return out;
 };
 
-void ServerLogic::PollConnectionStateChangesServer()
+void ServerTransport::PollConnectionStateChangesServer()
 {
     s_pCallbackInstance = this;
 	m_pInterface->RunCallbacks();
 };
 
-void ServerLogic::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionStatusChangedCallback_t *pInfo )
+void ServerTransport::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionStatusChangedCallback_t *pInfo )
 	{
 	// What's the state of the connection?
 	switch ( pInfo->m_info.m_eState )
@@ -288,7 +289,7 @@ void ServerLogic::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionSta
 
 			{
 				std::lock_guard<std::mutex> lock(clientsMtx_);
-				m_mapClients[ pInfo->m_hConn ];
+				m_mapClients.emplace(pInfo->m_hConn, Client_t{ id - 1});
 			}
 
 			msgpack::sbuffer buffer;
@@ -317,7 +318,7 @@ void ServerLogic::OnSteamNetConnectionStatusChangedServer( SteamNetConnectionSta
 	}
 };
 	
-void ServerLogic::SendGameStateToAllClients(const GameState& stateToSend)
+void ServerTransport::SendGameStateToAllClients(const GameState& stateToSend)
 {
 	const auto now = std::chrono::steady_clock::now();
 
@@ -365,7 +366,7 @@ void ServerLogic::SendGameStateToAllClients(const GameState& stateToSend)
 	}
 }
 
-void ServerLogic::SendPackageToClient(HSteamNetConnection conn, const msgpack::sbuffer &buffer)
+void ServerTransport::SendPackageToClient(HSteamNetConnection conn, const msgpack::sbuffer &buffer)
 {
 	EResult res = m_pInterface->SendMessageToConnection( conn, buffer.data(), buffer.size(), k_nSteamNetworkingSend_Reliable, nullptr );
 
@@ -373,12 +374,12 @@ void ServerLogic::SendPackageToClient(HSteamNetConnection conn, const msgpack::s
 		std::cout << "Send failed: " << res << " tick: " << gameState_->tick << "\n";
 };
 
-void ServerLogic::SendStringToClient( HSteamNetConnection conn, const char *str )
+void ServerTransport::SendStringToClient( HSteamNetConnection conn, const char *str )
 {
 	m_pInterface->SendMessageToConnection( conn, str, (uint32)strlen(str), k_nSteamNetworkingSend_Reliable, nullptr );
 };
 
-void ServerLogic::SendStringToAllClients(const char* str, HSteamNetConnection except) { 
+void ServerTransport::SendStringToAllClients(const char* str, HSteamNetConnection except) { 
 	std::vector<HSteamNetConnection> conns;
 	{
 		std::lock_guard<std::mutex> lock(clientsMtx_);
