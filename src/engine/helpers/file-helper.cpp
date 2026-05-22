@@ -6,7 +6,7 @@ std::string FileHelper::assetsDir_ = "";
 
 void FileHelper::SetBaseDir(std::string dir)
 {
-	baseDir_ = std::filesystem::weakly_canonical(dir).parent_path();
+	baseDir_ = std::filesystem::weakly_canonical(dir).parent_path().string();
     shaderDir_ = (std::filesystem::path(baseDir_) / "shaders").lexically_normal().string();
     assetsDir_ = (std::filesystem::path(baseDir_) / "assets").lexically_normal().string();
 }

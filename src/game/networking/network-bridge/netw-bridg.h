@@ -1,6 +1,7 @@
 #ifndef NETW_BRIDG_H
 #define NETW_BRIDG_H
 
+#include <deque>
 #include <map>
 #include <span>
 #include <memory>
@@ -11,12 +12,12 @@
 
 #include <msgpack.hpp>
 
+#include "../../../engine/networking/shared-strucs.h"
+
 class Scene;
 class CliTransp;
-class GameState;
 class GameWorld;
 class ServTransp;
-class InputState;
 class AssetManager;
 
 class NetwBridg

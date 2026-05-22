@@ -6,6 +6,7 @@
     "glm",
     "assimp",
     "openssl",
-    "msgpack"
+    "msgpack",
+    "protobuf"
   ]
 }

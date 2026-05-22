@@ -24,6 +24,12 @@ find_package(msgpack-cxx CONFIG REQUIRED)
 # Note: msgpack-cxx's CMake config does a transitive find_dependency(Boost),
 # so Boost is resolved automatically — we don't use Boost directly.
 
+# Must be set BEFORE add_subdirectory so the GNS DLL lands in the same
+# directory as the executable (Windows DLL search starts in the exe's dir).
+if(WIN32)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+endif()
+
 # GameNetworkingSockets (submodule). Build only the shared lib we actually link;
 # tests/examples already default OFF but set explicitly for safety.
 set(BUILD_STATIC_LIB OFF CACHE BOOL "" FORCE)
@@ -86,9 +92,16 @@ target_link_libraries(OpenGLPlayground PRIVATE
     GameNetworkingSockets
 )
 
-# Windows specific: Copy DLLs to the output folder automatically
+# Windows: copy all vcpkg imported DLLs next to the executable after each build.
+# GNS DLL is already there because CMAKE_RUNTIME_OUTPUT_DIRECTORY is set above.
+# $<TARGET_RUNTIME_DLLS:...> only covers imported targets (vcpkg), not in-tree ones.
 if(WIN32)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+    add_custom_command(TARGET OpenGLPlayground POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_RUNTIME_DLLS:OpenGLPlayground>
+            $<TARGET_FILE_DIR:OpenGLPlayground>
+        COMMAND_EXPAND_LISTS
+    )
 endif()
 
 # Sanitizers in Debug builds (Linux/macOS; GCC and Clang only)
@@ -108,33 +121,15 @@ if(ENABLE_SANITIZERS AND NOT MSVC
     )
 endif()
 
-# Asset/Shader Handling
-file(GLOB SHADERS CONFIGURE_DEPENDS "src/engine/shaders/*.vert" "src/engine/shaders/*.frag")
-
-foreach(SHADER_FILE ${SHADERS})
-    get_filename_component(FILE_NAME  ${SHADER_FILE} NAME)
-    configure_file(${SHADER_FILE} ${CMAKE_CURRENT_BINARY_DIR}/shaders/${FILE_NAME} COPYONLY)
-endforeach()
-
-# 1. Find all files recursively in the assets folder
-file(GLOB_RECURSE ASSET_FILES 
-    RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/assets"
-    "assets/*.mtl"
-    "assets/*.obj"
-    "assets/*.png"
-    "assets/*.jpg"
-)
-
-# 2. Loop through and copy them while maintaining structure
-foreach(ASSET_PATH ${ASSET_FILES})
-    configure_file(
-        "assets/${ASSET_PATH}" 
-        "${CMAKE_CURRENT_BINARY_DIR}/assets/${ASSET_PATH}" 
-        COPYONLY
-    )
-endforeach()
-
-target_compile_definitions(OpenGLPlayground PRIVATE
-    SHADER_DIR="${CMAKE_CURRENT_BINARY_DIR}/shaders"
-    ASSETS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+# Copy shaders and assets next to the executable at build time.
+# $<TARGET_FILE_DIR:...> resolves to the actual exe directory for any
+# config (Debug/Release) and any platform, so this works everywhere.
+add_custom_command(TARGET OpenGLPlayground POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders"
+        "$<TARGET_FILE_DIR:OpenGLPlayground>/shaders"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+        "$<TARGET_FILE_DIR:OpenGLPlayground>/assets"
+    COMMENT "Copying shaders and assets to output directory"
 )

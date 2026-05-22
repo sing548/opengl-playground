@@ -1,6 +1,7 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#include <array>
 #include <memory>
 #include <filesystem>
 #include <map>

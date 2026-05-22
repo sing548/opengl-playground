@@ -1,7 +1,7 @@
 Build:
 
   Linux (system packages — fast):
-    pacman -S glfw assimp glm openssl boost msgpack-cxx   # or apt equivalents
+    pacman -S glfw assimp glm openssl boost msgpack-cxx protobuf   # or apt equivalents
     cmake -S . -B build && cmake --build build
 
   Linux (vcpkg — reproducible, slower first build):
