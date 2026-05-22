@@ -2,6 +2,7 @@
 
 #include "../game/spawner/spawner.h"
 #include "../game/networking/network-bridge/network-bridge.h"
+#include "../game/networking/network-bridge/netw-bridg.h"
 
 Engine::Engine(EngineMode config, const char *serverAddr)
 {
@@ -72,11 +73,9 @@ Engine::Engine(EngineMode config, const char *serverAddr)
         }
     
         if (m_bServer)
-            networkBridge_ = std::make_unique<NetworkBridge>(true, gameWorld_.GetScene());
+            netwBridg_ = std::make_unique<NetwBridg>(NetwBridg::Role::Server, std::string(""));
         else
-        {
-            networkBridge_ = std::make_unique<NetworkBridge>(false, gameWorld_.GetScene(), serverAddr);
-        }
+            netwBridg_ = std::make_unique<NetwBridg>(NetwBridg::Role::Client, std::string(serverAddr));
     }
     else
     {
@@ -89,6 +88,8 @@ Engine::Engine(EngineMode config, const char *serverAddr)
 
     TempBuildRenderHelpers();
 }
+
+Engine::~Engine() = default;
 
 void Engine::TempBuildRenderHelpers()
 {
@@ -157,24 +158,15 @@ void Engine::Run()
 
             accTime -= fixedDelta;
 
-            if (newClient != 0)
-            {
-                AddNewPlayer(newClient);
-            }
-    
-            newClient = 0;
-    
             if (m_bNetworking && m_bServer)
             {
-               newClient = networkBridge_->SendGameState(gameWorld_.GetScene(), gameWorld_.GetScene().GetAddedModels(), gameWorld_.GetScene().GetRemoveMarkedModels(), fixedDelta);    
+               netwBridg_->ManageGameStateDistribution(gameWorld_.GetScene(), fixedDelta);
             }
             else if (m_bNetworking && playerId_ >= 0)
             {
-                networkBridge_->SendInputState(currentInputStates_.at(playerId_));
+                netwBridg_->SendInputState(currentInputStates_.at(playerId_));
+                //networkBridge_->SendInputState(currentInputStates_.at(playerId_));
             }
-
-            //gameWorld_.RemoveMarkedEntities();
-            gameWorld_.GetScene().ClearAddedModels();
 
             j++;
             // Logic/s counter in console
@@ -201,8 +193,8 @@ void Engine::Run()
         }
     }
     
-    if (networkBridge_ != nullptr)
-        networkBridge_->Shutdown();
+    //if (networkBridge_ != nullptr)
+    //    networkBridge_->Shutdown();
 
     std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
 }
@@ -223,7 +215,8 @@ void Engine::ReconcileNetwork()
 
 void Engine::UpdateServerNetworking()
 {
-    auto inputStates = networkBridge_->GetInputStates();
+    netwBridg_->PollEvents(gameWorld_, *assMan_);
+    auto inputStates = netwBridg_->GetInputStates();
 
     for (const auto [id, state] : inputStates)
     {
@@ -236,7 +229,7 @@ void Engine::UpdateServerNetworking()
         {
             previousInputStates_[state.id] = state;
         }
-        else if (previousInputStates_.at(state.id).tick - 1 < networkBridge_->currentTick)
+        else if (previousInputStates_.at(state.id).tick - 1 < netwBridg_->GetCurrentTick())
         {
             previousInputStates_.at(state.id) = currentInputStates_.at(state.id);
         }
@@ -247,7 +240,9 @@ void Engine::UpdateServerNetworking()
 
 void Engine::UpdateClientNetworking()
 {
-    auto [playerId, playerModelRemoved] = networkBridge_->UpdateScene(gameWorld_, *assMan_);
+    netwBridg_->PollEvents(gameWorld_, *assMan_);
+
+    auto [playerId, playerModelRemoved] = netwBridg_->MergeClientWithNetwork(gameWorld_, *assMan_);
 
     if (playerId != 0)
     {

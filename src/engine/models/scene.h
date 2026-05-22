@@ -8,32 +8,35 @@ class Scene
 public:
     Scene();
 
-    bool ModelExists(unsigned int id);
-    unsigned int AddModel(Model& model, int id = 0);
+    bool ModelExists(uint32_t id);
+    uint32_t AddModel(Model& model, int id = 0);
     std::unordered_map<uint32_t, Model>& GetModels() { return models_; };
     const std::unordered_map<uint32_t, Model>& GetModels() const;
-    Model& GetModelByReference(unsigned int id);
-    const Model& GetModelByReference(unsigned int id) const;
-    void RemoveModel(unsigned int id);
+    Model& GetModelByReference(uint32_t id);
+    const Model& GetModelByReference(uint32_t id) const;
+    void RemoveModel(uint32_t id);
 
-    void MarkModelForDelete(unsigned int id);
+    void MarkModelForDelete(uint32_t id);
     void RemoveMarkedModels();
-    const std::vector<unsigned int>& GetRemoveMarkedModels() const;
+    const std::vector<uint32_t>& GetRemoveMarkedModels() const;
+    void ClearRemovedModels() { removeMarkedModels_.clear(); };
 
-    const std::vector<unsigned int>& GetAddedModels() const;
-    void ClearAddedModels();
-    void AddExtraModelToAddedIds(unsigned int id);
+    const std::vector<uint32_t>& GetAddedModels() const;
+    void ClearAddedModels() { addedModels_.clear(); };
+
+    
+    void AddExtraModelToAddedIds(uint32_t id);
 
     uint32_t currentTick = 0;
 
     glm::vec3 currentFurthestPosition;
 
 private:
-    unsigned int nextId_;
+    uint32_t nextId_;
     std::unordered_map<uint32_t, Model> models_;
 
-    std::vector<unsigned int> removeMarkedModels_;
-    std::vector<unsigned int> addedModels_;
+    std::vector<uint32_t> removeMarkedModels_;
+    std::vector<uint32_t> addedModels_;
 };
 
 #endif

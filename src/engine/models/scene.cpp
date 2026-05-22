@@ -65,8 +65,6 @@ void Scene::RemoveMarkedModels()
 {
     for (uint32_t id : removeMarkedModels_)
         RemoveModel(id);
-    
-    removeMarkedModels_.clear();
 }
 
 const std::vector<uint32_t>& Scene::GetRemoveMarkedModels() const 
@@ -77,9 +75,4 @@ const std::vector<uint32_t>& Scene::GetRemoveMarkedModels() const
 const std::vector<uint32_t>& Scene::GetAddedModels() const
 {
     return addedModels_;
-}
-
-void Scene::ClearAddedModels()
-{
-    addedModels_.clear();
 }

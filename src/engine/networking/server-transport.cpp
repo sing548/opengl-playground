@@ -325,7 +325,6 @@ void ServerTransport::SendGameStateToAllClients(const GameState& stateToSend)
     {
         std::lock_guard<std::mutex> lock(mtx_);
 
-
 		deltaSamples_++;
         // Log once per second
         if (std::chrono::duration_cast<std::chrono::seconds>(now - lastLogTime_).count() >= 1)

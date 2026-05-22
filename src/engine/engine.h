@@ -27,10 +27,14 @@ enum class EngineMode { Standalone, Server, Client };
 
 class NetworkBridge;
 
+
+class NetwBridg;
+
 class Engine {
 public:
 
     Engine(EngineMode config, const char *serverAddr = nullptr);
+    ~Engine();
     void BasicLevel();
     void Run();
     AssetManager& GetAssMan();
@@ -49,7 +53,9 @@ private:
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<Renderer> renderer_;
     std::unique_ptr<AssetManager> assMan_;
-    std::unique_ptr<NetworkBridge> networkBridge_;
+    //std::unique_ptr<NetworkBridge> networkBridge_;
+
+    std::unique_ptr<NetwBridg> netwBridg_;
 
     GameWorld gameWorld_;
 
