@@ -33,6 +33,7 @@ public:
     void ManageGameStateDistribution(Scene& scene, float dT);
     std::unordered_map<uint32_t, InputState> GetInputStates() { return inputStates_; };
     const uint32_t GetCurrentTick() const { return currentTick_; };
+    void RespawnPlayers(GameWorld& world, AssetManager& assMan);
 #pragma endregion    
 
 #pragma region Client

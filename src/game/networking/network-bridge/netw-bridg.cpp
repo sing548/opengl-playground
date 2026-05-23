@@ -67,6 +67,44 @@ void NetwBridg::ManageGameStateDistribution(Scene& scene, float dT)
 	}
 }
 
+void NetwBridg::RespawnPlayers(GameWorld& world, AssetManager& assMan)
+{
+    for (auto& [connId, _] : connectionsToPlayers_)
+    {
+        // Spawn new player-model and send id to client -> Client can take "ownership"
+        PhysicalInfo pi = PhysicalInfo();
+        // ToDo: add some randomness, so 2 players connecting at the same time dont spawn on top of each other.
+        pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
+        pi.rotation_ = glm::quat(1, 0, 0, 0);
+        pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
+
+        uint32_t playerId = spawner::SpawnPlayer(world, assMan, pi);
+
+        msgpack::sbuffer buffer;
+		msgpack::packer<msgpack::sbuffer> pk(buffer);
+		pk.pack_array(2);
+		pk.pack_uint8(1);
+		pk.pack(playerId);
+
+        playersToConnections_.emplace(playerId, connId);
+        connectionsToPlayers_[connId] = playerId;
+
+        std::span<const std::byte> bytes {
+            reinterpret_cast<const std::byte*>(buffer.data()),
+            buffer.size()
+        };
+		server_->Send(connId, bytes, true);
+
+        /*auto gsBuffer = BuildAndPackGameState(world.GetScene(), true);
+
+        std::span<const std::byte> gsBytes {
+            reinterpret_cast<const std::byte*>(gsBuffer.data()),
+            gsBuffer.size()
+        };
+        server_->Send(connId, gsBytes, true);*/
+    }
+}
+
 void NetwBridg::PollEvents(GameWorld& world, AssetManager& assMan)
 {
     if (role_ == Role::Server)

@@ -416,6 +416,27 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, 
 
     if (engine) 
     {
+        if (key == GLFW_KEY_F5 && action == GLFW_PRESS)
+        {
+            auto it = engine->currentInputStates_.find(engine->playerId_);
+            if (it == engine->currentInputStates_.end())
+            {
+                PhysicalInfo pi = PhysicalInfo();
+                pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
+                pi.rotation_ = glm::quat(1, 0, 0, 0);
+                pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
+
+                engine->playerId_ = spawner::SpawnPlayer(engine->gameWorld_, *engine->assMan_, pi);
+
+                auto state = InputState { engine->playerId_, false, false, false, false, false, false  };
+                engine->currentInputStates_.try_emplace(engine->playerId_, state);
+                engine->previousInputStates_.try_emplace(engine->playerId_, state);
+            }
+        }
+        if (key == GLFW_KEY_F6 && action == GLFW_PRESS && engine->m_bNetworking && engine->m_bServer)
+        {
+            engine->netwBridg_->RespawnPlayers(engine->gameWorld_, *engine->assMan_);
+        }
         // Simple Flight
         if (key == GLFW_KEY_F7 && action == GLFW_PRESS)
             engine->settings_["simple_flight"] = !engine->settings_["simple_flight"];
