@@ -44,20 +44,23 @@ void NetworkBridge::ManageGameStateDistribution(Scene& scene, float dT)
 		currentTick_++;
 		tickTimer_ -= tickRate_;
 
-        auto gameState = BuildGameState(scene);
+        auto [defBuffer, tranBuffer] = BuildAndPackGameState(scene);
 
-        msgpack::sbuffer buffer;
-	    msgpack::packer<msgpack::sbuffer> pk(buffer);
-	    pk.pack_array(2);
-	    pk.pack_uint8(0);
-	    pk.pack(gameState);
-        
-        std::span<const std::byte> bytes {
-            reinterpret_cast<const std::byte*>(buffer.data()),
-            buffer.size()
+        if (defBuffer.size() > 0)
+        {
+            std::span<const std::byte> defBytes {
+                reinterpret_cast<const std::byte*>(defBuffer.data()),
+                defBuffer.size()
+            };
+            server_->Broadcast(defBytes, true);
+        }
+
+        std::span<const std::byte> tranBytes {
+            reinterpret_cast<const std::byte*>(tranBuffer.data()),
+            tranBuffer.size()
         };
+        server_->Broadcast(tranBytes, false);
 
-        server_->Broadcast(bytes, true);
         scene.ClearAddedModels();
         pendingRemoved_.clear();
 	}
@@ -79,7 +82,7 @@ void NetworkBridge::RespawnPlayers(GameWorld& world, AssetManager& assMan)
         msgpack::sbuffer buffer;
 		msgpack::packer<msgpack::sbuffer> pk(buffer);
 		pk.pack_array(2);
-		pk.pack_uint8(1);
+		pk.pack_uint8(0);
 		pk.pack(playerId);
 
         playersToConnections_.emplace(playerId, connId);
@@ -90,14 +93,6 @@ void NetworkBridge::RespawnPlayers(GameWorld& world, AssetManager& assMan)
             buffer.size()
         };
 		server_->Send(connId, bytes, true);
-
-        /*auto gsBuffer = BuildAndPackGameState(world.GetScene(), true);
-
-        std::span<const std::byte> gsBytes {
-            reinterpret_cast<const std::byte*>(gsBuffer.data()),
-            gsBuffer.size()
-        };
-        server_->Send(connId, gsBytes, true);*/
     }
 }
 
@@ -109,28 +104,41 @@ void NetworkBridge::PollEvents(GameWorld& world, AssetManager& assMan)
         PollInternalClient();
 }
 
-msgpack::sbuffer NetworkBridge::BuildAndPackGameState(const Scene& scene, bool fullState)
+std::tuple<msgpack::sbuffer, msgpack::sbuffer> NetworkBridge::BuildAndPackGameState(const Scene& scene, bool fullState)
 {
-    auto gameState = BuildGameState(scene, fullState);
+    auto [definitiveState, transientState] = BuildGameState(scene, fullState);
 
-    msgpack::sbuffer buffer;
-	msgpack::packer<msgpack::sbuffer> pk(buffer);
-	pk.pack_array(2);
-	pk.pack_uint8(0);
-	pk.pack(gameState);
+    msgpack::sbuffer definitiveBuffer;
 
-    return buffer;
+    if (fullState || !definitiveState.createdEntities.empty() || !definitiveState.destroyedEntities.empty())
+    {
+        msgpack::packer<msgpack::sbuffer> dPK(definitiveBuffer);
+        dPK.pack_array(2);
+        dPK.pack_uint8(1);
+        dPK.pack(definitiveState);
+    }
+
+    msgpack::sbuffer transientBuffer;
+	msgpack::packer<msgpack::sbuffer> tPK(transientBuffer);
+	tPK.pack_array(2);
+	tPK.pack_uint8(2);
+	tPK.pack(transientState);
+
+    return std::tuple(std::move(definitiveBuffer), std::move(transientBuffer));
 }
 
-GameState NetworkBridge::BuildGameState(const Scene& scene, bool fullState)
+std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const Scene& scene, bool fullState)
 {
-    GameState gs;
-    gs.tick = currentTick_;
+    GameState transientState;
+    GameState definitiveState;
+
+    transientState.tick = currentTick_;
+    definitiveState.tick = currentTick_;
 
     // Destroyed entities
     for (unsigned int id : pendingRemoved_)
     {
-        gs.destroyedEntities.push_back(id);
+        definitiveState.destroyedEntities.push_back(id);
     }
 
     auto& addedModels = scene.GetAddedModels();
@@ -152,7 +160,7 @@ GameState NetworkBridge::BuildGameState(const Scene& scene, bool fullState)
             e.velocity           = model.GetVelocity();
             e.angularVelocity    = model.GetRotationSpeed();
 
-            gs.createdEntities.push_back(e);
+            definitiveState.createdEntities.push_back(e);
         }
         else
         {
@@ -167,12 +175,12 @@ GameState NetworkBridge::BuildGameState(const Scene& scene, bool fullState)
 				e.velocity          = model.GetVelocity();
 				e.angularVelocity   = model.GetRotationSpeed();
 	
-				gs.entities.push_back(e);
+				transientState.entities.push_back(e);
 			}
         }
     }
 
-    return gs;
+    return std::tuple(definitiveState, transientState);
 }
 
 void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
@@ -199,7 +207,7 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
                 msgpack::sbuffer buffer;
 			    msgpack::packer<msgpack::sbuffer> pk(buffer);
 			    pk.pack_array(2);
-			    pk.pack_uint8(1);
+			    pk.pack_uint8(0);
 			    // ToDo: Re-evaluate if sending playerID like this is correct (or just good enough for now)
 			    pk.pack(playerId);
 
@@ -212,8 +220,9 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
                 };
 			    server_->Send(ev.conn, bytes, true);
 
-                // Send complete state of Scene to this client only - one-time setup
-                auto gsBuffer = BuildAndPackGameState(world.GetScene(), true);
+                // Send complete state of Scene to this client only - one-time setup.
+                // Possible ToDo: If this ever grows, maybe add second method so I don't throw a completely packed object away
+                auto [gsBuffer, _] = BuildAndPackGameState(world.GetScene(), true);
 
                 std::span<const std::byte> gsBytes {
                     reinterpret_cast<const std::byte*>(gsBuffer.data()),
@@ -334,25 +343,26 @@ void NetworkBridge::PollInternalClient()
             
 		        switch (type)
 		        {
-		        	case 0:
-		        	{
-		        		GameState gs;
-		        		payload.convert(gs);
-		        		int newTick = gs.tick;
-		        		if (previousTick_ != 0 && newTick - previousTick_ != 1)
-                			std::cout <<   "Skipped tick(1) between: " << previousTick_ << " and " << newTick << std::endl;
-                    
-		        		previousTick_ = newTick;
-                        pendingStates_.push_back(std::move(gs));
-		        		break;
-		        	}
-		        	case 1:
+                    case 0:
 		        	{
 		        		int i;
 		        		payload.convert(i);
 		        		std::cout << "PlayerId: " << i << " received!" << std::endl;
 		        		playerId_ = i;
                         break;
+		        	}
+		        	case 1:
+                    case 2:
+		        	{
+		        		GameState gs;
+		        		payload.convert(gs);
+		        		int newTick = gs.tick;
+		        		if (previousTick_ != 0 && newTick - previousTick_ != 1 && newTick != previousTick_)
+                			std::cout <<   "Skipped tick(1) between: " << previousTick_ << " and " << newTick << std::endl;
+                    
+		        		previousTick_ = newTick;
+                        pendingStates_.push_back(std::move(gs));
+		        		break;
 		        	}
                 }
             }
@@ -412,7 +422,8 @@ std::tuple<unsigned int, std::vector<uint32_t>> NetworkBridge::MergeClientWithNe
     {
         if (!gameWorld.GetScene().ModelExists(entity.id))
         {
-            std::cout << "Entity not loaded: " << entity.id << std::endl;
+            // Muted for now. ToDo: think if there is a threshold when we want to output because it might not be a network race condition
+            //std::cout << "Entity not loaded: " << entity.id << std::endl;
             continue;
         }
 

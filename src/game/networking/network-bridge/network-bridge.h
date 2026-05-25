@@ -61,8 +61,8 @@ private:
 #pragma region Server
     std::vector<uint32_t> pendingRemoved_;
     void PollInternalServer(GameWorld& world, AssetManager& assMan);
-    msgpack::sbuffer BuildAndPackGameState(const Scene& scene, bool fullState = false);
-    GameState BuildGameState(const Scene& scene, bool fullState = false);
+    std::tuple<msgpack::sbuffer, msgpack::sbuffer> BuildAndPackGameState(const Scene& scene, bool fullState = false);
+    std::tuple<GameState, GameState> BuildGameState(const Scene& scene, bool fullState = false);
 #pragma endregion
 
 #pragma region Client
