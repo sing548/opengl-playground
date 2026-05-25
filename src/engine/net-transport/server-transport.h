@@ -9,14 +9,14 @@
 
 using ConnectionId = uint32_t;
 
-class ServTransp
+class ServerTransport
 {
 public:
-    explicit ServTransp(uint16_t port);
-    ~ServTransp();
+    explicit ServerTransport(uint16_t port);
+    ~ServerTransport();
 
-    ServTransp(const ServTransp&) = delete;
-    ServTransp& operator=(const ServTransp&) = delete;
+    ServerTransport(const ServerTransport&) = delete;
+    ServerTransport& operator=(const ServerTransport&) = delete;
 
     void Send(ConnectionId to, std::span<const std::byte> bytes, bool reliable);
     void Broadcast(std::span<const std::byte> bytes, bool reliable);

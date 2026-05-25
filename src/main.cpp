@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 
 #include "engine/window/window.h"
 #include "engine/shaders/shader.h"
@@ -9,15 +10,14 @@
 #include "engine/models/scene.h"
 #include "engine/rendering/renderer.h"
 #include "engine/engine.h"
-#include "game/networking/network-bridge/network-bridge.h"
+
 
 int main(int argc, const char *argv[]) {
 
     bool bServer = false;
 	bool bClient = false;
 	int nPort = 5001;
-    const char *serverUrl = nullptr;
-	SteamNetworkingIPAddr addrServer; addrServer.Clear();
+    std::string serverUrl;
 
     FileHelper::SetBaseDir(argv[0]);
 
@@ -54,32 +54,29 @@ int main(int argc, const char *argv[]) {
 			continue;
 		}
 
-		if ( bClient && addrServer.IsIPv6AllZeros() )
-		{
-            serverUrl = argv[i]
-;			if ( !addrServer.ParseString( argv[i] ) )
+        if ( !strcmp( argv[i], "--url" ))
+        {
+            ++i;
+            if ( i >= argc )
             {
-                std::printf("Invalid server address '%s'", argv[i]);
+                std::cout << std::printf("i => argc") << std::endl;
                 return 0;
             }
-			if ( addrServer.m_port == 0 )
-				addrServer.m_port = 5001;
-			continue;
-		}
+            serverUrl =  std::string(( argv[i] ));
+            continue;
+        }
 	}
 
     std::unique_ptr<Engine> engine = nullptr;
 
     try {
         if (bServer)
-            engine = std::make_unique<Engine>(EngineMode::Server);
+            engine = std::make_unique<Engine>(EngineMode::Server, "", nPort);
         else if (bClient)
             engine = std::make_unique<Engine>(EngineMode::Client, serverUrl);
         else 
         {
             engine = std::make_unique<Engine>(EngineMode::Standalone);
-            //auto models = engine->BasicLevel();
-            //engine->SetupGameWorld(models); 
         }
     }
     catch (const std::runtime_error e)

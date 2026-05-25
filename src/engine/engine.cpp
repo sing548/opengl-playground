@@ -2,9 +2,8 @@
 
 #include "../game/spawner/spawner.h"
 #include "../game/networking/network-bridge/network-bridge.h"
-#include "../game/networking/network-bridge/netw-bridg.h"
 
-Engine::Engine(EngineMode config, const char *serverAddr)
+Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
 {
     if (config == EngineMode::Server)
     {
@@ -73,9 +72,9 @@ Engine::Engine(EngineMode config, const char *serverAddr)
         }
     
         if (m_bServer)
-            netwBridg_ = std::make_unique<NetwBridg>(NetwBridg::Role::Server, std::string(""));
+            netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Server, serverAddr, port);
         else
-            netwBridg_ = std::make_unique<NetwBridg>(NetwBridg::Role::Client, std::string(serverAddr));
+            netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Client, serverAddr, port);
     }
     else
     {
@@ -165,7 +164,6 @@ void Engine::Run()
             else if (m_bNetworking && playerId_ >= 0)
             {
                 netwBridg_->SendInputState(currentInputStates_.at(playerId_));
-                //networkBridge_->SendInputState(currentInputStates_.at(playerId_));
             }
 
             j++;
@@ -193,9 +191,6 @@ void Engine::Run()
         }
     }
     
-    //if (networkBridge_ != nullptr)
-    //    networkBridge_->Shutdown();
-
     std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
 }
 
@@ -495,7 +490,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 
 	for (auto& [id, model] : models)
 	{
-		if (model.type_ == ModelType::SHOT) {
+		if (gameWorld_.IsShot(id)) {
 			PointLight pl;
 			pl.position = model.GetPosition();
 			fg.pointLights.push_back(pl);

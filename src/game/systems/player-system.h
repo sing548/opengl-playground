@@ -2,7 +2,7 @@
 #define PLAYER_SYSTEM_H
 
 #include "../../engine/models/scene.h"
-#include "../../engine/networking/shared-strucs.h"
+#include "../../game/networking/network-bridge/shared-strucs.h"
 
 class GameWorld;
 

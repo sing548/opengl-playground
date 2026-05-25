@@ -1,147 +1,145 @@
 #include "network-bridge.h"
 
-#include "../../../game/spawner/spawner.h"
-#include "../../../game/game-world/game-world.h"
-#include "../../../engine/networking/client-transport.h"
-#include "../../../engine/networking/server-transport.h"
+#include <thread>
 
-NetworkBridge::NetworkBridge(bool bServer, const Scene& scene, const char *serverAddr)
+#include "../../../engine/models/asset-manager.h"
+#include "../../../engine/net-transport/client-transport.h"
+#include "../../../engine/net-transport/server-transport.h"
+
+#include "../../spawner/spawner.h"
+#include "../../game-world/game-world.h"
+
+
+NetworkBridge::NetworkBridge(Role role, const std::string& serverAddr, int port) : role_ (role)
 {
-	m_bServer = bServer;
-    #ifdef STEAMNETWORKINGSOCKETS_OPENSOURCE
-		SteamDatagramErrMsg errMsg;
-		if ( !GameNetworkingSockets_Init( nullptr, errMsg ) )
-			FatalError( "GameNetworkingSockets_Init failed.  %s", errMsg );
-	#else
-		SteamDatagram_SetAppID( 4888 ); // Just set something, doesn't matter what
-		SteamDatagram_SetUniverse( false, k_EUniverseDev );
-
-		SteamDatagramErrMsg errMsg;
-		if ( !SteamDatagramClient_Init( errMsg ) )
-			FatalError( "SteamDatagramClient_Init failed.  %s", errMsg );
-
-		// Disable authentication when running with Steam, for this
-		// example, since we're not a real app.
-		//
-		// Authentication is disabled automatically in the open-source
-		// version since we don't have a trusted third party to issue
-		// certs.
-		SteamNetworkingUtils()->SetGlobalConfigValueInt32( k_ESteamNetworkingConfig_IP_AllowWithoutAuth, 1 );
-	#endif
-
-	SteamNetworkingUtils()->SetDebugOutputFunction( k_ESteamNetworkingSocketsDebugOutputType_Msg, DebugOutput );
-
-	running_ = true;
-    if (bServer)
+    if (role == NetworkBridge::Role::Client)
     {
-		server_ = std::make_unique<ServerTransport>();
-		gameState_ = std::make_unique<GameState>();
-		
-		server_->UpdateGameState(std::move(gameState_));
-
-        networkThread_ = std::thread([this]() {
-            try 
-			{
-                server_->ServerLoop(5001, running_);
-            }
-			catch (const std::exception& e)
-			{
-                std::cerr << "Error in thread: " << e.what() << std::endl;
-            }
-        });
-
-		distributionThread_ = std::thread([this]() {
-			try 
-			{
-				server_->DistributeGameState(running_);
-			}
-			catch (const std::exception& e)
-			{
-				std::cerr << "Error in thread: " << e.what() << std::endl;
-			}
-		});
-
-        addedModels_ = std::vector<unsigned int>();
-        removedModels_ = std::vector<unsigned int>();
+        client_ = std::make_unique<ClientTransport>(serverAddr);
     }
     else
     {
-		client_ = std::make_unique<ClientTransport>();
-
-        networkThread_ = std::thread([this, serverAddr]() {
-            try
-            {
-                SteamNetworkingIPAddr addrServer;
-                addrServer.Clear();
-                addrServer.ParseString(serverAddr);
-				client_->ClientLoop(addrServer, running_);
-            }
-            catch(const std::exception& e)
-            {
-                std::cerr << e.what() << '\n';
-            }
-        });
-
+        server_ = std::make_unique<ServerTransport>(port);
     }
-};
-
-NetworkBridge::~NetworkBridge()
-{
-	running_ = false;
-	
-	if (server_) server_->Shutdown();
-
-	if (networkThread_.joinable())
-		networkThread_.join();
-
-	if (distributionThread_.joinable())
-		distributionThread_.join();
-};
-
-uint32_t NetworkBridge::SendGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels, float dT)
-{
-	uint32_t newClientId = 0;
-	const auto now = std::chrono::steady_clock::now();
-
-	tickTimer += dT;
-
-    addedModels_.insert(addedModels_.end(), addedModels.begin(), addedModels.end());
-    removedModels_.insert(removedModels_.end(), removedModels.begin(), removedModels.end());
-
-	if (tickTimer >= tickRate)
-	{
-		timesSent++;
-		currentTick++;
-		tickTimer -= tickRate;
-		BuildGameState(scene, addedModels_, removedModels_);
-		newClientId = server_->UpdateGameState(std::move(gameState_));
-
-        addedModels_.clear();
-        removedModels_.clear();
-	}
-
-	if (newClientId != 0)
-		return newClientId;
-
-	return 0;
 }
 
-void NetworkBridge::BuildGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels)
-{	
-    gameState_ = std::make_unique<GameState>();
-    gameState_->tick = currentTick;
+NetworkBridge::~NetworkBridge() = default;
+
+void NetworkBridge::ManageGameStateDistribution(Scene& scene, float dT)
+{
+
+    uint32_t newClientId = 0;
+	const auto now = std::chrono::steady_clock::now();
+
+    for (uint32_t id : scene.GetRemoveMarkedModels())
+    {
+        if (std::find(pendingRemoved_.begin(), pendingRemoved_.end(), id) == pendingRemoved_.end())
+            pendingRemoved_.push_back(id);
+    }
+
+	tickTimer_ += dT;
+
+
+	if (tickTimer_ >= tickRate_)
+	{
+		currentTick_++;
+		tickTimer_ -= tickRate_;
+
+        auto gameState = BuildGameState(scene);
+
+        msgpack::sbuffer buffer;
+	    msgpack::packer<msgpack::sbuffer> pk(buffer);
+	    pk.pack_array(2);
+	    pk.pack_uint8(0);
+	    pk.pack(gameState);
+        
+        std::span<const std::byte> bytes {
+            reinterpret_cast<const std::byte*>(buffer.data()),
+            buffer.size()
+        };
+
+        server_->Broadcast(bytes, true);
+        scene.ClearAddedModels();
+        pendingRemoved_.clear();
+	}
+}
+
+void NetworkBridge::RespawnPlayers(GameWorld& world, AssetManager& assMan)
+{
+    for (auto& [connId, _] : connectionsToPlayers_)
+    {
+        // Spawn new player-model and send id to client -> Client can take "ownership"
+        PhysicalInfo pi = PhysicalInfo();
+        // ToDo: add some randomness, so 2 players connecting at the same time dont spawn on top of each other.
+        pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
+        pi.rotation_ = glm::quat(1, 0, 0, 0);
+        pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
+
+        uint32_t playerId = spawner::SpawnPlayer(world, assMan, pi);
+
+        msgpack::sbuffer buffer;
+		msgpack::packer<msgpack::sbuffer> pk(buffer);
+		pk.pack_array(2);
+		pk.pack_uint8(1);
+		pk.pack(playerId);
+
+        playersToConnections_.emplace(playerId, connId);
+        connectionsToPlayers_[connId] = playerId;
+
+        std::span<const std::byte> bytes {
+            reinterpret_cast<const std::byte*>(buffer.data()),
+            buffer.size()
+        };
+		server_->Send(connId, bytes, true);
+
+        /*auto gsBuffer = BuildAndPackGameState(world.GetScene(), true);
+
+        std::span<const std::byte> gsBytes {
+            reinterpret_cast<const std::byte*>(gsBuffer.data()),
+            gsBuffer.size()
+        };
+        server_->Send(connId, gsBytes, true);*/
+    }
+}
+
+void NetworkBridge::PollEvents(GameWorld& world, AssetManager& assMan)
+{
+    if (role_ == Role::Server)
+        PollInternalServer(world, assMan);
+    else
+        PollInternalClient();
+}
+
+msgpack::sbuffer NetworkBridge::BuildAndPackGameState(const Scene& scene, bool fullState)
+{
+    auto gameState = BuildGameState(scene, fullState);
+
+    msgpack::sbuffer buffer;
+	msgpack::packer<msgpack::sbuffer> pk(buffer);
+	pk.pack_array(2);
+	pk.pack_uint8(0);
+	pk.pack(gameState);
+
+    return buffer;
+}
+
+GameState NetworkBridge::BuildGameState(const Scene& scene, bool fullState)
+{
+    GameState gs;
+    gs.tick = currentTick_;
 
     // Destroyed entities
-    for (unsigned int id : removedModels)
+    for (unsigned int id : pendingRemoved_)
     {
-        gameState_->destroyedEntities.push_back(id);
+        gs.destroyedEntities.push_back(id);
     }
+
+    auto& addedModels = scene.GetAddedModels();
 
     for (const auto& [id, model] : scene.GetModels())
     {
         const bool isNew = std::find(addedModels.begin(), addedModels.end(), id) != addedModels.end();
 
-        if (isNew)
+        if (isNew || fullState)
         {
             // --- Full creation data ---
             EntityCreationState e;
@@ -154,7 +152,7 @@ void NetworkBridge::BuildGameState(const Scene& scene, const std::vector<unsigne
             e.velocity           = model.GetVelocity();
             e.angularVelocity    = model.GetRotationSpeed();
 
-            gameState_->createdEntities.push_back(e);
+            gs.createdEntities.push_back(e);
         }
         else
         {
@@ -169,50 +167,212 @@ void NetworkBridge::BuildGameState(const Scene& scene, const std::vector<unsigne
 				e.velocity          = model.GetVelocity();
 				e.angularVelocity   = model.GetRotationSpeed();
 	
-				gameState_->entities.push_back(e);
+				gs.entities.push_back(e);
 			}
+        }
+    }
+
+    return gs;
+}
+
+void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
+{
+    auto events = server_->PollEvents();
+
+    for (auto& ev : events)
+    {
+        switch (ev.kind)
+        {
+            case ServerTransport::Event::Kind::Connected:
+            {
+                std::cout << "Connected event: " << ev.conn << std::endl;
+
+                // Spawn new player-model and send id to client -> Client can take "ownership"
+                PhysicalInfo pi = PhysicalInfo();
+                // ToDo: add some randomness, so 2 players connecting at the same time dont spawn on top of each other.
+                pi.position_ = glm::vec3(20.0f, 0.0f, 0.0f);
+                pi.rotation_ = glm::quat(1, 0, 0, 0);
+                pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
+
+                uint32_t playerId = spawner::SpawnPlayer(world, assMan, pi);
+
+                msgpack::sbuffer buffer;
+			    msgpack::packer<msgpack::sbuffer> pk(buffer);
+			    pk.pack_array(2);
+			    pk.pack_uint8(1);
+			    // ToDo: Re-evaluate if sending playerID like this is correct (or just good enough for now)
+			    pk.pack(playerId);
+
+                playersToConnections_.emplace(playerId, ev.conn);
+                connectionsToPlayers_.emplace(ev.conn, playerId);
+
+                std::span<const std::byte> bytes {
+                    reinterpret_cast<const std::byte*>(buffer.data()),
+                    buffer.size()
+                };
+			    server_->Send(ev.conn, bytes, true);
+
+                // Send complete state of Scene to this client only - one-time setup
+                auto gsBuffer = BuildAndPackGameState(world.GetScene(), true);
+
+                std::span<const std::byte> gsBytes {
+                    reinterpret_cast<const std::byte*>(gsBuffer.data()),
+                    gsBuffer.size()
+                };
+                server_->Send(ev.conn, gsBytes, true);
+
+                break;
+            }
+            case ServerTransport::Event::Kind::Disconnected:
+            {
+                // Just accept and remove that player for now. Maybe think about reconnect logic, or just destroying playermodel
+                
+                auto playerId = connectionsToPlayers_[ev.conn];
+                playersToConnections_.erase(playerId);
+                connectionsToPlayers_.erase(ev.conn);
+                world.MarkEntityForDelete(playerId);
+
+                std::cout << "Disconnected event: " << ev.conn << std::endl;
+                break;
+            }
+            case ServerTransport::Event::Kind::Message:
+            {
+                msgpack::object_handle oh = msgpack::unpack(
+		        	reinterpret_cast<const char*>(ev.bytes.data()), ev.bytes.size());
+		        msgpack::object obj = oh.get();
+
+		        if (obj.type != msgpack::type::ARRAY || obj.via.array.size != 2)
+		        {
+		        	std::cerr << "Invalid message format" << std::endl;
+		        	return;
+		        }
+            
+		        uint8_t type = obj.via.array.ptr[0].as<uint8_t>();
+		        msgpack::object payload = obj.via.array.ptr[1];
+            
+		        switch (type)
+		        {
+		        	case 0:
+		        	{
+		        		InputState is;
+		        		payload.convert(is);
+		        		is.tick = currentTick_;
+
+                        auto id = connectionsToPlayers_.at(ev.conn);
+                        inputStates_[id] = is;
+
+		        		break;
+		        	}
+		        	case 1:
+		        	{
+		        		// This is a placeholder for other messages. Just leave be for now
+                        std::cout << "Some other message from id: " << ev.conn << std::endl;
+		        		break;
+		        	}
+		        	default:
+		        	{
+		        		std::cerr << "Invalid message type" << std::endl;
+		        		return;
+		        	}
+		        }
+                break;
+            }
+            default:
+                break;
         }
     }
 }
 
-void NetworkBridge::Shutdown()
-{
-	running_ = false;
-
-	if (server_) server_->Shutdown();
-};
-
 void NetworkBridge::SendInputState(InputState& state)
 {
-	state.tick = currentTick;
-	client_->SendStateToServer(state);
-};
+    msgpack::sbuffer buffer;
+	msgpack::packer<msgpack::sbuffer> pk(buffer);
+	pk.pack_array(2);
+	pk.pack_uint8(0);
+	pk.pack(state);
 
-std::unordered_map<int, InputState> NetworkBridge::GetInputStates()
-{
-	return server_->GetLatestInputStates();
+    std::span<const std::byte> bytes {
+        reinterpret_cast<const std::byte*>(buffer.data()),
+        buffer.size()
+    };
+
+    client_->Send(bytes , true);
 }
 
-std::tuple<unsigned int, std::vector<uint32_t>> NetworkBridge::UpdateScene(GameWorld& gameWorld, AssetManager& assMan)
+void NetworkBridge::PollInternalClient()
 {
-	GameState gs;
+    auto events = client_->PollEvents();
+
+    for (auto& ev : events)
+    {
+        switch (ev.kind)
+        {
+            case ClientTransport::Event::Kind::Connected:
+            {
+                std::cout << "Connected to server OK\n";
+                break;
+            }
+            case ClientTransport::Event::Kind::Disconnected:
+            {
+                break;
+            }
+            case ClientTransport::Event::Kind::Message:
+            {
+                // Unpack message
+                msgpack::object_handle oh = msgpack::unpack(
+                    reinterpret_cast<const char*>(ev.bytes.data()), ev.bytes.size());
+                msgpack::object obj = oh.get();
+                
+		        if (obj.type != msgpack::type::ARRAY || obj.via.array.size != 2)
+		        {
+		            std::cerr << "Invalid message format" << std::endl;
+		            return;
+		        }
+            
+		        uint8_t type = obj.via.array.ptr[0].as<uint8_t>();
+		        msgpack::object payload = obj.via.array.ptr[1];
+            
+		        switch (type)
+		        {
+		        	case 0:
+		        	{
+		        		GameState gs;
+		        		payload.convert(gs);
+		        		int newTick = gs.tick;
+		        		if (previousTick_ != 0 && newTick - previousTick_ != 1)
+                			std::cout <<   "Skipped tick(1) between: " << previousTick_ << " and " << newTick << std::endl;
+                    
+		        		previousTick_ = newTick;
+                        pendingStates_.push_back(std::move(gs));
+		        		break;
+		        	}
+		        	case 1:
+		        	{
+		        		int i;
+		        		payload.convert(i);
+		        		std::cout << "PlayerId: " << i << " received!" << std::endl;
+		        		playerId_ = i;
+                        break;
+		        	}
+                }
+            }
+        }
+    }
+}
+
+std::tuple<unsigned int, std::vector<uint32_t>> NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan)
+{
+    GameState gs;
 	std::vector<uint32_t> killedPlayers;
 	
-	{
-		std::lock_guard lock(client_->gsMutex);
-		if (client_->pendingStates.size() == 0) return { 0, killedPlayers };
-		gs = std::move(client_->pendingStates.front());
-		client_->pendingStates.pop_front();
-	}
+    if (pendingStates_.size() == 0) return { 0, killedPlayers };
+
+    gs = std::move(pendingStates_.front());
+    pendingStates_.pop_front();
 
     if (gs.tick == 0) 
 		return { 0, killedPlayers };
-	/*if (currentTick > gs.tick) 
-		return { gs.playerId, killedPlayers };
-	
-	if (gameWorld.GetScene().currentTick >= gs.tick) 
-		return { gs.playerId, killedPlayers };
-*/
+
 	gameWorld.GetScene().currentTick = gs.tick;
 
 	for (uint32_t id : gs.destroyedEntities)
@@ -265,5 +425,5 @@ std::tuple<unsigned int, std::vector<uint32_t>> NetworkBridge::UpdateScene(GameW
         m.SetVelocity(entity.velocity);
     }
  
-	return { client_->playerId_, killedPlayers };
-};
+	return { playerId_, killedPlayers };
+}

@@ -1,4 +1,4 @@
-#include "cli-transp.h"
+#include "client-transport.h"
 
 #include <utility>
 #include <cassert>
@@ -10,11 +10,11 @@
 
 namespace
 {
-    CliTransp::Impl* pCallbackInstance_ = nullptr;
+    ClientTransport::Impl* pCallbackInstance_ = nullptr;
     void SteamNetConnectionStatusChangedCallbackClient(SteamNetConnectionStatusChangedCallback_t* pInfo);
 }
 
-struct CliTransp::Impl
+struct ClientTransport::Impl
 {
     ISteamNetworkingSockets *pInterface_ = nullptr;
     HSteamNetConnection hConnection_ = k_HSteamNetConnection_Invalid;
@@ -176,16 +176,16 @@ namespace
     }
 }
 
-CliTransp::CliTransp(const std::string& serverAddr) : impl_(std::make_unique<Impl>(serverAddr)) { }
+ClientTransport::ClientTransport(const std::string& serverAddr) : impl_(std::make_unique<Impl>(serverAddr)) { }
 
-CliTransp::~CliTransp() = default;
+ClientTransport::~ClientTransport() = default;
 
-void CliTransp::Send(std::span<const std::byte> bytes, bool reliable)
+void ClientTransport::Send(std::span<const std::byte> bytes, bool reliable)
 {
     impl_->Send(bytes, reliable);
 }
 
-std::vector<CliTransp::Event> CliTransp::PollEvents()
+std::vector<ClientTransport::Event> ClientTransport::PollEvents()
 {
     return impl_->PollEvents();
 }

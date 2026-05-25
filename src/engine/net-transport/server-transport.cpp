@@ -1,4 +1,4 @@
-#include "serv-transp.h"
+#include "server-transport.h"
 
 #include <map>
 #include <cassert>
@@ -10,11 +10,11 @@
 #include <steam/isteamnetworkingutils.h>
 
 namespace {
-    ServTransp::Impl* pCallbackInstance_ = nullptr;
+    ServerTransport::Impl* pCallbackInstance_ = nullptr;
     void SteamNetConnectionStatusChangedCallbackServer(SteamNetConnectionStatusChangedCallback_t* pInfo);
 }
 
-struct ServTransp::Impl{
+struct ServerTransport::Impl{
     ISteamNetworkingSockets* pInterface_ = nullptr;
     std::map<HSteamNetConnection, ConnectionId> mapClients_;
 
@@ -118,7 +118,7 @@ struct ServTransp::Impl{
         }
     }
 
-    std::vector<ServTransp::Event> PollEvents()
+    std::vector<ServerTransport::Event> PollEvents()
     {
         pCallbackInstance_ = this;
         pInterface_->RunCallbacks();
@@ -236,21 +236,21 @@ namespace
     };
 }
 
-ServTransp::ServTransp(uint16_t port) : impl_(std::make_unique<Impl>(port)) { }
+ServerTransport::ServerTransport(uint16_t port) : impl_(std::make_unique<Impl>(port)) { }
 
-ServTransp::~ServTransp() = default;
+ServerTransport::~ServerTransport() = default;
 
-void ServTransp::Send(ConnectionId to, std::span<const std::byte> bytes, bool reliable)
+void ServerTransport::Send(ConnectionId to, std::span<const std::byte> bytes, bool reliable)
 {
     impl_->Send(to, bytes, reliable);
 }
 
-void ServTransp::Broadcast(std::span<const std::byte> bytes, bool reliable)
+void ServerTransport::Broadcast(std::span<const std::byte> bytes, bool reliable)
 {
     impl_->Broadcast(bytes, reliable);
 }
 
-std::vector<ServTransp::Event> ServTransp::PollEvents()
+std::vector<ServerTransport::Event> ServerTransport::PollEvents()
 {
     return impl_->PollEvents();
 }

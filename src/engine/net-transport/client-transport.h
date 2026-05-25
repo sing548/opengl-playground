@@ -8,14 +8,14 @@
 #include <cstdint>
 #include <cstddef>
 
-class CliTransp
+class ClientTransport
 {
 public:
-    explicit CliTransp(const std::string& serverAddr);
-    ~CliTransp();
+    explicit ClientTransport(const std::string& serverAddr);
+    ~ClientTransport();
 
-    CliTransp(const CliTransp&) = delete;
-    CliTransp& operator=(const CliTransp&) = delete;
+    ClientTransport(const ClientTransport&) = delete;
+    ClientTransport& operator=(const ClientTransport&) = delete;
 
     void Send(std::span<const std::byte> bytes, bool reliable);
 

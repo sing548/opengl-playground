@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 #include <msgpack.hpp>
-#include "../models/scene.h"
 #include <glm/vec3.hpp>
+#include <glm/ext/quaternion_float.hpp>
 
 struct InputState {
     int  id        = 0;

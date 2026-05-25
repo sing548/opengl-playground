@@ -1,97 +1,77 @@
-#ifndef NETWORKING_H
-#define NETWORKING_H
+#ifndef NETW_BRIDG_H
+#define NETW_BRIDG_H
 
-#include <glm/glm.hpp>
-
-#include <iostream>
-#include <stdarg.h>
-#include <assert.h>
+#include <deque>
 #include <map>
-#include <thread>
-#include <atomic>
+#include <span>
+#include <memory>
+#include <string>
+#include <vector>
+#include <cstdint>
+#include <unordered_map>
 
-#include <steam/steam_api_common.h>
-#include <steam/steamnetworkingsockets.h>
-#include <steam/isteamnetworkingutils.h>
+#include <msgpack.hpp>
 
-#include "../../../engine/networking/shared-strucs.h"
+#include "shared-strucs.h"
 
-#ifdef _WIN32
-	#include <windows.h> // Ug, for NukeProcess -- see below
-#else
-	#include <unistd.h>
-	#include <signal.h>
-#endif
-
-#ifndef STEAMNETWORKINGSOCKETS_OPENSOURCE
-#include <steam/steam_api.h>
-#endif
-
+class Scene;
+class ClientTransport;
 class GameWorld;
 class ServerTransport;
-class ClientTransport;
+class AssetManager;
 
-class NetworkBridge 
+class NetworkBridge
 {
-
 public:
-    NetworkBridge(bool bServer, const Scene& scene, const char *serverAddr = nullptr);
+    enum class Role { Server, Client };
+
+    NetworkBridge(Role role, const std::string& serverAddr, int port);
     ~NetworkBridge();
+    void PollEvents(GameWorld& world, AssetManager& assMan);
 
+#pragma region Server
+    void ManageGameStateDistribution(Scene& scene, float dT);
+    std::unordered_map<uint32_t, InputState> GetInputStates() { return inputStates_; };
+    const uint32_t GetCurrentTick() const { return currentTick_; };
+    void RespawnPlayers(GameWorld& world, AssetManager& assMan);
+#pragma endregion    
+
+#pragma region Client
     void SendInputState(InputState& state);
-    std::unordered_map<int, InputState> GetInputStates();
-    uint32_t SendGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels, float dT);
-    std::tuple<unsigned int, std::vector<uint32_t>> UpdateScene(GameWorld& gameWorld, AssetManager& assMan);
-    void Shutdown();
-    uint32_t currentTick = 0;
+    std::tuple<unsigned int, std::vector<uint32_t>> MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan);
+#pragma endregion
+
 private:
-
-    float tickTimer = 0.0f;
-    const float tickRate = 1.0f / 30.0f;
-
-    uint32_t timesSent = 0;
-    std::chrono::steady_clock::time_point lastLogTime_;
-
-    bool m_bServer;
-    InputState inputState_;
-    std::unique_ptr<ServerTransport> server_;
-    std::unique_ptr<GameState> gameState_;
-    std::vector<unsigned int> addedModels_;
-    std::vector<unsigned int> removedModels_;
-
-    bool firstLoad_ = true;
+    Role role_;
     std::unique_ptr<ClientTransport> client_;
+    std::unique_ptr<ServerTransport> server_;
 
-    std::thread networkThread_;
-    std::thread distributionThread_;
-    std::atomic<bool> running_ { false };
-    
-    void BuildGameState(const Scene& scene, const std::vector<unsigned int>& addedModels, const std::vector<unsigned int>& removedModels);
-    static void FatalError( const char *fmt, ... )
-    {
-    	char text[ 2048 ];
-    	va_list ap;
-    	va_start( ap, fmt );
-    	vsprintf( text, fmt, ap );
-    	va_end(ap);
-    	char *nl = strchr( text, '\0' ) - 1;
-    	if ( nl >= text && *nl == '\n' )
-    		*nl = '\0';
-    	DebugOutput( k_ESteamNetworkingSocketsDebugOutputType_Bug, text );
-    };
+    const float tickRate_ = 1.0f / 30.0f;
 
-    static void DebugOutput( ESteamNetworkingSocketsDebugOutputType eType, const char *pszMsg )
-    {
-    	/*SteamNetworkingMicroseconds time = SteamNetworkingUtils()->GetLocalTimestamp() - g_logTimeZero;
-    	printf( "%10.6f %s\n", time*1e-6, pszMsg );
-    	fflush(stdout);
-    	if ( eType == k_ESteamNetworkingSocketsDebugOutputType_Bug )
-    	{
-    		fflush(stdout);
-    		fflush(stderr);
-    		NukeProcess(1);
-    	}*/
-    };
+    float tickTimer_ = 0.0f;
+
+    uint32_t currentTick_ = 0;
+
+    // Map holding modelId <-> connectionId
+    std::unordered_map<uint32_t, uint32_t> playersToConnections_;
+    std::unordered_map<uint32_t, uint32_t> connectionsToPlayers_;
+
+    std::unordered_map<uint32_t, InputState> inputStates_;
+
+#pragma region Server
+    std::vector<uint32_t> pendingRemoved_;
+    void PollInternalServer(GameWorld& world, AssetManager& assMan);
+    msgpack::sbuffer BuildAndPackGameState(const Scene& scene, bool fullState = false);
+    GameState BuildGameState(const Scene& scene, bool fullState = false);
+#pragma endregion
+
+#pragma region Client
+    uint32_t playerId_ = 0;
+    uint32_t previousTick_ = 0;
+    std::deque<GameState> pendingStates_;
+
+    void PollInternalClient();
+#pragma endregion
 };
 
 #endif

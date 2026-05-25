@@ -21,19 +21,17 @@
 #include "../engine/rendering/materials/hitbox-material.h"
 
 #include <map>
+#include <string>
 #include <thread>
 
 enum class EngineMode { Standalone, Server, Client };
 
 class NetworkBridge;
 
-
-class NetwBridg;
-
 class Engine {
 public:
 
-    Engine(EngineMode config, const char *serverAddr = nullptr);
+    Engine(EngineMode config, const std::string& serverUrl = "", int port = -1);
     ~Engine();
     void BasicLevel();
     void Run();
@@ -53,9 +51,8 @@ private:
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<Renderer> renderer_;
     std::unique_ptr<AssetManager> assMan_;
-    //std::unique_ptr<NetworkBridge> networkBridge_;
 
-    std::unique_ptr<NetwBridg> netwBridg_;
+    std::unique_ptr<NetworkBridge> netwBridg_;
 
     GameWorld gameWorld_;
 
