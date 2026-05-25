@@ -380,27 +380,6 @@ void Engine::CollectInputs(float deltaTime)
     state.forward   = glfwGetKey(window_->Get(), GLFW_KEY_W) == GLFW_PRESS;
     state.backward  = glfwGetKey(window_->Get(), GLFW_KEY_S) == GLFW_PRESS;
     state.shoot     = glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS;
-    state.shootShot = false;
-
-    const InputState& previousState = previousInputStates_.at(playerId_);
-
-    if (shotCooldown_ > 0.0f) shotCooldown_ = std::max(0.0f, shotCooldown_ - deltaTime);
-
-    bool shootPressed  =  state.shoot && !previousState.shoot;
-
-    if (shotCooldown_ <= 0.0f)
-    {
-        if (shootPressed)
-        {
-            state.shootShot = true;
-            shotCooldown_ = 0.1f;
-        }
-        else if (state.shoot)
-        {
-            state.shootShot = true;
-            shotCooldown_ = 0.5f;
-        }
-    }
 
     currentInputStates_.at(playerId_) = state;
 }

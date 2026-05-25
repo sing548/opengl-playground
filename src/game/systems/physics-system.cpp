@@ -24,7 +24,7 @@ void PhysicsSystem::MoveModels(float dT, GameWorld& gameWorld)
         MoveModel(dT, gameWorld.GetScene(), id, change);
 
         auto position = model.GetPosition();
-        if ((abs(position.x) > 80 || abs(position.z) > 80) && model.type_ != ModelType::PLAYER)
+        if ((abs(position.x) > 80 || abs(position.z) > 80) && !gameWorld.IsPlayer(id))
             gameWorld.MarkEntityForDelete(id);
     }
 }

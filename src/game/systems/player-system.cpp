@@ -77,10 +77,25 @@ void PlayerSystem::ExecuteInput(float dT,
 
         if (!shoot) continue;
 
-        if (state.shootShot && previousInputStates.at(id).shootShot != true)
+        auto& pd = gameWorld.GetPlayerData(id);
+
+        if (pd.shotCooldown > 0.0f)
+            pd.shotCooldown = std::max(0.0f, pd.shotCooldown - dT);
+        
+        bool shootPressed = state.shoot && !previousInputStates.at(id).shoot;
+
+        if (pd.shotCooldown <= 0.0f)
         {
-            previousInputStates.at(id).shootShot = true;
-            Shoot(gameWorld, assMan, id);
+            if (shootPressed)
+            {
+                Shoot(gameWorld, assMan, id);
+                pd.shotCooldown = 0.1f;
+            }
+            else if (state.shoot)
+            {
+                Shoot(gameWorld, assMan, id);
+                pd.shotCooldown = 0.5f;
+            }
         }
     }
 }

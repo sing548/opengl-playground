@@ -41,9 +41,6 @@ private:
     const unsigned int WIDTH = 1920;
     const unsigned int HEIGHT = 1080;
 
-    float shotCooldown_ = 0;
-    bool shotReleased_ = true;
-
     int playerId_;
 
     std::unique_ptr<Window> window_;

@@ -46,5 +46,6 @@ uint32_t GameWorld::AddShot(uint32_t id)
 
 void GameWorld::RemoveEntity(uint32_t id)
 {
-    throw std::runtime_error("Not Implemented");
+    scene_.MarkModelForDelete(id);
+    scene_.RemoveModel(id);
 }

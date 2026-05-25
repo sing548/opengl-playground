@@ -15,6 +15,7 @@ struct PlayerData
 {
     float lastHit = 0;
     int lifes = 10;
+    float shotCooldown = 0.0f;
 };
 
 struct NpcData
