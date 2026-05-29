@@ -1,9 +1,9 @@
 #ifndef NETW_BRIDG_H
 #define NETW_BRIDG_H
 
-#include <deque>
 #include <map>
 #include <span>
+#include <deque>
 #include <memory>
 #include <string>
 #include <vector>
@@ -13,6 +13,7 @@
 #include <msgpack.hpp>
 
 #include "shared-strucs.h"
+#include "../interpolator/interpolator.h"
 
 class Scene;
 class ClientTransport;
@@ -37,8 +38,9 @@ public:
 #pragma endregion    
 
 #pragma region Client
+    uint32_t GetPlayerId() { return playerId_; };
     void SendInputState(InputState& state);
-    std::tuple<unsigned int, std::vector<uint32_t>> MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan);
+    void MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan);
 #pragma endregion
 
 private:
@@ -68,7 +70,12 @@ private:
 #pragma region Client
     uint32_t playerId_ = 0;
     uint32_t previousTick_ = 0;
+    
+    std::chrono::steady_clock::time_point timeAtLastTick_;
+
     std::deque<GameState> pendingStates_;
+
+    Interpolator inter_ = Interpolator(tickRate_);
 
     void PollInternalClient();
 #pragma endregion

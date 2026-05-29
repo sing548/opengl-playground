@@ -11,13 +11,13 @@ void PhysicsSystem::Update(float dT, GameWorld& gameWorld)
 {
     MoveModels(dT, gameWorld);
     CheckHits(gameWorld);
-
-    CorrectZOffset(gameWorld.GetScene());    
+    CorrectZOffset(gameWorld.GetScene());
 }
 
 void PhysicsSystem::MoveModels(float dT, GameWorld& gameWorld)
 {
     gameWorld.GetScene().currentFurthestPosition = glm::vec3(0.0f, 0.0f, 0.0f);
+    if (isAuthoritative_)
     for (auto& [id, model] : gameWorld.GetScene().GetModels())
     {
         glm::vec3 change = model.GetVelocity();
@@ -26,6 +26,13 @@ void PhysicsSystem::MoveModels(float dT, GameWorld& gameWorld)
         auto position = model.GetPosition();
         if ((abs(position.x) > 80 || abs(position.z) > 80) && !gameWorld.IsPlayer(id))
             gameWorld.MarkEntityForDelete(id);
+    }
+
+    else
+    for (auto& [id, _] : gameWorld.GetShotData())
+    {
+        auto& model = gameWorld.GetScene().GetModelByReference(id);
+        MoveModel(dT, gameWorld.GetScene(), id, model.GetVelocity());
     }
 }
 
@@ -57,15 +64,12 @@ void PhysicsSystem::CheckHits(GameWorld& gameWorld)
 
             playerData.lastHit = 0.2f;
 
-            if (isAuthoritative_)
-            {
-                playerData.lifes -= 1;
+            playerData.lifes -= 1;
 
-                if (playerData.lifes <= 0)
-                    gameWorld.MarkEntityForDelete(playerId);
-
-                gameWorld.MarkEntityForDelete(shotId);
-            }
+            if (playerData.lifes <= 0)
+                gameWorld.MarkEntityForDelete(playerId);
+            gameWorld.MarkEntityForDelete(shotId);
+            
             shotConsumed = true;
             break;
         }
@@ -80,14 +84,11 @@ void PhysicsSystem::CheckHits(GameWorld& gameWorld)
 
             npcData.lastHit = 0.2f;
 
-            if (isAuthoritative_)
-            {
-                npcData.lifes -= 1;
+            npcData.lifes -= 1;
     
-                if (npcData.lifes <= 0)
-                    gameWorld.MarkEntityForDelete(npcId);
-                gameWorld.MarkEntityForDelete(shotId);
-            }
+            if (npcData.lifes <= 0)
+                gameWorld.MarkEntityForDelete(npcId);
+            gameWorld.MarkEntityForDelete(shotId);
             shotConsumed = true;
             break;
         }

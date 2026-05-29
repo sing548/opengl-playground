@@ -1,5 +1,6 @@
 #include "network-bridge.h"
 
+#include <chrono>
 #include <thread>
 
 #include "../../../engine/models/asset-manager.h"
@@ -8,6 +9,8 @@
 
 #include "../../spawner/spawner.h"
 #include "../../game-world/game-world.h"
+
+#include <glm/glm.hpp>
 
 
 NetworkBridge::NetworkBridge(Role role, const std::string& serverAddr, int port) : role_ (role)
@@ -361,7 +364,16 @@ void NetworkBridge::PollInternalClient()
                 			std::cout <<   "Skipped tick(1) between: " << previousTick_ << " and " << newTick << std::endl;
                     
 		        		previousTick_ = newTick;
+                        timeAtLastTick_ = std::chrono::steady_clock::now();
+                        
+                        if (type == 2 || gs.entities.size() != 0)
+                        {
+                            inter_.FeedSnapshot(previousTick_, gs.entities);
+                            gs.entities.clear();
+                        }
+
                         pendingStates_.push_back(std::move(gs));
+
 		        		break;
 		        	}
                 }
@@ -370,27 +382,31 @@ void NetworkBridge::PollInternalClient()
     }
 }
 
-std::tuple<unsigned int, std::vector<uint32_t>> NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan)
+void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan)
 {
     GameState gs;
-	std::vector<uint32_t> killedPlayers;
+
+    float timeSinceLastTick = std::chrono::duration<float>(
+        std::chrono::steady_clock::now() - timeAtLastTick_
+    ).count();
+    float serverTimeNow = (previousTick_ * tickRate_) + timeSinceLastTick;
+    float renderTime = serverTimeNow - inter_.lerp_;
 	
-    if (pendingStates_.size() == 0) return { 0, killedPlayers };
+    if (pendingStates_.empty()) return;
+
+
+    if (pendingStates_[0].tick >= (renderTime / tickRate_)) return;
 
     gs = std::move(pendingStates_.front());
     pendingStates_.pop_front();
 
     if (gs.tick == 0) 
-		return { 0, killedPlayers };
+		return;
 
 	gameWorld.GetScene().currentTick = gs.tick;
 
 	for (uint32_t id : gs.destroyedEntities)
-    {
-		auto& players = gameWorld.GetPlayerData();
-		if (players.contains(id)) 
-			killedPlayers.push_back(id);
-			
+    {		
         gameWorld.MarkEntityForDelete(id);
     }
 
@@ -417,24 +433,9 @@ std::tuple<unsigned int, std::vector<uint32_t>> NetworkBridge::MergeClientWithNe
 			default: break;
 		}
 	}
-
-	for (const auto& entity : gs.entities)
-    {
-        if (!gameWorld.GetScene().ModelExists(entity.id))
-        {
-            // Muted for now. ToDo: think if there is a threshold when we want to output because it might not be a network race condition
-            //std::cout << "Entity not loaded: " << entity.id << std::endl;
-            continue;
-        }
-
-        auto& m = gameWorld.GetScene().GetModelByReference(entity.id);
-
-        m.SetPosition(entity.position);
-        m.SetRotation(entity.rotation);
-        m.SetRotationSpeed(entity.angularVelocity);
-        m.SetScale(entity.scale);
-        m.SetVelocity(entity.velocity);
-    }
  
-	return { playerId_, killedPlayers };
+    inter_.InterpolateGameState(gameWorld.GetScene(), renderTime);
+    
+	return;
 }
+

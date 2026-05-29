@@ -176,6 +176,9 @@ void Engine::Run()
             }
         }
 
+        if (m_bNetworking && !m_bServer)
+            netwBridg_->MergeClientWithNetwork(gameWorld_, *assMan_);
+
         auto [rL, fG] = BuildRenderList();
         
         renderer_->Draw(rL, fG, settings_);
@@ -185,7 +188,7 @@ void Engine::Run()
         i++;
         // FPS counter in console
         if (fpsTime >= 1) {
-            //std::cout << "Current FPS: " << i / fpsTime << std::endl;
+            std::cout << "Current FPS: " << i / fpsTime << std::endl;
             i = 0;
             fpsTime = 0;
         }
@@ -236,8 +239,7 @@ void Engine::UpdateServerNetworking()
 void Engine::UpdateClientNetworking()
 {
     netwBridg_->PollEvents(gameWorld_, *assMan_);
-
-    auto [playerId, playerModelRemoved] = netwBridg_->MergeClientWithNetwork(gameWorld_, *assMan_);
+    auto playerId = netwBridg_->GetPlayerId();
 
     if (playerId != 0)
     {
@@ -245,20 +247,6 @@ void Engine::UpdateClientNetworking()
         auto state = InputState { playerId_, false, false, false, false, false, false  };
         currentInputStates_.try_emplace(playerId_, state);
         previousInputStates_.try_emplace(playerId_, state);
-    }
-
-    for (auto& id : playerModelRemoved)
-    {
-        auto i = currentInputStates_.find(id);
-        auto j = previousInputStates_.find(id);
-
-        if (i != currentInputStates_.end())
-            currentInputStates_.erase(i);
-        if (j != previousInputStates_.end())
-            previousInputStates_.erase(j);
-        
-        if (id == playerId_)
-            playerId_ = -1;
     }
 }
 

@@ -57,6 +57,7 @@ add_executable(OpenGLPlayground
     src/engine/rendering/renderer.cpp
     src/engine/engine.cpp
     src/game/game-world/game-world.cpp
+    src/game/networking/interpolator/interpolator.cpp
     src/game/networking/network-bridge/network-bridge.cpp
     src/game/spawner/spawner.cpp
     src/game/systems/camera-system.cpp
