@@ -363,8 +363,11 @@ void NetworkBridge::PollInternalClient()
 		        		if (previousTick_ != 0 && newTick - previousTick_ != 1 && newTick != previousTick_)
                 			std::cout <<   "Skipped tick(1) between: " << previousTick_ << " and " << newTick << std::endl;
                     
-		        		previousTick_ = newTick;
-                        timeAtLastTick_ = std::chrono::steady_clock::now();
+                        if (newTick != previousTick_)
+                        {
+                            previousTick_ = newTick;
+                            timeAtLastTick_ = std::chrono::steady_clock::now();
+                        }
                         
                         if (type == 2 || gs.entities.size() != 0)
                         {
@@ -384,58 +387,81 @@ void NetworkBridge::PollInternalClient()
 
 void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan)
 {
-    GameState gs;
+    float renderTime = CalculateRenderTime();
 
-    float timeSinceLastTick = std::chrono::duration<float>(
-        std::chrono::steady_clock::now() - timeAtLastTick_
-    ).count();
-    float serverTimeNow = (previousTick_ * tickRate_) + timeSinceLastTick;
-    float renderTime = serverTimeNow - inter_.lerp_;
-	
-    if (pendingStates_.empty()) return;
+    while (!pendingStates_.empty())
+    {
+        const auto& first = pendingStates_.front();
 
+        if (first.tick * tickRate_ > renderTime) break;
+        if (first.tick == 0) 
+        {
+            pendingStates_.pop_front();
+            continue;
+        }
 
-    if (pendingStates_[0].tick >= (renderTime / tickRate_)) return;
+        auto gs = std::move(pendingStates_.front());
+        pendingStates_.pop_front();
 
-    gs = std::move(pendingStates_.front());
-    pendingStates_.pop_front();
+        gameWorld.GetScene().currentTick = gs.tick;
 
-    if (gs.tick == 0) 
-		return;
+	    for (uint32_t id : gs.destroyedEntities)
+            gameWorld.MarkEntityForDelete(id);
 
-	gameWorld.GetScene().currentTick = gs.tick;
-
-	for (uint32_t id : gs.destroyedEntities)
-    {		
-        gameWorld.MarkEntityForDelete(id);
+	    for (auto &entity : gs.createdEntities)
+	    {
+	    	PhysicalInfo pi;
+	    	pi.position_			= entity.position;
+	    	pi.rotation_			= entity.rotation;
+	    	pi.angularVelocity_		= entity.angularVelocity;
+	    	pi.scale_				= entity.scale;
+	    	pi.velocity_			= entity.velocity;
+        
+	    	switch (entity.type) 
+	    	{
+	    		case 0: 
+	    			spawner::SpawnPlayer(gameWorld, assMan, pi, entity.id);
+	    			break;
+	    		case 1: 
+	    			spawner::SpawnShotFromNetwork(gameWorld, assMan, pi, entity.id);
+	    			break;
+	    		case 2: 
+	    			spawner::SpawnNpc(gameWorld, assMan, pi, entity.id);
+	    			break;
+	    		default: break;
+	    	}
+	    }
     }
 
-	for (auto &entity : gs.createdEntities)
-	{
-		PhysicalInfo pi;
-		pi.position_			= entity.position;
-		pi.rotation_			= entity.rotation;
-		pi.angularVelocity_		= entity.angularVelocity;
-		pi.scale_				= entity.scale;
-		pi.velocity_			= entity.velocity;
-	
-		switch (entity.type) 
-		{
-			case 0: 
-				spawner::SpawnPlayer(gameWorld, assMan, pi, entity.id);
-				break;
-			case 1: 
-				spawner::SpawnShotFromNetwork(gameWorld, assMan, pi, entity.id);
-				break;
-			case 2: 
-				spawner::SpawnNpc(gameWorld, assMan, pi, entity.id);
-				break;
-			default: break;
-		}
-	}
- 
     inter_.InterpolateGameState(gameWorld.GetScene(), renderTime);
     
 	return;
 }
 
+float NetworkBridge::CalculateRenderTime()
+{
+    auto now = std::chrono::steady_clock::now();
+    float timeSinceLastTick = std::chrono::duration<float>(
+        now - timeAtLastTick_
+    ).count();
+    float target = previousTick_ * tickRate_ + timeSinceLastTick;
+
+    if (!serverClockInit_)
+    {
+        serverClock_ = target;
+        serverClockInit_ = true;
+    }
+    else
+    {
+        float dT = std::chrono::duration<float>(now - lastUpdateTime_).count();
+
+        serverClock_ += dT;
+
+        float drift = target - serverClock_;
+        serverClock_ += drift * 0.05f;
+        std::cout << "Updated servertime. Drift: " << drift << std::endl;
+    }
+
+    lastUpdateTime_ = now;
+    return serverClock_ - inter_.lerp_;
+}

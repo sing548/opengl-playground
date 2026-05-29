@@ -65,6 +65,7 @@ private:
     void PollInternalServer(GameWorld& world, AssetManager& assMan);
     std::tuple<msgpack::sbuffer, msgpack::sbuffer> BuildAndPackGameState(const Scene& scene, bool fullState = false);
     std::tuple<GameState, GameState> BuildGameState(const Scene& scene, bool fullState = false);
+    float CalculateRenderTime();
 #pragma endregion
 
 #pragma region Client
@@ -72,6 +73,10 @@ private:
     uint32_t previousTick_ = 0;
     
     std::chrono::steady_clock::time_point timeAtLastTick_;
+    std::chrono::steady_clock::time_point lastUpdateTime_;
+
+    float serverClock_ = 0.0f;
+    bool serverClockInit_ = false;
 
     std::deque<GameState> pendingStates_;
 

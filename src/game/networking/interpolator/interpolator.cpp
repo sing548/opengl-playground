@@ -39,13 +39,25 @@ void Interpolator::InterpolateGameState(Scene& scene, float renderTime)
 
     if (snapshots_.size() < 2) return;
 
-
     auto& first = snapshots_.at(0);
     auto& second = snapshots_.at(1);
+
+    float deltaTime = second.gameTime - first.gameTime;
+    
 
     int count = snapshots_.size();
     
     float intFactor = std::clamp((renderTime - first.gameTime) / (second.gameTime - first.gameTime), 0.0f, 1.0f);
+
+    float t = intFactor;
+    float t2 = t * t;
+    float t3 = t * t * t;
+
+    float h00 =  2.0f*t3 - 3.0f*t2 + 1.0f;
+    float h10 =       t3 - 2.0f*t2 + t;
+    float h01 = -2.0f*t3 + 3.0f*t2;
+    float h11 =       t3 -      t2;
+
     std::cout << count << " snapshots active! Currently using timestamp: " << first.gameTime << " and " << second.gameTime << ", interpolation factor: " << intFactor << "\n";
 
     for (auto& [id, oldEnt] : first.entities)
@@ -55,7 +67,15 @@ void Interpolator::InterpolateGameState(Scene& scene, float renderTime)
         auto& newEnt = second.entities.at(id);
         auto& realEnt = scene.GetModelByReference(id);
 
-        realEnt.SetPosition(glm::mix(oldEnt.position, newEnt.position, intFactor));
+        glm::vec3 tangent0 = oldEnt.velocity * 60.0f * deltaTime;
+        glm::vec3 tangent1 = newEnt.velocity * 60.0f * deltaTime;
+
+        glm::vec3 position = h00 * oldEnt.position
+                           + h10 * tangent0
+                           + h01 * newEnt.position
+                           + h11 * tangent1;
+
+        realEnt.SetPosition(position);
         realEnt.SetScale(glm::mix(oldEnt.scale, newEnt.scale, intFactor));
         realEnt.SetRotation(glm::slerp(oldEnt.rotation, newEnt.rotation, intFactor));
         realEnt.SetVelocity(glm::mix(oldEnt.velocity, newEnt.velocity, intFactor));
