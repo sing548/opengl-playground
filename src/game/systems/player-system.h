@@ -8,6 +8,10 @@ class GameWorld;
 
 class PlayerSystem {
 public:
+
+    PlayerSystem() = default;
+    explicit PlayerSystem(bool isAuthoritative);
+
     void Update(float dT,
                 GameWorld& gameWorld,
                 AssetManager& assMan,
@@ -17,6 +21,8 @@ public:
                 bool shoot,
                 const std::map<std::string, bool>& settings);
 private:
+    bool isAutoritative_;
+
     void ExecuteInput(float dT,
                       GameWorld& gameWorld,
                       AssetManager& assMan,

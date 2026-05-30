@@ -39,6 +39,7 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
 
     const bool isAuthoritative = !m_bNetworking || m_bServer;
     npcSystem_ = NpcSystem(isAuthoritative);
+    playerSystem_ = PlayerSystem(isAuthoritative);
     physicsSystem_ = PhysicsSystem(isAuthoritative);
 
     glfwSetWindowUserPointer(window_->Get(), this);
@@ -128,6 +129,7 @@ void Engine::BasicLevel()
 
 void Engine::Run()
 {
+    // FixedDelta = Logic / s
     const float fixedDelta = 1.0f / 60.0f;
 
     int i = 0, j = 0;
@@ -142,6 +144,7 @@ void Engine::Run()
 
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
+        deltaTime = std::min(deltaTime, 0.25f);
 	    lastFrame = currentFrame;
         accTime += deltaTime;
         fpsTime += deltaTime;
@@ -170,7 +173,7 @@ void Engine::Run()
             // Logic/s counter in console
             if (logicTime >= 1) 
             {
-                //std::cout << "Current Logic/s: " << j / logicTime << std::endl;
+                std::cout << "Current Logic/s: " << j / logicTime << std::endl;
                 j = 0;
                 logicTime = 0;
             }
@@ -178,6 +181,10 @@ void Engine::Run()
 
         if (m_bNetworking && !m_bServer)
             netwBridg_->MergeClientWithNetwork(gameWorld_, *assMan_);
+
+        bool adjust = settings_["adjust_camera"];
+        if (adjust)
+            AdjustCamera();
 
         auto [rL, fG] = BuildRenderList();
         
@@ -270,12 +277,6 @@ void Engine::HandleLogic(float deltaTime)
     npcSystem_.Update(deltaTime, gameWorld_, *assMan_);
     playerSystem_.Update(deltaTime, gameWorld_, *assMan_, currentInputStates_, previousInputStates_, playerId_, !(m_bNetworking && !m_bServer), settings_);
     shotSystem_.Update(gameWorld_.GetScene());
-    cameraSystem_.Update();
-    
-    bool adjust = settings_["adjust_camera"];
-
-    if (adjust)
-        AdjustCamera();
 }
 
 void Engine::AdjustCamera()

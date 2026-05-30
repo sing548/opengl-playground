@@ -3,6 +3,11 @@
 #include "../spawner/spawner.h"
 #include "../game-world/game-world.h"
 
+PlayerSystem::PlayerSystem(bool isAutoritative)
+{
+    isAutoritative_ = isAutoritative;
+}
+
 void PlayerSystem::Update(float dT,
                           GameWorld& gameWorld,
                           AssetManager& assMan,
@@ -12,7 +17,8 @@ void PlayerSystem::Update(float dT,
                           bool shoot,
                           const std::map<std::string, bool>& settings)
 {
-    ExecuteInput(dT, gameWorld, assMan, currentInputStates, previousInputStates, playerId, shoot, settings.at("simple_flight"));
+    if (isAutoritative_)
+        ExecuteInput(dT, gameWorld, assMan, currentInputStates, previousInputStates, playerId, shoot, settings.at("simple_flight"));
     UpdatePlayerData(dT, gameWorld);
 }
 

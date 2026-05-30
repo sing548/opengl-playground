@@ -458,10 +458,12 @@ float NetworkBridge::CalculateRenderTime()
         serverClock_ += dT;
 
         float drift = target - serverClock_;
-        serverClock_ += drift * 0.05f;
-        std::cout << "Updated servertime. Drift: " << drift << std::endl;
+        
+        if (std::abs(drift) > 0.2f) serverClock_ = target;
+        else                        serverClock_ += drift * 0.05f;
+        //std::cout << "Updated servertime. Drift: " << drift << std::endl;
     }
 
     lastUpdateTime_ = now;
-    return serverClock_ - inter_.lerp_;
+    return serverClock_ - renderDelay_;
 }

@@ -14,8 +14,6 @@ class Interpolator
 public:
     Interpolator(float tickRate) : tickRate_(tickRate) {};
     ~Interpolator();
-
-    const float lerp_ = 0.1f;
     
     void FeedSnapshot(uint32_t tick, const std::vector<EntityState>& entities);
     void InterpolateGameState(Scene& scene, float renderTime);

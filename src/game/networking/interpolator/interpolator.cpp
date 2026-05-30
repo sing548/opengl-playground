@@ -43,12 +43,12 @@ void Interpolator::InterpolateGameState(Scene& scene, float renderTime)
     auto& second = snapshots_.at(1);
 
     float deltaTime = second.gameTime - first.gameTime;
-    
 
     int count = snapshots_.size();
     
     float intFactor = std::clamp((renderTime - first.gameTime) / (second.gameTime - first.gameTime), 0.0f, 1.0f);
 
+    //https://de.wikipedia.org/wiki/Kubisch_Hermitescher_Spline
     float t = intFactor;
     float t2 = t * t;
     float t3 = t * t * t;
