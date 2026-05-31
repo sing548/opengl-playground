@@ -41,7 +41,7 @@ private:
     const unsigned int WIDTH = 1920;
     const unsigned int HEIGHT = 1080;
 
-    int playerId_;
+    uint32_t playerId_;
 
     std::unique_ptr<Window> window_;
     std::unique_ptr<InputManager> inputManager_;
@@ -63,7 +63,7 @@ private:
     glm::vec2 maxScreenSize_;
     glm::vec3 currentFurthestPosition;
 
-    std::map<std::string, bool> settings_;
+    std::unordered_map<std::string, bool> settings_;
     std::unordered_map<uint32_t, InputState> previousInputStates_;
     std::unordered_map<uint32_t, InputState> currentInputStates_;
 

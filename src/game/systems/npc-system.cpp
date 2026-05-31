@@ -2,35 +2,31 @@
 
 #include "../../engine/models/asset-manager.h"
 
+#include "system-structs.h"
 #include "../spawner/spawner.h"
 #include "../game-world/game-world.h"
 
-NpcSystem::NpcSystem(bool isAuthoritative)
-{
-    isAuthoritative_ = isAuthoritative;
-}
-
-void NpcSystem::Update(float dT, GameWorld& gameWorld, AssetManager& assMan)
+void NpcSystem::Update(SystemsContext context)
 {
     int n = 0;
 
-    for (auto& [npcId, npcData] : gameWorld.GetNpcData())
+    for (auto& [npcId, npcData] : context.world.GetNpcData())
     {
         n++;
-        auto& npc = gameWorld.GetScene().GetModelByReference(npcId);
+        auto& npc = context.world.GetScene().GetModelByReference(npcId);
 
 
-        if (npcData.lastHit > 0) npcData.lastHit -= dT;
+        if (npcData.lastHit > 0) npcData.lastHit -= context.dT;
         if (npcData.lastHit < 0) npcData.lastHit = 0;
 
-        if (!isAuthoritative_) continue;
+        if (!context.authoritative) continue;
 
         float closestDist = 0.0f;
         std::optional<uint32_t> closestPlayer = NULL;
 
-        for (auto& [playerId, playerData] : gameWorld.GetPlayerData())
+        for (auto& [playerId, playerData] : context.world.GetPlayerData())
         {
-            auto& playerModel = gameWorld.GetScene().GetModelByReference(playerId);
+            auto& playerModel = context.world.GetScene().GetModelByReference(playerId);
             auto dist = glm::length(playerModel.GetPosition() - npc.GetPosition());
 
             if (closestPlayer == NULL || dist < closestDist)
@@ -43,14 +39,14 @@ void NpcSystem::Update(float dT, GameWorld& gameWorld, AssetManager& assMan)
         if (closestPlayer == NULL) 
         {
             auto velocity = npc.GetVelocity();
-            if (velocity.x > 0) velocity.x -= dT * 10;
-            if (velocity.x < 0) velocity.x += dT * 10;
+            if (velocity.x > 0) velocity.x -= context.dT * 10;
+            if (velocity.x < 0) velocity.x += context.dT * 10;
 
-            if (velocity.y > 0) velocity.y -= dT * 10;
-            if (velocity.y < 0) velocity.y += dT * 10;
+            if (velocity.y > 0) velocity.y -= context.dT * 10;
+            if (velocity.y < 0) velocity.y += context.dT * 10;
 
-            if (velocity.z > 0) velocity.z -= dT * 10;
-            if (velocity.z < 0) velocity.z += dT * 10;
+            if (velocity.z > 0) velocity.z -= context.dT * 10;
+            if (velocity.z < 0) velocity.z += context.dT * 10;
 
             if (glm::length(velocity) < 0.05f)
             {
@@ -62,7 +58,7 @@ void NpcSystem::Update(float dT, GameWorld& gameWorld, AssetManager& assMan)
             continue;
         }
 
-        auto& playerModel = gameWorld.GetScene().GetModelByReference(closestPlayer.value());
+        auto& playerModel = context.world.GetScene().GetModelByReference(closestPlayer.value());
 
         auto toPlayer = glm::normalize(playerModel.GetPosition() - npc.GetPosition());
         auto facing  = glm::normalize(npc.GetForward());
@@ -84,7 +80,7 @@ void NpcSystem::Update(float dT, GameWorld& gameWorld, AssetManager& assMan)
         {
             auto oldVelo = npc.GetVelocity();
             auto forward = npc.GetForward();
-            auto newVelo = oldVelo + forward * 0.06f * dT;
+            auto newVelo = oldVelo + forward * 0.06f * context.dT;
             npc.SetVelocity(newVelo);
             auto test = npc.GetVelocity();
         }
@@ -98,12 +94,12 @@ void NpcSystem::Update(float dT, GameWorld& gameWorld, AssetManager& assMan)
 		    pi.angularVelocity_	    = npc.GetRotationSpeed();
 		    pi.scale_			    = npc.GetScale();
 		    pi.velocity_			= npc.GetVelocity();
-            spawner::SpawnShot(gameWorld, assMan, pi, npcId); 
+            spawner::SpawnShot(context.world, context.assMan, pi, npcId); 
 
             npcData.lastShot = 1.0f;
         }
 
-        npcData.lastShot -= dT;
+        npcData.lastShot -= context.dT;
     }
 
     if (n == 0)
@@ -112,6 +108,6 @@ void NpcSystem::Update(float dT, GameWorld& gameWorld, AssetManager& assMan)
         pi.position_ = glm::vec3(-20.0f, 0.0f, 0.0f);
         pi.rotation_ = glm::angleAxis(glm::radians(180.0f), glm::vec3(0,1,0));
         pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
-        spawner::SpawnNpc(gameWorld, assMan, pi);
+        spawner::SpawnNpc(context.world, context.assMan, pi);
     }
 }

@@ -1,29 +1,16 @@
 #include "player-system.h"
 
+#include "system-structs.h"
 #include "../spawner/spawner.h"
 #include "../game-world/game-world.h"
 
-PlayerSystem::PlayerSystem(bool isAuthoritative)
+void PlayerSystem::Update(SystemsContext ctx)
 {
-    isAuthoritative_ = isAuthoritative;
-}
-
-void PlayerSystem::Update(float dT,
-                          GameWorld& gameWorld,
-                          AssetManager& assMan,
-                          std::unordered_map<uint32_t, InputState>& currentInputStates,
-                          std::unordered_map<uint32_t, InputState>& previousInputStates,
-                          uint32_t playerId,
-                          bool shoot,
-                          const std::map<std::string, bool>& settings,
-                          bool replay
-                        )
-{
-    if (replay || isAuthoritative_)
-        ExecuteInput(dT, gameWorld, assMan, currentInputStates, previousInputStates, playerId, shoot, settings.at("simple_flight"));
-    if (!replay)
+    if (ctx.replay || ctx.authoritative)
+        ExecuteInput(ctx.dT, ctx.world, ctx.assMan, ctx.current, ctx.previous, ctx.localPlayerId, ctx.authoritative, ctx.settings.at("simple_flight"));
+    if (!ctx.replay)
     {
-        UpdatePlayerData(dT, gameWorld);
+        UpdatePlayerData(ctx.dT, ctx.world);
     }
 }
 
@@ -33,7 +20,7 @@ void PlayerSystem::ExecuteInput(float dT,
                                 std::unordered_map<uint32_t, InputState>& currentInputStates,
                                 std::unordered_map<uint32_t, InputState>& previousInputStates,
                                 uint32_t playerId,
-                                bool shoot,
+                                bool authoritative,
                                 bool lockRAndV
                             )
 { 
@@ -85,7 +72,7 @@ void PlayerSystem::ExecuteInput(float dT,
             gameWorld.GetScene().GetModelByReference(id).SetVelocity(speed);
         }
 
-        if (!shoot || !isAuthoritative_) continue;
+        if (!authoritative) continue;
 
         auto& pd = gameWorld.GetPlayerData(id);
 

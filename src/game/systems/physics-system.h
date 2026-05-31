@@ -5,18 +5,15 @@
 #include "../../engine/window/window.h"
 
 class GameWorld;
+struct SystemsContext;
 
 class PhysicsSystem {
 public:
-    PhysicsSystem() = default;
-    explicit PhysicsSystem(bool isAuthoritative);
-
-    void Update(float dT, GameWorld& gameWorld, uint32_t replay_PlayerId = 0);
+    void Update(SystemsContext ctx);
 private:
-    bool isAuthoritative_;
-    void MoveModels(float dT, GameWorld& gameWorld);
+    void MoveModels(float dT, GameWorld& gameWorld, bool authoritative);
     void MoveModel(float dT, Scene& Scene, unsigned int id, const glm::vec3& change);
-    void CheckHits(GameWorld& gameWorld);
+    void CheckHits(GameWorld& gameWorld, bool authoritative);
     bool Collide(const Model& a, const Model& b);
     void TryCollide(Scene& scene, uint32_t idA, uint32_t idB);
     void CorrectZOffset(Scene& scene);

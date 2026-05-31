@@ -1,6 +1,7 @@
 #include "engine.h"
 
 #include "../game/spawner/spawner.h"
+#include "../game/systems/system-structs.h"
 #include "../game/networking/network-bridge/network-bridge.h"
 
 Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
@@ -37,11 +38,6 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     renderer_ = std::make_unique<Renderer>(WIDTH, HEIGHT);
     assMan_ = std::make_unique<AssetManager>();
 
-    const bool isAuthoritative = !m_bNetworking || m_bServer;
-    npcSystem_ = NpcSystem(isAuthoritative);
-    playerSystem_ = PlayerSystem(isAuthoritative);
-    physicsSystem_ = PhysicsSystem(isAuthoritative);
-
     glfwSetWindowUserPointer(window_->Get(), this);
     glfwSetKeyCallback(window_->Get(), Engine::KeyCallback);
 
@@ -55,7 +51,7 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
 
     if (m_bNetworking)
     {
-        playerId_ = -1;
+        playerId_ = 0;
        
         if (m_bServer)
         {
@@ -164,7 +160,7 @@ void Engine::Run()
             {
                netwBridg_->ManageGameStateDistribution(gameWorld_, fixedDelta);
             }
-            else if (m_bNetworking && playerId_ >= 0)
+            else if (m_bNetworking && playerId_ > 0)
             {
                 netwBridg_->SendInputState(currentInputStates_.at(playerId_));
             }
@@ -184,12 +180,25 @@ void Engine::Run()
             netwBridg_->MergeClientWithNetwork(gameWorld_, *assMan_);
             auto& statesToReplay = netwBridg_->ResetPlayerToLastInputState(gameWorld_);
 
+            SystemsContext context = SystemsContext
+            {
+                deltaTime,
+                gameWorld_,
+                *assMan_,
+                currentInputStates_,
+                previousInputStates_,
+                playerId_,
+                !(m_bNetworking && !m_bServer),
+                true,
+                settings_
+            };
+
             for (auto& [tick, state] : statesToReplay)
             {
                 stateAsMap_[playerId_] = state;
                 // Not saving "previuousStateAsMap" - would need updating if 
-                playerSystem_.Update(fixedDelta, gameWorld_, *assMan_, stateAsMap_, stateAsMap_, playerId_, !(m_bNetworking && !m_bServer), settings_, true);
-                physicsSystem_.Update(fixedDelta, gameWorld_, playerId_);
+                playerSystem_.Update(context);
+                physicsSystem_.Update(context);
             }
         }
 
@@ -276,24 +285,37 @@ void Engine::HandleLogic(float deltaTime)
     {
         currentInputStates_.erase(id);
         previousInputStates_.erase(id);
-        if (id == playerId_) playerId_ = -1;
+        if (id == playerId_) playerId_ = 0;
     }
 
     for (uint32_t id : removed.players)
     {
         killedPlayers_.push_back(id);
     }
+
+    SystemsContext context = SystemsContext
+    {
+        deltaTime,
+        gameWorld_,
+        *assMan_,
+        currentInputStates_,
+        previousInputStates_,
+        playerId_,
+        !(m_bNetworking && !m_bServer),
+        false,
+        settings_
+    };
     
-    physicsSystem_.Update(deltaTime, gameWorld_);
-    npcSystem_.Update(deltaTime, gameWorld_, *assMan_);
-    playerSystem_.Update(deltaTime, gameWorld_, *assMan_, currentInputStates_, previousInputStates_, playerId_, !(m_bNetworking && !m_bServer), settings_);
-    shotSystem_.Update(gameWorld_.GetScene());
+    physicsSystem_.Update(context);
+    npcSystem_.Update(context);
+    playerSystem_.Update(context);
+    shotSystem_.Update(context);
 }
 
 void Engine::AdjustCamera()
 {
     if (settings_["third_person"]) {
-        if (playerId_ < 0 || !gameWorld_.GetScene().ModelExists(playerId_)) return;
+        if (playerId_ == 0 || !gameWorld_.GetScene().ModelExists(playerId_)) return;
 
         const auto& model = gameWorld_.GetScene().GetModelByReference(playerId_);
         glm::vec3 modelPos = model.GetPosition();
@@ -368,7 +390,7 @@ void Engine::ChangeSetting(std::string key, bool value)
 
 void Engine::CollectInputs(float deltaTime)
 {
-    if (playerId_ < 0 || std::ranges::find(killedPlayers_, playerId_) != killedPlayers_.end()) return;
+    if (playerId_ == 0 || std::ranges::find(killedPlayers_, playerId_) != killedPlayers_.end()) return;
     if (!currentInputStates_.contains(playerId_)) return;
 
     previousInputStates_.at(playerId_) = currentInputStates_.at(playerId_);

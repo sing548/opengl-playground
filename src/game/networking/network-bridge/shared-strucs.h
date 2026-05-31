@@ -7,7 +7,7 @@
 #include <glm/ext/quaternion_float.hpp>
 
 struct InputState {
-    int  id        = 0;
+    uint32_t  id   = 0;
     bool left      = false;
     bool right     = false;
     bool forward   = false;

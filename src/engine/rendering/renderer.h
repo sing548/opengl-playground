@@ -4,7 +4,7 @@
 #include <array>
 #include <memory>
 #include <filesystem>
-#include <map>
+#include <unordered_map>
 
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
@@ -23,7 +23,7 @@ class Renderer
 public:
     Renderer(unsigned int width, unsigned int height);
 
-    void Draw(const RenderList& renderList, const FrameGlobals& globals, const std::map<std::string, bool>& settings);
+    void Draw(const RenderList& renderList, const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings);
 
 private:
     unsigned int frameFBO_;

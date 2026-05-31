@@ -5,33 +5,19 @@
 #include "../../game/networking/network-bridge/shared-strucs.h"
 
 class GameWorld;
+struct SystemsContext;
 
 class PlayerSystem {
 public:
-
-    PlayerSystem() = default;
-    explicit PlayerSystem(bool isAuthoritative);
-
-    void Update(float dT,
-                GameWorld& gameWorld,
-                AssetManager& assMan,
-                std::unordered_map<uint32_t, InputState>& currentInputStates,
-                std::unordered_map<uint32_t, InputState>& previousInputStates,
-                uint32_t playerId,
-                bool shoot,
-                const std::map<std::string, bool>& settings,
-                bool replay = false
-            );
+    void Update(SystemsContext ctx);
 private:
-    bool isAuthoritative_;
-
     void ExecuteInput(float dT,
                       GameWorld& gameWorld,
                       AssetManager& assMan,
                       std::unordered_map<uint32_t, InputState>& currentInputStates,
                       std::unordered_map<uint32_t, InputState>& previousInputStates,
                       uint32_t playerId,
-                      bool shoot,
+                      bool authoritative,
                       bool simpleFlight
                     );
     void UpdatePlayerData(float dT, GameWorld& gameWorld);

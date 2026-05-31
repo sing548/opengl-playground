@@ -112,7 +112,7 @@ Renderer::Renderer(unsigned int width, unsigned int height)
 	sky_ = std::make_unique<Sky>(faces);
 }
 
-void Renderer::Draw(const RenderList& renderList, const FrameGlobals& globals, const std::map<std::string, bool>& settings)
+void Renderer::Draw(const RenderList& renderList, const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings)
 {
 	//ToDo: ECS (Entity Component System)
 	glEnable(GL_DEPTH_TEST);

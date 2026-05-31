@@ -3,9 +3,11 @@
 
 #include "../../engine/models/scene.h"
 
+struct SystemsContext;
+
 class ShotSystem {
 public:
-    void Update(Scene& scene);
+    void Update(SystemsContext ctx);
 };
 
 #endif

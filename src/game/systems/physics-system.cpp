@@ -1,34 +1,30 @@
 #include "physics-system.h"
 
+#include "system-structs.h"
 #include "../game-world/game-world.h"
 
-PhysicsSystem::PhysicsSystem(bool isAuthoritative)
+void PhysicsSystem::Update(SystemsContext ctx)
 {
-    isAuthoritative_ = isAuthoritative;
-}
-
-void PhysicsSystem::Update(float dT, GameWorld& gameWorld, uint32_t replay_playerId)
-{
-    if (replay_playerId == 0)
+    if (!ctx.replay)
     {
-        MoveModels(dT, gameWorld);
-        CheckHits(gameWorld);
-        CorrectZOffset(gameWorld.GetScene());
+        MoveModels(ctx.dT, ctx.world, ctx.authoritative);
+        CheckHits(ctx.world, ctx.authoritative);
+        CorrectZOffset(ctx.world.GetScene());
     }
     else
     {
-        if (!gameWorld.GetScene().ModelExists(replay_playerId)) return;
-        auto& model = gameWorld.GetScene().GetModelByReference(replay_playerId);
+        if (!ctx.world.GetScene().ModelExists(ctx.localPlayerId)) return;
+        auto& model = ctx.world.GetScene().GetModelByReference(ctx.localPlayerId);
         glm::vec3 change = model.GetVelocity();
-        MoveModel(dT, gameWorld.GetScene(), replay_playerId, change);
+        MoveModel(ctx.dT, ctx.world.GetScene(), ctx.localPlayerId, change);
     }
 }
 
-void PhysicsSystem::MoveModels(float dT, GameWorld& gameWorld)
+void PhysicsSystem::MoveModels(float dT, GameWorld& gameWorld, bool authoritative)
 {
     gameWorld.GetScene().currentFurthestPosition = glm::vec3(0.0f, 0.0f, 0.0f);
 
-    if (isAuthoritative_)
+    if (authoritative)
     for (auto& [id, model] : gameWorld.GetScene().GetModels())
     {
         glm::vec3 change = model.GetVelocity();
@@ -58,9 +54,9 @@ void PhysicsSystem::MoveModel(float dT, Scene& scene, unsigned int id, const glm
     if (abs(position.z) > scene.currentFurthestPosition.z) scene.currentFurthestPosition.z = abs(position.z);
 }
 
-void PhysicsSystem::CheckHits(GameWorld& gameWorld)
+void PhysicsSystem::CheckHits(GameWorld& gameWorld, bool authoritative)
 {
-    if (!isAuthoritative_) return;
+    if (!authoritative) return;
     
     Scene& scene = gameWorld.GetScene();
 

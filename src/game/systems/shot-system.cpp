@@ -1,6 +1,7 @@
 #include "shot-system.h"
 
-void ShotSystem::Update(Scene& scene)
+#include "system-structs.h"
+
+void ShotSystem::Update(SystemsContext ctx)
 {
-    
 }
