@@ -98,7 +98,7 @@ void NpcSystem::Update(float dT, GameWorld& gameWorld, AssetManager& assMan)
 		    pi.angularVelocity_	    = npc.GetRotationSpeed();
 		    pi.scale_			    = npc.GetScale();
 		    pi.velocity_			= npc.GetVelocity();
-            spawner::SpawnShot(gameWorld, assMan, pi, npc.GetForward()); 
+            spawner::SpawnShot(gameWorld, assMan, pi, npcId); 
 
             npcData.lastShot = 1.0f;
         }

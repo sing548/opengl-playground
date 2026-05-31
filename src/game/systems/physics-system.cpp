@@ -7,16 +7,27 @@ PhysicsSystem::PhysicsSystem(bool isAuthoritative)
     isAuthoritative_ = isAuthoritative;
 }
 
-void PhysicsSystem::Update(float dT, GameWorld& gameWorld)
+void PhysicsSystem::Update(float dT, GameWorld& gameWorld, uint32_t replay_playerId)
 {
-    MoveModels(dT, gameWorld);
-    CheckHits(gameWorld);
-    CorrectZOffset(gameWorld.GetScene());
+    if (replay_playerId == 0)
+    {
+        MoveModels(dT, gameWorld);
+        CheckHits(gameWorld);
+        CorrectZOffset(gameWorld.GetScene());
+    }
+    else
+    {
+        if (!gameWorld.GetScene().ModelExists(replay_playerId)) return;
+        auto& model = gameWorld.GetScene().GetModelByReference(replay_playerId);
+        glm::vec3 change = model.GetVelocity();
+        MoveModel(dT, gameWorld.GetScene(), replay_playerId, change);
+    }
 }
 
 void PhysicsSystem::MoveModels(float dT, GameWorld& gameWorld)
 {
     gameWorld.GetScene().currentFurthestPosition = glm::vec3(0.0f, 0.0f, 0.0f);
+
     if (isAuthoritative_)
     for (auto& [id, model] : gameWorld.GetScene().GetModels())
     {
@@ -49,6 +60,8 @@ void PhysicsSystem::MoveModel(float dT, Scene& scene, unsigned int id, const glm
 
 void PhysicsSystem::CheckHits(GameWorld& gameWorld)
 {
+    if (!isAuthoritative_) return;
+    
     Scene& scene = gameWorld.GetScene();
 
     for (auto& [shotId, shotData] : gameWorld.GetShotData())

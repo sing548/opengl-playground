@@ -38,9 +38,9 @@ uint32_t GameWorld::AddNpc(uint32_t id)
     return id;
 }
 
-uint32_t GameWorld::AddShot(uint32_t id)
+uint32_t GameWorld::AddShot(uint32_t id, uint32_t shooterId)
 {
-    shotData_[id] = ShotData();
+    shotData_[id] = ShotData { id, shooterId };
     return id;
 }
 

@@ -64,8 +64,11 @@ private:
     glm::vec3 currentFurthestPosition;
 
     std::map<std::string, bool> settings_;
-    std::unordered_map<int, InputState> previousInputStates_;
-    std::unordered_map<int, InputState> currentInputStates_;
+    std::unordered_map<uint32_t, InputState> previousInputStates_;
+    std::unordered_map<uint32_t, InputState> currentInputStates_;
+
+    // only used in client mode for replay
+    std::unordered_map<uint32_t, InputState> stateAsMap_;
     std::vector<uint32_t> killedPlayers_;
 
     bool m_bNetworking = false;

@@ -3,35 +3,39 @@
 #include "../spawner/spawner.h"
 #include "../game-world/game-world.h"
 
-PlayerSystem::PlayerSystem(bool isAutoritative)
+PlayerSystem::PlayerSystem(bool isAuthoritative)
 {
-    isAutoritative_ = isAutoritative;
+    isAuthoritative_ = isAuthoritative;
 }
 
 void PlayerSystem::Update(float dT,
                           GameWorld& gameWorld,
                           AssetManager& assMan,
-                          std::unordered_map<int, InputState>& currentInputStates,
-                          std::unordered_map<int, InputState>& previousInputStates,
-                          int playerId,
+                          std::unordered_map<uint32_t, InputState>& currentInputStates,
+                          std::unordered_map<uint32_t, InputState>& previousInputStates,
+                          uint32_t playerId,
                           bool shoot,
-                          const std::map<std::string, bool>& settings)
+                          const std::map<std::string, bool>& settings,
+                          bool replay
+                        )
 {
-    if (isAutoritative_)
+    if (replay || isAuthoritative_)
         ExecuteInput(dT, gameWorld, assMan, currentInputStates, previousInputStates, playerId, shoot, settings.at("simple_flight"));
-    UpdatePlayerData(dT, gameWorld);
+    if (!replay)
+    {
+        UpdatePlayerData(dT, gameWorld);
+    }
 }
-
-
 
 void PlayerSystem::ExecuteInput(float dT,
                                 GameWorld& gameWorld,
                                 AssetManager& assMan,
-                                std::unordered_map<int, InputState>& currentInputStates,
-                                std::unordered_map<int, InputState>& previousInputStates,
-                                int playerId,
+                                std::unordered_map<uint32_t, InputState>& currentInputStates,
+                                std::unordered_map<uint32_t, InputState>& previousInputStates,
+                                uint32_t playerId,
                                 bool shoot,
-                                bool lockRAndV)
+                                bool lockRAndV
+                            )
 { 
     
     for (auto& [id, state] : currentInputStates)
@@ -81,7 +85,7 @@ void PlayerSystem::ExecuteInput(float dT,
             gameWorld.GetScene().GetModelByReference(id).SetVelocity(speed);
         }
 
-        if (!shoot) continue;
+        if (!shoot || !isAuthoritative_) continue;
 
         auto& pd = gameWorld.GetPlayerData(id);
 
@@ -128,7 +132,7 @@ void PlayerSystem::Shoot(GameWorld& gameWorld, AssetManager& assMan, uint32_t sh
 	pi.angularVelocity_	    = shooter.GetRotationSpeed();
 	pi.scale_			    = shooter.GetScale();
 	pi.velocity_    		= shooter.GetVelocity();
-    spawner::SpawnShot(gameWorld, assMan, pi, shooter.GetForward(), shooter.GetVelocity());
+    spawner::SpawnShot(gameWorld, assMan, pi, shooterId);
 }
 
 void PlayerSystem::UpdatePlayerData(float dT, GameWorld& gameWorld)

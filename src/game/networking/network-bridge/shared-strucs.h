@@ -39,6 +39,7 @@ struct EntityState {
 struct EntityCreationState {
     uint32_t id;
     uint32_t type;
+    uint32_t ownerId;
     float radius;
 
     glm::vec3 position;
@@ -48,7 +49,7 @@ struct EntityCreationState {
     glm::vec3 angularVelocity;
 
     MSGPACK_DEFINE(
-        id, type, radius, 
+        id, type, ownerId, radius, 
         position.x, position.y, position.z,
         scale.x, scale.y, scale.z,
         rotation.x, rotation.y, rotation.z, rotation.w,
@@ -59,9 +60,10 @@ struct EntityCreationState {
 
 struct GameState {
     uint32_t tick = 0;
+    std::unordered_map<uint32_t, uint32_t> playerToLastProcessedInput;
     std::vector<EntityState> entities;
     std::vector<uint32_t> destroyedEntities;
     std::vector<EntityCreationState> createdEntities;
 
-    MSGPACK_DEFINE(tick, entities, destroyedEntities, createdEntities);
+    MSGPACK_DEFINE(tick, playerToLastProcessedInput, entities, destroyedEntities, createdEntities);
 };

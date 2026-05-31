@@ -162,7 +162,7 @@ void Engine::Run()
 
             if (m_bNetworking && m_bServer)
             {
-               netwBridg_->ManageGameStateDistribution(gameWorld_.GetScene(), fixedDelta);
+               netwBridg_->ManageGameStateDistribution(gameWorld_, fixedDelta);
             }
             else if (m_bNetworking && playerId_ >= 0)
             {
@@ -180,7 +180,18 @@ void Engine::Run()
         }
 
         if (m_bNetworking && !m_bServer)
+        {
             netwBridg_->MergeClientWithNetwork(gameWorld_, *assMan_);
+            auto& statesToReplay = netwBridg_->ResetPlayerToLastInputState(gameWorld_);
+
+            for (auto& [tick, state] : statesToReplay)
+            {
+                stateAsMap_[playerId_] = state;
+                // Not saving "previuousStateAsMap" - would need updating if 
+                playerSystem_.Update(fixedDelta, gameWorld_, *assMan_, stateAsMap_, stateAsMap_, playerId_, !(m_bNetworking && !m_bServer), settings_, true);
+                physicsSystem_.Update(fixedDelta, gameWorld_, playerId_);
+            }
+        }
 
         bool adjust = settings_["adjust_camera"];
         if (adjust)

@@ -15,24 +15,27 @@ public:
     void Update(float dT,
                 GameWorld& gameWorld,
                 AssetManager& assMan,
-                std::unordered_map<int, InputState>& currentInputStates,
-                std::unordered_map<int, InputState>& previousInputStates,
-                int playerId,
+                std::unordered_map<uint32_t, InputState>& currentInputStates,
+                std::unordered_map<uint32_t, InputState>& previousInputStates,
+                uint32_t playerId,
                 bool shoot,
-                const std::map<std::string, bool>& settings);
+                const std::map<std::string, bool>& settings,
+                bool replay = false
+            );
 private:
-    bool isAutoritative_;
+    bool isAuthoritative_;
 
     void ExecuteInput(float dT,
                       GameWorld& gameWorld,
                       AssetManager& assMan,
-                      std::unordered_map<int, InputState>& currentInputStates,
-                      std::unordered_map<int, InputState>& previousInputStates,
-                      int playerId,
+                      std::unordered_map<uint32_t, InputState>& currentInputStates,
+                      std::unordered_map<uint32_t, InputState>& previousInputStates,
+                      uint32_t playerId,
                       bool shoot,
-                      bool simpleFlight);
+                      bool simpleFlight
+                    );
     void UpdatePlayerData(float dT, GameWorld& gameWorld);
-    void RotateModel(unsigned int id, Scene& scene, const glm::quat& change, bool lockRotationAndVelocity);
+    void RotateModel(uint32_t id, Scene& scene, const glm::quat& change, bool lockRotationAndVelocity);
     void Shoot(GameWorld& gameWorld, AssetManager& assMan, uint32_t shooterId);
 };
 

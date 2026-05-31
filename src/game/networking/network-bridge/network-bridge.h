@@ -31,7 +31,7 @@ public:
     void PollEvents(GameWorld& world, AssetManager& assMan);
 
 #pragma region Server
-    void ManageGameStateDistribution(Scene& scene, float dT);
+    void ManageGameStateDistribution(GameWorld& gameWorld, float dT);
     std::unordered_map<uint32_t, InputState> GetInputStates() { return inputStates_; };
     const uint32_t GetCurrentTick() const { return currentTick_; };
     void RespawnPlayers(GameWorld& world, AssetManager& assMan);
@@ -41,6 +41,7 @@ public:
     uint32_t GetPlayerId() { return playerId_; };
     void SendInputState(InputState& state);
     void MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan);
+    std::map<uint32_t, InputState>& ResetPlayerToLastInputState(GameWorld& world);
 #pragma endregion
 
 private:
@@ -62,9 +63,12 @@ private:
 
 #pragma region Server
     std::vector<uint32_t> pendingRemoved_;
+    std::map<uint32_t, GameState> pastStates_;
+    std::unordered_map<uint32_t, uint32_t> latestInputTickPerPlayer_;
     void PollInternalServer(GameWorld& world, AssetManager& assMan);
-    std::tuple<msgpack::sbuffer, msgpack::sbuffer> BuildAndPackGameState(const Scene& scene, bool fullState = false);
-    std::tuple<GameState, GameState> BuildGameState(const Scene& scene, bool fullState = false);
+    void ReplayInputState(uint32_t playerId);
+    std::tuple<msgpack::sbuffer, msgpack::sbuffer> BuildAndPackGameState(const GameWorld& gameWorld, bool fullState = false);
+    std::tuple<GameState, GameState> BuildGameState(const GameWorld& gameWorld, bool fullState = false);
     float CalculateRenderTime();
 #pragma endregion
 
@@ -72,19 +76,24 @@ private:
     uint32_t playerId_ = 0;
     uint32_t previousTick_ = 0;
 
-    const float renderDelay_ = 0.066f;
+    const float renderDelay_ = 0.1f;
     
     std::chrono::steady_clock::time_point timeAtLastTick_;
     std::chrono::steady_clock::time_point lastUpdateTime_;
 
+    EntityState latestPlayerState_;
+
     float serverClock_ = 0.0f;
     bool serverClockInit_ = false;
+
+    std::map<uint32_t, InputState> sentInputStates_;
 
     std::deque<GameState> pendingStates_;
 
     Interpolator inter_ = Interpolator(tickRate_);
 
     void PollInternalClient();
+    
 #pragma endregion
 };
 

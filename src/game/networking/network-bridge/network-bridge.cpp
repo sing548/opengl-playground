@@ -27,9 +27,9 @@ NetworkBridge::NetworkBridge(Role role, const std::string& serverAddr, int port)
 
 NetworkBridge::~NetworkBridge() = default;
 
-void NetworkBridge::ManageGameStateDistribution(Scene& scene, float dT)
+void NetworkBridge::ManageGameStateDistribution(GameWorld& gameWorld, float dT)
 {
-
+    auto& scene = gameWorld.GetScene();
     uint32_t newClientId = 0;
 	const auto now = std::chrono::steady_clock::now();
 
@@ -47,7 +47,7 @@ void NetworkBridge::ManageGameStateDistribution(Scene& scene, float dT)
 		currentTick_++;
 		tickTimer_ -= tickRate_;
 
-        auto [defBuffer, tranBuffer] = BuildAndPackGameState(scene);
+        auto [defBuffer, tranBuffer] = BuildAndPackGameState(gameWorld);
 
         if (defBuffer.size() > 0)
         {
@@ -107,9 +107,9 @@ void NetworkBridge::PollEvents(GameWorld& world, AssetManager& assMan)
         PollInternalClient();
 }
 
-std::tuple<msgpack::sbuffer, msgpack::sbuffer> NetworkBridge::BuildAndPackGameState(const Scene& scene, bool fullState)
+std::tuple<msgpack::sbuffer, msgpack::sbuffer> NetworkBridge::BuildAndPackGameState(const GameWorld& gameWorld, bool fullState)
 {
-    auto [definitiveState, transientState] = BuildGameState(scene, fullState);
+    auto [definitiveState, transientState] = BuildGameState(gameWorld, fullState);
 
     msgpack::sbuffer definitiveBuffer;
 
@@ -130,10 +130,11 @@ std::tuple<msgpack::sbuffer, msgpack::sbuffer> NetworkBridge::BuildAndPackGameSt
     return std::tuple(std::move(definitiveBuffer), std::move(transientBuffer));
 }
 
-std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const Scene& scene, bool fullState)
+std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const GameWorld& gameWorld, bool fullState)
 {
     GameState transientState;
     GameState definitiveState;
+    const auto& scene = gameWorld.GetScene();
 
     transientState.tick = currentTick_;
     definitiveState.tick = currentTick_;
@@ -156,6 +157,7 @@ std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const Scene& scen
             EntityCreationState e;
             e.id                 = id;
             e.type               = static_cast<uint32_t>(model.type_);
+            e.ownerId            = model.type_ == ModelType::SHOT ? gameWorld.GetShotData(id).ownerId : 0;
             e.radius             = model.GetRadius();
             e.position           = model.GetPosition();
             e.scale              = model.GetScale();
@@ -164,6 +166,7 @@ std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const Scene& scen
             e.angularVelocity    = model.GetRotationSpeed();
 
             definitiveState.createdEntities.push_back(e);
+            definitiveState.playerToLastProcessedInput = latestInputTickPerPlayer_;
         }
         else
         {
@@ -179,9 +182,14 @@ std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const Scene& scen
 				e.angularVelocity   = model.GetRotationSpeed();
 	
 				transientState.entities.push_back(e);
+                transientState.playerToLastProcessedInput = latestInputTickPerPlayer_;
 			}
         }
     }
+
+    // ToDo: revisit on server side replay implementation
+    //if (!pastStates_.contains(currentTick_))
+    //    pastStates_.emplace(currentTick_, transientState);
 
     return std::tuple(definitiveState, transientState);
 }
@@ -225,7 +233,7 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
 
                 // Send complete state of Scene to this client only - one-time setup.
                 // Possible ToDo: If this ever grows, maybe add second method so I don't throw a completely packed object away
-                auto [gsBuffer, _] = BuildAndPackGameState(world.GetScene(), true);
+                auto [gsBuffer, _] = BuildAndPackGameState(world, true);
 
                 std::span<const std::byte> gsBytes {
                     reinterpret_cast<const std::byte*>(gsBuffer.data()),
@@ -268,10 +276,12 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
 		        	{
 		        		InputState is;
 		        		payload.convert(is);
-		        		is.tick = currentTick_;
 
                         auto id = connectionsToPlayers_.at(ev.conn);
                         inputStates_[id] = is;
+                        latestInputTickPerPlayer_[id] = is.tick;
+
+                        ReplayInputState(id);
 
 		        		break;
 		        	}
@@ -295,8 +305,23 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
     }
 }
 
+void NetworkBridge::ReplayInputState(uint32_t playerId)
+{
+    auto& inputState = inputStates_[playerId];
+
+    
+    if (!pastStates_.contains(inputState.tick))
+    return;
+    
+    auto& oldGameState = pastStates_[inputState.tick];
+    
+    // ToDo: Re-Calculate actions for player
+}
+
 void NetworkBridge::SendInputState(InputState& state)
 {
+    state.tick = currentTick_++;
+
     msgpack::sbuffer buffer;
 	msgpack::packer<msgpack::sbuffer> pk(buffer);
 	pk.pack_array(2);
@@ -309,6 +334,8 @@ void NetworkBridge::SendInputState(InputState& state)
     };
 
     client_->Send(bytes , true);
+
+    sentInputStates_.emplace(state.tick, state);
 }
 
 void NetworkBridge::PollInternalClient()
@@ -372,6 +399,16 @@ void NetworkBridge::PollInternalClient()
                         if (type == 2 || gs.entities.size() != 0)
                         {
                             inter_.FeedSnapshot(previousTick_, gs.entities);
+
+                            for (auto& ent : gs.entities)
+                            {
+                                if (ent.id == playerId_)
+                                {
+                                    latestPlayerState_ = ent;
+                                    break;
+                                }
+                            }
+
                             gs.entities.clear();
                         }
 
@@ -423,7 +460,7 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
 	    			spawner::SpawnPlayer(gameWorld, assMan, pi, entity.id);
 	    			break;
 	    		case 1: 
-	    			spawner::SpawnShotFromNetwork(gameWorld, assMan, pi, entity.id);
+	    			spawner::SpawnShotFromNetwork(gameWorld, assMan, pi, entity.ownerId, entity.id);
 	    			break;
 	    		case 2: 
 	    			spawner::SpawnNpc(gameWorld, assMan, pi, entity.id);
@@ -433,9 +470,33 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
 	    }
     }
 
-    inter_.InterpolateGameState(gameWorld.GetScene(), renderTime);
-    
+    inter_.InterpolateGameState(gameWorld.GetScene(), renderTime, playerId_);
+
 	return;
+}
+
+std::map<uint32_t, InputState>& NetworkBridge::ResetPlayerToLastInputState(GameWorld& world)
+{
+    if (!world.GetScene().ModelExists(playerId_) || pendingStates_.empty() || playerId_ == 0)
+        return sentInputStates_;
+
+    auto& playerModel = world.GetScene().GetModelByReference(playerId_);
+
+    const auto& gs = pendingStates_.back();
+
+    auto it = gs.playerToLastProcessedInput.find(playerId_);
+    if (it == gs.playerToLastProcessedInput.end())
+        return sentInputStates_;
+
+    playerModel.SetPosition(latestPlayerState_.position);
+    playerModel.SetScale(latestPlayerState_.scale);
+    playerModel.SetRotation(latestPlayerState_.rotation);
+    playerModel.SetVelocity(latestPlayerState_.velocity);
+    playerModel.SetRotationSpeed(latestPlayerState_.angularVelocity);
+
+    sentInputStates_.erase(sentInputStates_.begin(), sentInputStates_.upper_bound(it->second));
+
+    return sentInputStates_;
 }
 
 float NetworkBridge::CalculateRenderTime()

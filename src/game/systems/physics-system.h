@@ -11,7 +11,7 @@ public:
     PhysicsSystem() = default;
     explicit PhysicsSystem(bool isAuthoritative);
 
-    void Update(float dT, GameWorld& gameWorld);
+    void Update(float dT, GameWorld& gameWorld, uint32_t replay_PlayerId = 0);
 private:
     bool isAuthoritative_;
     void MoveModels(float dT, GameWorld& gameWorld);

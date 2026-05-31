@@ -23,7 +23,7 @@ void Interpolator::FeedSnapshot(uint32_t tick, const std::vector<EntityState>& e
 
 Interpolator::~Interpolator() = default;
 
-void Interpolator::InterpolateGameState(Scene& scene, float renderTime)
+void Interpolator::InterpolateGameState(Scene& scene, float renderTime, uint32_t playerId)
 {
     while (snapshots_.size() >= 2)
     {
@@ -58,11 +58,11 @@ void Interpolator::InterpolateGameState(Scene& scene, float renderTime)
     float h01 = -2.0f*t3 + 3.0f*t2;
     float h11 =       t3 -      t2;
 
-    std::cout << count << " snapshots active! Currently using timestamp: " << first.gameTime << " and " << second.gameTime << ", interpolation factor: " << intFactor << "\n";
+    //std::cout << count << " snapshots active! Currently using timestamp: " << first.gameTime << " and " << second.gameTime << ", interpolation factor: " << intFactor << "\n";
 
     for (auto& [id, oldEnt] : first.entities)
     {
-        if (!second.entities.contains(id) || !scene.ModelExists(id)) continue;
+        if (!second.entities.contains(id) || !scene.ModelExists(id) || id == playerId) continue;
 
         auto& newEnt = second.entities.at(id);
         auto& realEnt = scene.GetModelByReference(id);
