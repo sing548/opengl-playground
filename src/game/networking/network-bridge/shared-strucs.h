@@ -88,5 +88,7 @@ struct GameState {
     std::vector<PlayerDataState> playerData;
     std::vector<NpcDataState> npcData;
 
+    bool eventsApplied = false;
+
     MSGPACK_DEFINE(tick, playerToLastProcessedInput, entities, destroyedEntities, createdEntities, playerData, npcData);
 };

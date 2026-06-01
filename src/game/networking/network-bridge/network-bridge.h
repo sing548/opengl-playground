@@ -78,7 +78,7 @@ private:
     uint32_t playerId_ = 0;
     uint32_t previousTick_ = 0;
 
-    const float renderDelay_ = 0.1f;
+    const float renderDelay_ = 0.066f;
     
     std::chrono::steady_clock::time_point timeAtLastTick_;
     std::chrono::steady_clock::time_point lastUpdateTime_;

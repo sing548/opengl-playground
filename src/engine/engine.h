@@ -68,7 +68,8 @@ private:
     std::unordered_map<uint32_t, InputState> currentInputStates_;
 
     // only used in client mode for replay
-    std::unordered_map<uint32_t, InputState> stateAsMap_;
+    std::unordered_map<uint32_t, InputState> currentStateAsMap_;
+    std::unordered_map<uint32_t, InputState> previousStateAsMap_;
     std::vector<uint32_t> killedPlayers_;
 
     bool m_bNetworking = false;

@@ -443,6 +443,34 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
 {
     float renderTime = CalculateRenderTime();
 
+    for (auto& gs : pendingStates_)
+    {
+        if (gs.eventsApplied) continue;
+        gs.eventsApplied = true;
+        if (gs.tick == 0) continue;
+
+        for (auto& data : gs.playerData)
+        {
+            if (!gameWorld.IsPlayer(data.id)) continue;
+            auto& pd = gameWorld.GetPlayerData(data.id);
+            pd.lastHit = data.lastHit;
+            pd.lifes = data.lifes;
+        }
+
+        for (auto& data : gs.npcData)
+        {
+            if (!gameWorld.IsNpc(data.id)) continue;
+            auto& npcData = gameWorld.GetNpcData(data.id);
+            npcData.lastHit = data.lastHit;
+            npcData.lifes = data.lifes;
+        }
+
+        if (predictiveClient)
+            for (uint32_t id : gs.destroyedEntities)
+                if (gameWorld.IsShot(id) && gameWorld.GetShotData(id).ownerId == playerId_)
+                    gameWorld.MarkEntityForDelete(id);
+    }
+
     while (!pendingStates_.empty())
     {
         const auto& first = pendingStates_.front();
@@ -503,22 +531,6 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
 	    		default: break;
 	    	}
 	    }
-
-        for (auto& data : gs.playerData)
-        {
-            if (!gameWorld.IsPlayer(data.id)) continue;
-            auto& pd = gameWorld.GetPlayerData(data.id);
-            pd.lastHit = data.lastHit;
-            pd.lifes = data.lifes;
-        }
-
-        for (auto& data : gs.npcData)
-        {
-            if (!gameWorld.IsNpc(data.id)) continue;
-            auto& npcData = gameWorld.GetNpcData(data.id);
-            npcData.lastHit = data.lastHit;
-            npcData.lifes = data.lifes;
-        }
     }
 
     inter_.InterpolateGameState(gameWorld.GetScene(), renderTime, playerId_, predictiveClient);

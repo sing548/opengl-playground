@@ -30,7 +30,7 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     settings_["bloom"] = bloom;
     bool simpleFlight = true;
     settings_["simple_flight"] = simpleFlight;
-    bool predictiveClient = false;
+    bool predictiveClient = true;
     settings_["predictive_client"] = predictiveClient;
 
     camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 60.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0F, -90.0F);
@@ -190,12 +190,12 @@ void Engine::Run()
     
                 SystemsContext context = SystemsContext
                 {
-                    deltaTime,
+                    fixedDelta,
                     gameWorld_,
                     *assMan_,
                     *netwBridg_,
-                    currentInputStates_,
-                    previousInputStates_,
+                    currentStateAsMap_,
+                    previousStateAsMap_,
                     playerId_,
                     !(m_bNetworking && !m_bServer),
                     true,
@@ -204,8 +204,8 @@ void Engine::Run()
     
                 for (auto& [tick, state] : statesToReplay)
                 {
-                    stateAsMap_[playerId_] = state;
-                    // Not saving "previuousStateAsMap" - would need updating if 
+                    previousStateAsMap_[playerId_] = currentStateAsMap_[playerId_];
+                    currentStateAsMap_[playerId_] = state;
                     playerSystem_.Update(context);
                     physicsSystem_.Update(context);
                 }
