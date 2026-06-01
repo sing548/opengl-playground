@@ -19,7 +19,7 @@ NetworkBridge::NetworkBridge(Role role, const std::string& serverAddr, int port)
     {
         client_ = std::make_unique<ClientTransport>(serverAddr);
     }
-    else
+    else if (role == NetworkBridge::Role::Server)
     {
         server_ = std::make_unique<ServerTransport>(port);
     }

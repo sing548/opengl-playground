@@ -51,6 +51,12 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
         }
     });
 
+	glfwSetFramebufferSizeCallback(window_->Get(), [](GLFWwindow* w, int width, int height)
+	{
+		Engine* engine = static_cast<Engine*>(glfwGetWindowUserPointer(w));
+		engine->GetWindow().ResizeWindow(width, height);
+	});
+
     if (m_bNetworking)
     {
         playerId_ = 0;
@@ -82,6 +88,8 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
         auto state = InputState { playerId_, false, false, false, false, false, false  };
         currentInputStates_.try_emplace(playerId_, state);
         previousInputStates_.try_emplace(playerId_, state);
+
+        netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Offline, "", 0);
     }
 
     TempBuildRenderHelpers();
@@ -149,6 +157,13 @@ void Engine::Run()
         logicTime += deltaTime;
         
         glfwPollEvents();
+
+
+        if (window_->WasWindowResized()) 
+        {
+            renderer_->ResizeWindow(window_->GetSize().width, window_->GetSize().height);
+            window_->ClearResizedFlag();
+        }
 
         while (accTime >= fixedDelta)
         {

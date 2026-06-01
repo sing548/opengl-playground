@@ -62,7 +62,7 @@ Window::Window(unsigned int width, unsigned int height, std::unique_ptr<Camera> 
 		throw std::runtime_error("Failed to initialize GLAD");
     }
 
-	glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	//glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 Camera& Window::GetCamera()
@@ -103,8 +103,14 @@ void Window::UpdateCameraPitch(float pitch)
 
 void Window::ResizeWindow(unsigned int width, unsigned int height)
 {
+	if (width == 0 || height == 0)
+		return;
+
 	size_.width = width;
 	size_.height = height;
+	glViewport(0, 0, width, height);
+	
+	windowResized_ = true;
 }
 
 void Window::HandleInput(float deltaTime)

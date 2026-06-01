@@ -105,7 +105,7 @@ void PlayerSystem::Shoot(GameWorld& gameWorld,
                          bool predicted,
                          NetworkBridge& bridge)
 {
-    if (!current.contains(playerId) || !previous.contains(playerId)) return;
+    if (!current.contains(playerId) || !previous.contains(playerId) || !gameWorld.IsPlayer(playerId)) return;
     auto& pd = gameWorld.GetPlayerData(playerId);
 
     if (pd.shotCooldown > 0.0f)

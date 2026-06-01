@@ -24,7 +24,7 @@ class AssetManager;
 class NetworkBridge
 {
 public:
-    enum class Role { Server, Client };
+    enum class Role { Server, Client, Offline };
 
     NetworkBridge(Role role, const std::string& serverAddr, int port);
     ~NetworkBridge();
@@ -78,7 +78,7 @@ private:
     uint32_t playerId_ = 0;
     uint32_t previousTick_ = 0;
 
-    const float renderDelay_ = 0.066f;
+    const float renderDelay_ = 0.08f;
     
     std::chrono::steady_clock::time_point timeAtLastTick_;
     std::chrono::steady_clock::time_point lastUpdateTime_;

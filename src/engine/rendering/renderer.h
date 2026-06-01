@@ -24,7 +24,7 @@ public:
     Renderer(unsigned int width, unsigned int height);
 
     void Draw(const RenderList& renderList, const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings);
-
+    void ResizeWindow(unsigned int width, unsigned int height);
 private:
     unsigned int frameFBO_;
     unsigned int colorBuffers_[2];

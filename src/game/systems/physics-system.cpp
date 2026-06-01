@@ -56,7 +56,7 @@ void PhysicsSystem::MoveModel(float dT, Scene& scene, unsigned int id, const glm
 
 void PhysicsSystem::CheckHits(GameWorld& gameWorld, bool authoritative, bool predictive)
 {
-    if (predictive) return;
+    if (predictive && !authoritative) return;
     
     Scene& scene = gameWorld.GetScene();
 

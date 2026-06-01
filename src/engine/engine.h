@@ -36,6 +36,7 @@ public:
     void BasicLevel();
     void Run();
     AssetManager& GetAssMan();
+    Window& GetWindow() { return *window_; };
 
 private:
     const unsigned int WIDTH = 1920;

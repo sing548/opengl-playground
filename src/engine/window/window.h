@@ -37,10 +37,13 @@ public:
     void UpdateCameraYaw(float yaw);
     void UpdateCameraPitch(float pitch);
     void mouse_callback(double xpos, double ypos);
+    bool WasWindowResized() { return windowResized_; };
+    void ClearResizedFlag() { windowResized_ = false; };
 
-    private:
+private:
     float lastX_, lastY_;
     unsigned int firstMouse_ = 20;
+    bool windowResized_ = false;
 
     GLFWwindow* window_;
     WindowSize size_;
@@ -51,6 +54,7 @@ public:
     
     
     static void error_callback(int error, const char* description);
+
 };
 
 #endif

@@ -186,6 +186,24 @@ void Renderer::Draw(const RenderList& renderList, const FrameGlobals& globals, c
 	glBindVertexArray(0);
 }
 
+void Renderer::ResizeWindow(unsigned int width, unsigned int height)
+{
+	for (int i = 0; i < 2; i++) 
+	{
+		glBindTexture(GL_TEXTURE_2D, colorBuffers_[i]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+	}
+	
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo_);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+	
+	for (int i = 0; i < 2; i++)
+	{
+		glBindTexture(GL_TEXTURE_2D, pingPongColorbuffers_[i]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+	}
+}
+
 void Renderer::ApplyPassState(RenderPass pass)
 {
 	switch (pass)
