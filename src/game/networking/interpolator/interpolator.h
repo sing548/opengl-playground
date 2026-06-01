@@ -16,7 +16,7 @@ public:
     ~Interpolator();
     
     void FeedSnapshot(uint32_t tick, const std::vector<EntityState>& entities);
-    void InterpolateGameState(Scene& scene, float renderTime, uint32_t playerId);
+    void InterpolateGameState(Scene& scene, float renderTime, uint32_t playerId, bool predictiveClient);
 private:
     
     float tickRate_;

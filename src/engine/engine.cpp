@@ -30,6 +30,8 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     settings_["bloom"] = bloom;
     bool simpleFlight = true;
     settings_["simple_flight"] = simpleFlight;
+    bool predictiveClient = false;
+    settings_["predictive_client"] = predictiveClient;
 
     camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 60.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0F, -90.0F);
     
@@ -177,28 +179,33 @@ void Engine::Run()
 
         if (m_bNetworking && !m_bServer)
         {
-            netwBridg_->MergeClientWithNetwork(gameWorld_, *assMan_);
-            auto& statesToReplay = netwBridg_->ResetPlayerToLastInputState(gameWorld_);
+            bool predictive = settings_["predictive_client"];
+            netwBridg_->MergeClientWithNetwork(gameWorld_, *assMan_, predictive);
 
-            SystemsContext context = SystemsContext
+            if (predictive)
             {
-                deltaTime,
-                gameWorld_,
-                *assMan_,
-                currentInputStates_,
-                previousInputStates_,
-                playerId_,
-                !(m_bNetworking && !m_bServer),
-                true,
-                settings_
-            };
-
-            for (auto& [tick, state] : statesToReplay)
-            {
-                stateAsMap_[playerId_] = state;
-                // Not saving "previuousStateAsMap" - would need updating if 
-                playerSystem_.Update(context);
-                physicsSystem_.Update(context);
+                auto& statesToReplay = netwBridg_->ResetPlayerToLastInputState(gameWorld_);
+    
+                SystemsContext context = SystemsContext
+                {
+                    deltaTime,
+                    gameWorld_,
+                    *assMan_,
+                    currentInputStates_,
+                    previousInputStates_,
+                    playerId_,
+                    !(m_bNetworking && !m_bServer),
+                    true,
+                    settings_
+                };
+    
+                for (auto& [tick, state] : statesToReplay)
+                {
+                    stateAsMap_[playerId_] = state;
+                    // Not saving "previuousStateAsMap" - would need updating if 
+                    playerSystem_.Update(context);
+                    physicsSystem_.Update(context);
+                }
             }
         }
 
@@ -412,6 +419,8 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, 
 
     if (engine) 
     {
+        if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
+            engine->settings_["predictive_client"] = !engine->settings_["predictive_client"];
         if (key == GLFW_KEY_F5 && action == GLFW_PRESS)
         {
             auto it = engine->currentInputStates_.find(engine->playerId_);

@@ -23,7 +23,7 @@ void Interpolator::FeedSnapshot(uint32_t tick, const std::vector<EntityState>& e
 
 Interpolator::~Interpolator() = default;
 
-void Interpolator::InterpolateGameState(Scene& scene, float renderTime, uint32_t playerId)
+void Interpolator::InterpolateGameState(Scene& scene, float renderTime, uint32_t playerId, bool predictiveClient)
 {
     while (snapshots_.size() >= 2)
     {
@@ -62,7 +62,8 @@ void Interpolator::InterpolateGameState(Scene& scene, float renderTime, uint32_t
 
     for (auto& [id, oldEnt] : first.entities)
     {
-        if (!second.entities.contains(id) || !scene.ModelExists(id) || id == playerId) continue;
+        if (!second.entities.contains(id) || !scene.ModelExists(id)) continue;
+        if (id == playerId && predictiveClient) continue;
 
         auto& newEnt = second.entities.at(id);
         auto& realEnt = scene.GetModelByReference(id);

@@ -8,7 +8,7 @@ void PhysicsSystem::Update(SystemsContext ctx)
     if (!ctx.replay)
     {
         MoveModels(ctx.dT, ctx.world, ctx.authoritative);
-        CheckHits(ctx.world, ctx.authoritative);
+        CheckHits(ctx.world, ctx.authoritative, ctx.settings.at("predictive_client"));
         CorrectZOffset(ctx.world.GetScene());
     }
     else
@@ -54,9 +54,9 @@ void PhysicsSystem::MoveModel(float dT, Scene& scene, unsigned int id, const glm
     if (abs(position.z) > scene.currentFurthestPosition.z) scene.currentFurthestPosition.z = abs(position.z);
 }
 
-void PhysicsSystem::CheckHits(GameWorld& gameWorld, bool authoritative)
+void PhysicsSystem::CheckHits(GameWorld& gameWorld, bool authoritative, bool predictive)
 {
-    if (!authoritative) return;
+    if (predictive) return;
     
     Scene& scene = gameWorld.GetScene();
 
@@ -73,11 +73,14 @@ void PhysicsSystem::CheckHits(GameWorld& gameWorld, bool authoritative)
 
             playerData.lastHit = 0.2f;
 
-            playerData.lifes -= 1;
-
-            if (playerData.lifes <= 0)
-                gameWorld.MarkEntityForDelete(playerId);
-            gameWorld.MarkEntityForDelete(shotId);
+            if (authoritative)
+            {
+                playerData.lifes -= 1;
+    
+                if (playerData.lifes <= 0)
+                    gameWorld.MarkEntityForDelete(playerId);
+                gameWorld.MarkEntityForDelete(shotId);
+            }
             
             shotConsumed = true;
             break;
@@ -95,10 +98,13 @@ void PhysicsSystem::CheckHits(GameWorld& gameWorld, bool authoritative)
 
             npcData.lifes -= 1;
     
-            if (npcData.lifes <= 0)
-                gameWorld.MarkEntityForDelete(npcId);
-            gameWorld.MarkEntityForDelete(shotId);
-            shotConsumed = true;
+            if (authoritative)
+            {
+                if (npcData.lifes <= 0)
+                    gameWorld.MarkEntityForDelete(npcId);
+                gameWorld.MarkEntityForDelete(shotId);
+                shotConsumed = true;
+            }
             break;
         }
     }

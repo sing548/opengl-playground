@@ -40,7 +40,7 @@ public:
 #pragma region Client
     uint32_t GetPlayerId() { return playerId_; };
     void SendInputState(InputState& state);
-    void MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan);
+    void MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan, bool predictiveClient);
     std::map<uint32_t, InputState>& ResetPlayerToLastInputState(GameWorld& world);
 #pragma endregion
 

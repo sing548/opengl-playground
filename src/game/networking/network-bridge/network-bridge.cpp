@@ -422,7 +422,7 @@ void NetworkBridge::PollInternalClient()
     }
 }
 
-void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan)
+void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan, bool predictiveClient)
 {
     float renderTime = CalculateRenderTime();
 
@@ -470,7 +470,7 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
 	    }
     }
 
-    inter_.InterpolateGameState(gameWorld.GetScene(), renderTime, playerId_);
+    inter_.InterpolateGameState(gameWorld.GetScene(), renderTime, playerId_, predictiveClient);
 
 	return;
 }
