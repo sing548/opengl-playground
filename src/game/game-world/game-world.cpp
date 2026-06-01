@@ -18,6 +18,7 @@ RemovedEntities GameWorld::RemoveMarkedEntities()
         npcData_.erase(id);
         shotData_.erase(id);
         playerData_.erase(id);
+        std::cout << "Removed entity: " << id << std::endl;
     }
     scene_.RemoveMarkedModels();
 
@@ -38,9 +39,9 @@ uint32_t GameWorld::AddNpc(uint32_t id)
     return id;
 }
 
-uint32_t GameWorld::AddShot(uint32_t id, uint32_t shooterId)
+uint32_t GameWorld::AddShot(uint32_t id, uint32_t shooterId, bool predicted, uint32_t creationTick)
 {
-    shotData_[id] = ShotData { id, shooterId };
+    shotData_[id] = ShotData { id, shooterId, creationTick };
     return id;
 }
 
@@ -48,4 +49,13 @@ void GameWorld::RemoveEntity(uint32_t id)
 {
     scene_.MarkModelForDelete(id);
     scene_.RemoveModel(id);
+}
+
+void GameWorld::ReassignShotId(uint32_t oldId, uint32_t newId)
+{
+    auto nh = shotData_.extract(oldId);
+    if (nh.empty()) return;
+
+    nh.key() = newId;
+    shotData_.insert(std::move(nh));
 }

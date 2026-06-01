@@ -1,5 +1,7 @@
 #include "player-system.h"
 
+#include "../networking/network-bridge/network-bridge.h"
+
 #include "system-structs.h"
 #include "../spawner/spawner.h"
 #include "../game-world/game-world.h"
@@ -7,7 +9,9 @@
 void PlayerSystem::Update(SystemsContext ctx)
 {
     if (ctx.replay || ctx.authoritative)
-        ExecuteInput(ctx.dT, ctx.world, ctx.assMan, ctx.current, ctx.previous, ctx.localPlayerId, ctx.authoritative, ctx.settings.at("simple_flight"));
+        ExecuteInput(ctx.dT, ctx.world, ctx.assMan, ctx.current, ctx.previous, ctx.localPlayerId, ctx.authoritative, ctx.settings.at("simple_flight"), ctx.bridge);
+    else if (!ctx.replay && ctx.settings.at("predictive_client"))
+        Shoot(ctx.world, ctx.assMan, ctx.localPlayerId, ctx.dT, ctx.current, ctx.previous, true, ctx.bridge);
     if (!ctx.replay)
     {
         UpdatePlayerData(ctx.dT, ctx.world);
@@ -21,7 +25,8 @@ void PlayerSystem::ExecuteInput(float dT,
                                 std::unordered_map<uint32_t, InputState>& previousInputStates,
                                 uint32_t playerId,
                                 bool authoritative,
-                                bool lockRAndV
+                                bool lockRAndV,
+                                NetworkBridge& bridge
                             )
 { 
     
@@ -74,26 +79,7 @@ void PlayerSystem::ExecuteInput(float dT,
 
         if (!authoritative) continue;
 
-        auto& pd = gameWorld.GetPlayerData(id);
-
-        if (pd.shotCooldown > 0.0f)
-            pd.shotCooldown = std::max(0.0f, pd.shotCooldown - dT);
-        
-        bool shootPressed = state.shoot && !previousInputStates.at(id).shoot;
-
-        if (pd.shotCooldown <= 0.0f)
-        {
-            if (shootPressed)
-            {
-                Shoot(gameWorld, assMan, id);
-                pd.shotCooldown = 0.1f;
-            }
-            else if (state.shoot)
-            {
-                Shoot(gameWorld, assMan, id);
-                pd.shotCooldown = 0.5f;
-            }
-        }
+        Shoot(gameWorld, assMan, id, dT, currentInputStates, previousInputStates, false, bridge);
     }
 }
 
@@ -110,16 +96,44 @@ void PlayerSystem::RotateModel(unsigned int id, Scene& scene, const glm::quat& c
     }
 }
 
-void PlayerSystem::Shoot(GameWorld& gameWorld, AssetManager& assMan, uint32_t shooterId)
+void PlayerSystem::Shoot(GameWorld& gameWorld,
+                         AssetManager& assMan,
+                         uint32_t playerId,
+                         float dT,
+                         std::unordered_map<uint32_t, InputState>& current,
+                         std::unordered_map<uint32_t, InputState>& previous,
+                         bool predicted,
+                         NetworkBridge& bridge)
 {
-    auto shooter = gameWorld.GetScene().GetModelByReference(shooterId);
+    if (!current.contains(playerId) || !previous.contains(playerId)) return;
+    auto& pd = gameWorld.GetPlayerData(playerId);
+
+    if (pd.shotCooldown > 0.0f)
+    {
+        pd.shotCooldown = std::max(0.0f, pd.shotCooldown - dT);
+        return;
+    }
+    
+    bool shootPressed = current.at(playerId).shoot && !previous.at(playerId).shoot;
+
+    if (shootPressed)
+        pd.shotCooldown = 0.1f;
+    else if (current.at(playerId).shoot)
+        pd.shotCooldown = 0.5f;
+    else 
+        return;
+
+    auto shooter = gameWorld.GetScene().GetModelByReference(playerId);
     PhysicalInfo pi         = PhysicalInfo();
 	pi.position_		    = shooter.GetPosition();
 	pi.rotation_		    = shooter.GetRotation();
 	pi.angularVelocity_	    = shooter.GetRotationSpeed();
 	pi.scale_			    = shooter.GetScale();
 	pi.velocity_    		= shooter.GetVelocity();
-    spawner::SpawnShot(gameWorld, assMan, pi, shooterId);
+    auto id = spawner::SpawnShot(gameWorld, assMan, pi, playerId, predicted ? localPredCounter++ : 0, predicted, current.at(playerId).tick);
+
+    if (predicted)
+        bridge.AddPredictedShot(id);
 }
 
 void PlayerSystem::UpdatePlayerData(float dT, GameWorld& gameWorld)

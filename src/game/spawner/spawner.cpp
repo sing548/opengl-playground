@@ -6,7 +6,7 @@
 
 namespace spawner 
 {
-    uint32_t SpawnShot(GameWorld& gameWorld, AssetManager& assMan, PhysicalInfo pi, uint32_t shooterId, uint32_t id)
+    uint32_t SpawnShot(GameWorld& gameWorld, AssetManager& assMan, PhysicalInfo pi, uint32_t shooterId, uint32_t id, bool predicted, uint32_t tick)
     {
         auto& shooter = gameWorld.GetScene().GetModelByReference(shooterId);
         glm::vec3 shotBaseOrientation = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -18,7 +18,7 @@ namespace spawner
 
         Model shot(Model::GetModelPath(ModelType::SHOT), pi, assMan, ModelType::SHOT, shotBaseOrientation, true, 0.05f);
         id = gameWorld.GetScene().AddModel(shot, id);
-        gameWorld.AddShot(id, shooterId);
+        gameWorld.AddShot(id, shooterId, predicted, tick);
 
         return id;
     }

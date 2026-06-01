@@ -40,6 +40,7 @@ struct EntityCreationState {
     uint32_t id;
     uint32_t type;
     uint32_t ownerId;
+    uint32_t sourceTick;
     float radius;
 
     glm::vec3 position;
@@ -49,12 +50,32 @@ struct EntityCreationState {
     glm::vec3 angularVelocity;
 
     MSGPACK_DEFINE(
-        id, type, ownerId, radius, 
+        id, type, ownerId, sourceTick, radius, 
         position.x, position.y, position.z,
         scale.x, scale.y, scale.z,
         rotation.x, rotation.y, rotation.z, rotation.w,
         velocity.x, velocity.y, velocity.z,
         angularVelocity.x, angularVelocity.y, angularVelocity.z
+    );
+};
+
+struct PlayerDataState {
+    uint32_t id;
+    float lastHit;
+    int lifes;
+
+    MSGPACK_DEFINE(
+        id, lastHit, lifes
+    );
+};
+
+struct NpcDataState {
+    uint32_t id;
+    float lastHit;
+    int lifes;
+
+    MSGPACK_DEFINE(
+        id, lastHit, lifes
     );
 };
 
@@ -64,6 +85,8 @@ struct GameState {
     std::vector<EntityState> entities;
     std::vector<uint32_t> destroyedEntities;
     std::vector<EntityCreationState> createdEntities;
+    std::vector<PlayerDataState> playerData;
+    std::vector<NpcDataState> npcData;
 
-    MSGPACK_DEFINE(tick, playerToLastProcessedInput, entities, destroyedEntities, createdEntities);
+    MSGPACK_DEFINE(tick, playerToLastProcessedInput, entities, destroyedEntities, createdEntities, playerData, npcData);
 };

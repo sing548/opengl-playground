@@ -15,6 +15,7 @@ public:
     Model& GetModelByReference(uint32_t id);
     const Model& GetModelByReference(uint32_t id) const;
     void RemoveModel(uint32_t id);
+    void ReassignId(uint32_t oldId, uint32_t newId);
 
     void MarkModelForDelete(uint32_t id);
     void RemoveMarkedModels();
@@ -23,7 +24,6 @@ public:
 
     const std::vector<uint32_t>& GetAddedModels() const;
     void ClearAddedModels() { addedModels_.clear(); };
-
     
     void AddExtraModelToAddedIds(uint32_t id);
 

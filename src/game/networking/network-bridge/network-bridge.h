@@ -42,6 +42,7 @@ public:
     void SendInputState(InputState& state);
     void MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan, bool predictiveClient);
     std::map<uint32_t, InputState>& ResetPlayerToLastInputState(GameWorld& world);
+    void AddPredictedShot(uint32_t id) { pendingShotCreations.emplace(currentTick_, id); };
 #pragma endregion
 
 private:
@@ -62,6 +63,7 @@ private:
     std::unordered_map<uint32_t, InputState> inputStates_;
 
 #pragma region Server
+    std::vector<uint32_t> pendingAdded_;
     std::vector<uint32_t> pendingRemoved_;
     std::map<uint32_t, GameState> pastStates_;
     std::unordered_map<uint32_t, uint32_t> latestInputTickPerPlayer_;
@@ -89,6 +91,9 @@ private:
     std::map<uint32_t, InputState> sentInputStates_;
 
     std::deque<GameState> pendingStates_;
+
+    // <tick, id>
+    std::map<uint32_t, uint32_t> pendingShotCreations;
 
     Interpolator inter_ = Interpolator(tickRate_);
 

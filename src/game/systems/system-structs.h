@@ -5,14 +5,16 @@
 #include <unordered_map>
 
 class GameWorld;
-class AssetManager;
 class InputState;
+class AssetManager;
+class NetworkBridge;
 
 struct SystemsContext
 {
     float dT;
     GameWorld& world;
     AssetManager& assMan;
+    NetworkBridge& bridge;
     std::unordered_map<uint32_t, InputState> current;
     std::unordered_map<uint32_t, InputState> previous;
     uint32_t localPlayerId;

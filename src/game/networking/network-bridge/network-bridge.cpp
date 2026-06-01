@@ -39,6 +39,12 @@ void NetworkBridge::ManageGameStateDistribution(GameWorld& gameWorld, float dT)
             pendingRemoved_.push_back(id);
     }
 
+    for (uint32_t id : scene.GetAddedModels())
+    {
+        if (std::find(pendingAdded_.begin(), pendingAdded_.end(), id) == pendingAdded_.end())
+            pendingAdded_.push_back(id);
+    }
+
 	tickTimer_ += dT;
 
 
@@ -64,7 +70,7 @@ void NetworkBridge::ManageGameStateDistribution(GameWorld& gameWorld, float dT)
         };
         server_->Broadcast(tranBytes, false);
 
-        scene.ClearAddedModels();
+        pendingAdded_.clear();
         pendingRemoved_.clear();
 	}
 }
@@ -145,11 +151,9 @@ std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const GameWorld& 
         definitiveState.destroyedEntities.push_back(id);
     }
 
-    auto& addedModels = scene.GetAddedModels();
-
     for (const auto& [id, model] : scene.GetModels())
     {
-        const bool isNew = std::find(addedModels.begin(), addedModels.end(), id) != addedModels.end();
+        const bool isNew = std::find(pendingAdded_.begin(), pendingAdded_.end(), id) != pendingAdded_.end();
 
         if (isNew || fullState)
         {
@@ -164,6 +168,7 @@ std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const GameWorld& 
             e.rotation           = model.GetRotation();
             e.velocity           = model.GetVelocity();
             e.angularVelocity    = model.GetRotationSpeed();
+            e.sourceTick         = model.type_ == ModelType::SHOT ? gameWorld.GetShotData(id).creationTick : 0;
 
             definitiveState.createdEntities.push_back(e);
             definitiveState.playerToLastProcessedInput = latestInputTickPerPlayer_;
@@ -185,6 +190,18 @@ std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const GameWorld& 
                 transientState.playerToLastProcessedInput = latestInputTickPerPlayer_;
 			}
         }
+    }
+
+    for (auto& [id, pd] : gameWorld.GetPlayerData())
+    {
+        PlayerDataState pds { id, pd.lastHit, pd.lifes };
+        transientState.playerData.push_back(pds);
+    }
+
+    for (auto& [id, npcd] : gameWorld.GetNpcData())
+    {
+        NpcDataState nds { id, npcd.lastHit, npcd.lifes };
+        transientState.npcData.push_back(nds);
     }
 
     // ToDo: revisit on server side replay implementation
@@ -281,7 +298,7 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
                         inputStates_[id] = is;
                         latestInputTickPerPlayer_[id] = is.tick;
 
-                        ReplayInputState(id);
+                        //ReplayInputState(id);
 
 		        		break;
 		        	}
@@ -459,8 +476,26 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
 	    		case 0: 
 	    			spawner::SpawnPlayer(gameWorld, assMan, pi, entity.id);
 	    			break;
-	    		case 1: 
-	    			spawner::SpawnShotFromNetwork(gameWorld, assMan, pi, entity.ownerId, entity.id);
+	    		case 1:
+                    if ((entity.ownerId == playerId_ && predictiveClient))
+                    {
+                        auto match = pendingShotCreations.find(entity.sourceTick);
+
+                        if (match != pendingShotCreations.end())
+                        {
+                            gameWorld.GetScene().ReassignId(match->second, entity.id);
+                            gameWorld.ReassignShotId(match->second, entity.id);
+                            pendingShotCreations.erase(match);
+                        }
+                        else
+                        {
+                            // ToDo: Maybe revisit, a bit "hacky" right now
+                            if (pendingShotCreations.size() > 0 && pendingShotCreations.begin()->first > entity.sourceTick + 50)
+                                pendingShotCreations.erase(pendingShotCreations.begin());
+                        }
+                    }
+                    else
+                        spawner::SpawnShotFromNetwork(gameWorld, assMan, pi, entity.ownerId, entity.id);
 	    			break;
 	    		case 2: 
 	    			spawner::SpawnNpc(gameWorld, assMan, pi, entity.id);
@@ -468,6 +503,22 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
 	    		default: break;
 	    	}
 	    }
+
+        for (auto& data : gs.playerData)
+        {
+            if (!gameWorld.IsPlayer(data.id)) continue;
+            auto& pd = gameWorld.GetPlayerData(data.id);
+            pd.lastHit = data.lastHit;
+            pd.lifes = data.lifes;
+        }
+
+        for (auto& data : gs.npcData)
+        {
+            if (!gameWorld.IsNpc(data.id)) continue;
+            auto& npcData = gameWorld.GetNpcData(data.id);
+            npcData.lastHit = data.lastHit;
+            npcData.lifes = data.lifes;
+        }
     }
 
     inter_.InterpolateGameState(gameWorld.GetScene(), renderTime, playerId_, predictiveClient);

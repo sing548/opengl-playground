@@ -20,7 +20,8 @@ uint32_t Scene::AddModel(Model& model, int id)
         modelId = nextId_++;  
     }
     
-    models_.try_emplace(modelId, model);
+    auto [it, inserted] = models_.try_emplace(modelId, model);
+    if (!inserted) std::cout << "AddModel COLLISION on id " << modelId << "\n";
 
     addedModels_.push_back(modelId);
 
@@ -56,6 +57,15 @@ const Model& Scene::GetModelByReference(uint32_t id) const
     return models_.at(id);
 }
 
+void Scene::ReassignId(uint32_t oldId, uint32_t newId)
+{
+    auto nh = models_.extract(oldId);
+    if (nh.empty()) return;
+
+    nh.key() = newId;
+    models_.insert(std::move(nh));
+}
+
 void Scene::MarkModelForDelete(uint32_t id)
 {
     removeMarkedModels_.push_back(id);
@@ -65,6 +75,8 @@ void Scene::RemoveMarkedModels()
 {
     for (uint32_t id : removeMarkedModels_)
         RemoveModel(id);
+    
+    ClearRemovedModels();
 }
 
 const std::vector<uint32_t>& Scene::GetRemoveMarkedModels() const 

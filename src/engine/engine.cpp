@@ -175,6 +175,8 @@ void Engine::Run()
                 j = 0;
                 logicTime = 0;
             }
+
+            gameWorld_.GetScene().ClearAddedModels();
         }
 
         if (m_bNetworking && !m_bServer)
@@ -191,6 +193,7 @@ void Engine::Run()
                     deltaTime,
                     gameWorld_,
                     *assMan_,
+                    *netwBridg_,
                     currentInputStates_,
                     previousInputStates_,
                     playerId_,
@@ -305,6 +308,7 @@ void Engine::HandleLogic(float deltaTime)
         deltaTime,
         gameWorld_,
         *assMan_,
+        *netwBridg_,
         currentInputStates_,
         previousInputStates_,
         playerId_,
