@@ -1,3 +1,6 @@
+This is a small passion/learning project for graphics programming using C++ and OpenGL.
+Currently mostly the architecture containing a basic pipeline handling rendering, shaders and gameplay systems and networking using Valves GameNetworkingSockets.
+
 Build:
 
   Linux (system packages — fast):
@@ -12,4 +15,4 @@ Build:
     cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=S:/src/vcpkg_win/scripts/buildsystems/vcpkg.cmake
     cmake --build build --config Release
 
-Run from build/: ./OpenGLPlayground [server --port 5001 | client host:port]
+Run from build/: ./OpenGLPlayground [server --port 5001 | client --url host:port]
