@@ -1,5 +1,13 @@
 This is a small passion/learning project for graphics programming using C++ and OpenGL.
-Currently mostly the architecture containing a basic pipeline handling rendering, shaders and gameplay systems and networking using Valves GameNetworkingSockets.
+Currently mostly the architecture containing a basic pipeline handling rendering, shaders and gameplay systems and networking using Valve's GameNetworkingSockets.
+
+What's implemented so far:
+- Rendering pipeline with shader handling
+- Model loading (assimp)
+- Client/server networking (Valve's GameNetworkingSockets)
+- Message serialization (protobuf / msgpack)
+- Basic gameplay systems
+- CMake build with optional vcpkg, Linux & Windows
 
 Build:
 
