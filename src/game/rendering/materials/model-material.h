@@ -3,8 +3,8 @@
 
 #include <glm/ext/matrix_clip_space.hpp>
 
-#include "material.h"
-#include "../../rendering/render-list.h"
+#include "../../../engine/rendering/render-list.h"
+#include "../../../engine/rendering/materials/material.h"
 
 class ModelMaterial : public Material
 {

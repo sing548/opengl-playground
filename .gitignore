@@ -34,3 +34,4 @@
 build/
 assets/
 .vscode/
+.temp

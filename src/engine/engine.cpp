@@ -2,7 +2,9 @@
 
 #include "../game/spawner/spawner.h"
 #include "../game/systems/system-structs.h"
+#include "../game/rendering/terrain/flat-chunk-generator.h"
 #include "../game/networking/network-bridge/network-bridge.h"
+
 
 Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
 {
@@ -24,6 +26,8 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     settings_["third_person"] = thirdPerson;
     bool skyBox = false;
     settings_["sky_box"] = skyBox;
+    bool debug_view = false;
+    settings_["debug_view"] = debug_view;
     bool hitboxes = false;
     settings_["hitboxes"] = hitboxes;
     bool bloom = true;
@@ -93,6 +97,17 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     }
 
     TempBuildRenderHelpers();
+
+    chunkGenerator_ = std::make_unique<FlatChunkGenerator>();
+
+    ChunkRegion testOrigin {
+        { 0, 0 },
+        5.0f,
+        16
+    };
+
+    auto testChunk = chunkGenerator_->Generate(testOrigin);
+    testChunk_ = chunkHandler_.UploadChunk(testChunk);
 }
 
 Engine::~Engine() = default;
@@ -440,6 +455,9 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, 
     {
         if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
             engine->settings_["predictive_client"] = !engine->settings_["predictive_client"];
+        // debug_view
+        if (key == GLFW_KEY_F4 && action == GLFW_PRESS)
+            engine->settings_["debug_view"] = !engine->settings_["debug_view"];
         if (key == GLFW_KEY_F5 && action == GLFW_PRESS)
         {
             auto it = engine->currentInputStates_.find(engine->playerId_);
@@ -464,10 +482,9 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, 
         // Simple Flight
         if (key == GLFW_KEY_F7 && action == GLFW_PRESS)
             engine->settings_["simple_flight"] = !engine->settings_["simple_flight"];
-        // Hitboxes
+        // hitboxes
         if (key == GLFW_KEY_F8 && action == GLFW_PRESS)
             engine->settings_["hitboxes"] = !engine->settings_["hitboxes"];
-            //engine->renderer_->ToggleHitboxes();
         // Skybox
         if (key == GLFW_KEY_F9 && action == GLFW_PRESS)
             engine->settings_["sky_box"] = !engine->settings_["sky_box"];
@@ -543,7 +560,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			dc.material = modelMat_.get();
 			dc.transform = modelProjection;
 			dc.tint = {1,1,1,1};
-			dc.renderPass = RenderPass::Opaque;
+			dc.renderPass = settings_["debug_view"] ? RenderPass::Debug : RenderPass::Opaque;
 
 			rl.commands.push_back(dc);
 		}
@@ -594,7 +611,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
         if (npcData.lastHit > 0)
 		{
 			auto& model = gameWorld_.GetScene().GetModelByReference(id);
-			
+
 			DrawCommand dc;
 			dc.mesh = model.GetHitboxMesh();
 			dc.material = hitboxMat_.get();
@@ -627,6 +644,15 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 
 		dc.mesh->Draw(dc.material->GetShader());
 	}
+
+    
+
+    /*DrawCommand dc;
+    dc.mesh = testChunk_.get();
+    dc.material = modelMat_.get();
+    dc.transform = glm::mat4(1.0f);
+    dc.renderPass = settings_["debug_view"] ? RenderPass::Debug : RenderPass::Opaque;
+    rl.commands.push_back(dc);*/
 
     return std::tuple(rl, fg);
 };

@@ -51,14 +51,16 @@ add_executable(OpenGLPlayground
     src/engine/models/scene.cpp
     src/engine/net-transport/client-transport.cpp
     src/engine/net-transport/server-transport.cpp
-    src/engine/rendering/materials/hitbox-material.cpp
-    src/engine/rendering/materials/model-material.cpp
     src/engine/rendering/sky/sky.cpp
     src/engine/rendering/renderer.cpp
+    src/engine/rendering/terrain/chunk-handler.cpp
     src/engine/engine.cpp
     src/game/game-world/game-world.cpp
     src/game/networking/interpolator/interpolator.cpp
     src/game/networking/network-bridge/network-bridge.cpp
+    src/game/rendering/materials/hitbox-material.cpp
+    src/game/rendering/materials/model-material.cpp
+    src/game/rendering/terrain/flat-chunk-generator.cpp
     src/game/spawner/spawner.cpp
     src/game/systems/camera-system.cpp
     src/game/systems/npc-system.cpp

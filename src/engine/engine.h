@@ -17,12 +17,20 @@
 #include "../game/systems/shot-system.h"
 #include "../game/game-world/game-world.h"
 
-#include "../engine/rendering/materials/model-material.h"
-#include "../engine/rendering/materials/hitbox-material.h"
+#include "../game/rendering/materials/model-material.h"
+#include "../game/rendering/materials/hitbox-material.h"
 
 #include <map>
 #include <string>
 #include <thread>
+
+
+
+// ToDo: Remove, just for testing/building terrain
+#include "rendering/terrain/chunk-structs.h"
+#include "rendering/terrain/chunk-handler.h"
+#include "rendering/terrain/chunk-generator.h"
+
 
 enum class EngineMode { Standalone, Server, Client };
 
@@ -96,6 +104,12 @@ private:
     void TempBuildRenderHelpers();
     std::unique_ptr<ModelMaterial> modelMat_;
     std::unique_ptr<HitboxMaterial> hitboxMat_;
+
+    //------------- TEMP, only for testing terrain while implementing
+    ChunkHandler chunkHandler_;
+
+    std::unique_ptr<IChunkGenerator> chunkGenerator_;
+    std::shared_ptr<Mesh> testChunk_;
 };
 
 #endif

@@ -1,8 +1,8 @@
 #ifndef HITBOX_MATERIAL_H
 #define HITBOX_MATERIAL_H
 
-#include "material.h"
-#include "../../rendering/render-list.h"
+#include "../../../engine/rendering/render-list.h"
+#include "../../../engine/rendering/materials/material.h"
 
 class HitboxMaterial : public Material
 {
