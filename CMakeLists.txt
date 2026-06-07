@@ -60,6 +60,7 @@ add_executable(OpenGLPlayground
     src/game/networking/network-bridge/network-bridge.cpp
     src/game/rendering/materials/hitbox-material.cpp
     src/game/rendering/materials/model-material.cpp
+    src/game/rendering/materials/terrain-material.cpp
     src/game/rendering/terrain/flat-chunk-generator.cpp
     src/game/spawner/spawner.cpp
     src/game/systems/camera-system.cpp
@@ -92,6 +93,18 @@ target_link_libraries(OpenGLPlayground PRIVATE
     GameNetworkingSockets
 )
 
+# Make the binary relocatable on Linux: search for bundled .so files (e.g. the
+# GameNetworkingSockets shared lib, or libs bundled into a libs/ subfolder) next
+# to the executable itself, via $ORIGIN. CMake still adds the automatic build-tree
+# rpath, so running from build/ keeps working; the extra $ORIGIN entries only kick
+# in once the binary is copied elsewhere with its .so files alongside.
+# ($ORIGIN is the Linux/ELF form; macOS would use @loader_path, Windows ignores rpath.)
+if(UNIX AND NOT APPLE)
+    set_target_properties(OpenGLPlayground PROPERTIES
+        BUILD_RPATH   "$ORIGIN:$ORIGIN/libs"
+        INSTALL_RPATH "$ORIGIN:$ORIGIN/libs")
+endif()
+
 # Windows: copy all vcpkg imported DLLs next to the executable after each build.
 # GNS DLL is already there because CMAKE_RUNTIME_OUTPUT_DIRECTORY is set above.
 # $<TARGET_RUNTIME_DLLS:...> only covers imported targets (vcpkg), not in-tree ones.
@@ -121,15 +134,26 @@ if(ENABLE_SANITIZERS AND NOT MSVC
     )
 endif()
 
-# Copy shaders and assets next to the executable at build time.
-# $<TARGET_FILE_DIR:...> resolves to the actual exe directory for any
+# Copy assets next to the executable at build time (runs only when the exe
+# relinks). $<TARGET_FILE_DIR:...> resolves to the actual exe directory for any
 # config (Debug/Release) and any platform, so this works everywhere.
 add_custom_command(TARGET OpenGLPlayground POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders"
-        "$<TARGET_FILE_DIR:OpenGLPlayground>/shaders"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/assets"
         "$<TARGET_FILE_DIR:OpenGLPlayground>/assets"
-    COMMENT "Copying shaders and assets to output directory"
+    COMMENT "Copying assets to output directory"
 )
+
+# Shaders change constantly during development, so copy them on EVERY build:
+# custom targets are always considered out-of-date, so this command re-runs even
+# when no source changed and the exe wasn't relinked. copy_directory is instant
+# for small text files. (Assets stay on POST_BUILD above — re-copying multi-MB
+# skyboxes every build would be wasted I/O, and they rarely change.)
+add_custom_target(copy_shaders ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders"
+        "$<TARGET_FILE_DIR:OpenGLPlayground>/shaders"
+    COMMENT "Copying shaders to output directory"
+)
+# Build the exe first so its output directory exists before we copy into it.
+add_dependencies(copy_shaders OpenGLPlayground)

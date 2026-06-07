@@ -36,6 +36,8 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     settings_["simple_flight"] = simpleFlight;
     bool predictiveClient = true;
     settings_["predictive_client"] = predictiveClient;
+    bool terrain = false;
+    settings_["terrain"] = terrain;
 
     camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 60.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0F, -90.0F);
     
@@ -118,12 +120,16 @@ void Engine::TempBuildRenderHelpers()
     std::string modelFrag  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.frag").string();
 	std::string hitboxVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "hitbox.vert").string();
 	std::string hitboxFrag = (std::filesystem::path(FileHelper::GetShaderDir()) / "hitbox.frag").string();
+    std::string terrainVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "terrain.vert").string();
+	std::string terrainFrag = (std::filesystem::path(FileHelper::GetShaderDir()) / "terrain.frag").string();
     
     modelShader_  = std::make_unique<Shader>(modelVert.c_str(), modelFrag.c_str());
 	hitboxShader_ = std::make_unique<Shader>(hitboxVert.c_str(), hitboxFrag.c_str());
+    terrainShader_ = std::make_unique<Shader>(terrainVert.c_str(), terrainFrag.c_str());
 
     modelMat_ = std::make_unique<ModelMaterial>(modelShader_.get());
 	hitboxMat_ = std::make_unique<HitboxMaterial>(hitboxShader_.get());
+    terrainMat_ = std::make_unique<TerrainMaterial>(terrainShader_.get());
 }
 
 AssetManager& Engine::GetAssMan()
@@ -455,6 +461,8 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, 
     {
         if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
             engine->settings_["predictive_client"] = !engine->settings_["predictive_client"];
+        if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
+            engine->settings_["terrain"] = !engine->settings_["terrain"];
         // debug_view
         if (key == GLFW_KEY_F4 && action == GLFW_PRESS)
             engine->settings_["debug_view"] = !engine->settings_["debug_view"];
@@ -628,31 +636,15 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 		}
     }
 
-	modelMat_->ApplyFrame(fg);
-
-	Material* lastMat = nullptr;
-
-	for (auto& dc : rl.commands)
-	{
-		if (dc.material != lastMat)
-		{ 
-			dc.material->ApplyFrame(fg);
-			lastMat = dc.material;
-		}
-
-		dc.material->ApplyInstance(dc.transform, dc.tint);
-
-		dc.mesh->Draw(dc.material->GetShader());
-	}
-
-    
-
-    /*DrawCommand dc;
-    dc.mesh = testChunk_.get();
-    dc.material = modelMat_.get();
-    dc.transform = glm::mat4(1.0f);
-    dc.renderPass = settings_["debug_view"] ? RenderPass::Debug : RenderPass::Opaque;
-    rl.commands.push_back(dc);*/
+    if (settings_["terrain"])
+    {
+        DrawCommand dc;
+        dc.mesh = testChunk_.get();
+        dc.material = terrainMat_.get();
+        dc.transform = glm::mat4(1.0f);
+        dc.renderPass = settings_["debug_view"] ? RenderPass::Debug : RenderPass::Opaque;
+        rl.commands.push_back(dc);
+    }
 
     return std::tuple(rl, fg);
 };

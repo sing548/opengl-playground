@@ -1,5 +1,5 @@
 // hitbox.frag
-#version 330 core
+#version 460 core
 out vec4 FragColor;
 
 void main()

@@ -19,6 +19,7 @@
 
 #include "../game/rendering/materials/model-material.h"
 #include "../game/rendering/materials/hitbox-material.h"
+#include "../game/rendering/materials/terrain-material.h"
 
 #include <map>
 #include <string>
@@ -100,10 +101,12 @@ private:
     std::unique_ptr<Shader> screenShader_;
     std::unique_ptr<Shader> modelShader_;
     std::unique_ptr<Shader> hitboxShader_;
+    std::unique_ptr<Shader> terrainShader_;
     std::tuple<RenderList, FrameGlobals> BuildRenderList();
     void TempBuildRenderHelpers();
     std::unique_ptr<ModelMaterial> modelMat_;
     std::unique_ptr<HitboxMaterial> hitboxMat_;
+    std::unique_ptr<TerrainMaterial> terrainMat_;
 
     //------------- TEMP, only for testing terrain while implementing
     ChunkHandler chunkHandler_;

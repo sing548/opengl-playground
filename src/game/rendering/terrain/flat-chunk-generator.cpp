@@ -2,7 +2,7 @@
 
 ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
 {
-    const float height = 0;
+    const float height = -0.1f;
 
     ChunkData chunk;
     std::vector<Vertex> vertices;
@@ -13,19 +13,6 @@ ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
         {
             float u = (float)i / region.resolution;
             float v = (float)j / region.resolution;
-            
-            /*Vertex vert;
-            vert.Position = 
-            { 
-                region.coord.x * region.worldSize + u * region.worldSize,
-                height,
-                region.coord.y * region.worldSize + v * region.worldSize
-            };
-            vert.Normal = { 0, 1, 0 };
-            vert.TexCoords = { u, v };
-            vert.Tangent =  { 0, 0, 0 };
-            vert.Bitangent = { 0, 0, 0 };
-            vertices.push_back(vert);*/
 
             vertices.push_back(
             {

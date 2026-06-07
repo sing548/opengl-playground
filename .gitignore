@@ -32,6 +32,7 @@
 *.app
 
 build/
+build-release/
 assets/
 .vscode/
 .temp

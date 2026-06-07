@@ -1,6 +1,6 @@
 #include "hitbox-material.h"
 
-HitboxMaterial::HitboxMaterial(Shader* shader) : shader_(shader) 
+HitboxMaterial::HitboxMaterial(Shader* shader) : Material(shader) 
 {
 };
 
@@ -15,9 +15,4 @@ void HitboxMaterial::ApplyFrame(const FrameGlobals& globals)
 void HitboxMaterial::ApplyInstance(const glm::mat4& model, const glm::vec4& tint)
 {
     shader_->SetMat4("model", model);
-};
-
-Shader& HitboxMaterial::GetShader()
-{
-    return *shader_;
 };
