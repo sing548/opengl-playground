@@ -1,0 +1,93 @@
+#version 460 core
+
+layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec4 BrightColor;
+
+struct DirLight {
+	vec3 direction;
+	
+	vec3 ambient;
+	vec3 diffuse;
+	vec3 specular;
+};
+
+struct PointLight {
+	vec3 position;
+
+	vec3 ambient;
+	vec3 diffuse;
+
+	float constant;
+	float linear;
+	float quadratic;
+};
+
+#define MAX_POINT_LIGHTS 128
+
+in vec3 FragPos;
+in vec3 Normal;
+
+in vec3 RotatedNormal1;
+in vec3 RotatedNormal2;
+in float Side;
+in float HeightPercent;
+
+uniform vec3 viewPos;
+uniform DirLight dirLight;
+uniform PointLight pointLights[MAX_POINT_LIGHTS];
+uniform int numPointLights;
+
+
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 albedo, float heightPercent);
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 albedo);
+
+void main()
+{
+    vec3 baseColor = vec3(0.1, 0.4, 0.05);
+    vec3 tipColor = vec3(0.6, 0.6, 0.1);
+    vec3 color = mix(baseColor, tipColor, HeightPercent);
+
+    vec3 viewDir = normalize(viewPos - FragPos);
+
+    vec3 N = mix(RotatedNormal1, RotatedNormal2, Side);
+
+    if (dot(N, viewDir) < 0.0)
+        N = -N;
+
+    vec3 result = CalcDirLight(dirLight, N, viewDir, color, HeightPercent);
+
+    for (int i = 0; i < numPointLights; i++)
+        result += CalcPointLight(pointLights[i], N, FragPos, viewDir, color);
+
+
+    FragColor   = vec4(result, 1.0);
+    BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
+}
+
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 albedo, float heightPercent)
+{
+	vec3 lightDir = normalize(-light.direction);
+	float diff = max(dot(normal, lightDir), 0.0);
+
+	vec3 ambient = light.ambient * albedo;
+    ambient *= mix(0.3, 1.0, heightPercent);
+	vec3 diffuse = light.diffuse * diff * albedo;
+	return (ambient + diffuse);
+}
+
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 albedo)
+{
+	vec3 lightDir = normalize(light.position - fragPos);
+	float diff = max(dot(normal, lightDir), 0.0);
+
+	float distance = length(light.position - fragPos);
+	float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+
+	vec3 ambient = light.ambient * albedo;
+	vec3 diffuse = light.diffuse * diff * albedo;
+	
+	ambient *= attenuation;
+	diffuse *= attenuation;
+
+	return (ambient + diffuse);
+}

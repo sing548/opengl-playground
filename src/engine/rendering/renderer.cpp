@@ -110,6 +110,8 @@ Renderer::Renderer(unsigned int width, unsigned int height)
 	    (std::filesystem::path(base) / "negz.png").string()
 	};
 	sky_ = std::make_unique<Sky>(faces);
+
+	grass_ = std::make_unique<Grass>();
 }
 
 void Renderer::Draw(const RenderList& renderList, const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings)
@@ -154,6 +156,14 @@ void Renderer::Draw(const RenderList& renderList, const FrameGlobals& globals, c
 	if (settings.at("sky_box")) {
 		ApplyPassState(RenderPass::Skybox);
 		sky_->Render(globals);
+	}
+
+	if (settings.at("grass"))
+	{
+		settings.at("debug_view") ? 
+			ApplyPassState(RenderPass::Debug) : 
+			ApplyPassState(RenderPass::Opaque);
+		grass_->Render(globals);
 	}
 	
 	// ---------- Post-processing / Render to screen ----------

@@ -2,7 +2,7 @@
 
 ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
 {
-    const float height = -0.1f;
+    const float height = -1.0f;
 
     ChunkData chunk;
     std::vector<Vertex> vertices;

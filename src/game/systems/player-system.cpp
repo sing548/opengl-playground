@@ -57,22 +57,13 @@ void PlayerSystem::ExecuteInput(float dT,
                 acc = dT * .6f;
 
             glm::vec3 speed = gameWorld.GetScene().GetModelByReference(id).GetVelocity();
+            
+            float speedLength = glm::length(speed);
 
-            if (speed.x > 0) speed.x -= acc;
-            if (speed.x < 0) speed.x += acc;
-
-            if (speed.y > 0) speed.y -= acc;
-            if (speed.y < 0) speed.y += acc;
-
-            if (speed.z > 0) speed.z -= acc;
-            if (speed.z < 0) speed.z += acc;
-
-            if (glm::length(speed) < .05) 
-            {
-                speed.x = 0.0f;
-                speed.y = 0.0f;
-                speed.z = 0.0f;
-            }
+            if (speedLength <= acc || speedLength < 0.05)
+                speed = glm::vec3(0.0f);
+            else
+                speed -= (speed / speedLength) * acc;
 
             gameWorld.GetScene().GetModelByReference(id).SetVelocity(speed);
         }

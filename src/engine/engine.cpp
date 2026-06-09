@@ -2,6 +2,7 @@
 
 #include "../game/spawner/spawner.h"
 #include "../game/systems/system-structs.h"
+#include "../game/rendering/terrain/terrain-handler.h"
 #include "../game/rendering/terrain/flat-chunk-generator.h"
 #include "../game/networking/network-bridge/network-bridge.h"
 
@@ -38,6 +39,8 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     settings_["predictive_client"] = predictiveClient;
     bool terrain = false;
     settings_["terrain"] = terrain;
+    bool grass = true;
+    settings_["grass"] = grass;
 
     camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 60.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0F, -90.0F);
     
@@ -100,16 +103,7 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
 
     TempBuildRenderHelpers();
 
-    chunkGenerator_ = std::make_unique<FlatChunkGenerator>();
-
-    ChunkRegion testOrigin {
-        { 0, 0 },
-        5.0f,
-        16
-    };
-
-    auto testChunk = chunkGenerator_->Generate(testOrigin);
-    testChunk_ = chunkHandler_.UploadChunk(testChunk);
+    terrainHandler_ = std::make_unique<TerrainHandler>();
 }
 
 Engine::~Engine() = default;
@@ -463,6 +457,8 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, 
             engine->settings_["predictive_client"] = !engine->settings_["predictive_client"];
         if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
             engine->settings_["terrain"] = !engine->settings_["terrain"];
+        if (key == GLFW_KEY_F3 && action == GLFW_PRESS)
+            engine->settings_["grass"] = !engine->settings_["grass"];
         // debug_view
         if (key == GLFW_KEY_F4 && action == GLFW_PRESS)
             engine->settings_["debug_view"] = !engine->settings_["debug_view"];
@@ -540,7 +536,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 	fg.view 	  = view;
 	fg.projection = projection;
 	fg.cameraPos  = window_->GetCamera().Position;
-	fg.time 	  = 0.0f;
+	fg.time 	  = static_cast<float>(glfwGetTime());
 
 	for (auto& [id, model] : models)
 	{
@@ -638,12 +634,15 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 
     if (settings_["terrain"])
     {
-        DrawCommand dc;
-        dc.mesh = testChunk_.get();
-        dc.material = terrainMat_.get();
-        dc.transform = glm::mat4(1.0f);
-        dc.renderPass = settings_["debug_view"] ? RenderPass::Debug : RenderPass::Opaque;
-        rl.commands.push_back(dc);
+        for (auto& mp : terrainHandler_->GetChunks())
+        {
+            DrawCommand dc;
+            dc.mesh = mp.get();
+            dc.material = terrainMat_.get();
+            dc.transform = glm::mat4(1.0f);
+            dc.renderPass = settings_["debug_view"] ? RenderPass::Debug : RenderPass::Opaque;
+            rl.commands.push_back(dc);
+        }
     }
 
     return std::tuple(rl, fg);

@@ -25,17 +25,10 @@
 #include <string>
 #include <thread>
 
-
-
-// ToDo: Remove, just for testing/building terrain
-#include "rendering/terrain/chunk-structs.h"
-#include "rendering/terrain/chunk-handler.h"
-#include "rendering/terrain/chunk-generator.h"
-
-
 enum class EngineMode { Standalone, Server, Client };
 
 class NetworkBridge;
+class TerrainHandler;
 
 class Engine {
 public:
@@ -109,10 +102,7 @@ private:
     std::unique_ptr<TerrainMaterial> terrainMat_;
 
     //------------- TEMP, only for testing terrain while implementing
-    ChunkHandler chunkHandler_;
-
-    std::unique_ptr<IChunkGenerator> chunkGenerator_;
-    std::shared_ptr<Mesh> testChunk_;
+    std::unique_ptr<TerrainHandler> terrainHandler_;
 };
 
 #endif

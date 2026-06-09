@@ -58,10 +58,12 @@ add_executable(OpenGLPlayground
     src/game/game-world/game-world.cpp
     src/game/networking/interpolator/interpolator.cpp
     src/game/networking/network-bridge/network-bridge.cpp
+    src/game/rendering/grass/grass.cpp
     src/game/rendering/materials/hitbox-material.cpp
     src/game/rendering/materials/model-material.cpp
     src/game/rendering/materials/terrain-material.cpp
     src/game/rendering/terrain/flat-chunk-generator.cpp
+    src/game/rendering/terrain/terrain-handler.cpp
     src/game/spawner/spawner.cpp
     src/game/systems/camera-system.cpp
     src/game/systems/npc-system.cpp

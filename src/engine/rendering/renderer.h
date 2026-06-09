@@ -18,6 +18,9 @@
 
 #include "../rendering/sky/sky.h"
 
+// ToDo: Remove or rework to make split  engine <-> game clearer again
+#include "../../game/rendering/grass/grass.h"
+
 class Renderer
 {
 public:
@@ -41,6 +44,7 @@ private:
     std::unique_ptr<Shader> blurShader_;
     
     std::unique_ptr<Sky> sky_;
+    std::unique_ptr<Grass> grass_;
     
     void ApplyPassState(RenderPass pass);
     void PostProcessing();

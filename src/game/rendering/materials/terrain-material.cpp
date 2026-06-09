@@ -8,7 +8,7 @@ void TerrainMaterial::ApplyFrame(const FrameGlobals& globals)
 {
     shader_->Use();
 
-    glm::vec3 dirLight(-1.0f, 0.0f, 0.0f);
+    glm::vec3 dirLight(-1.0f, -1.0f, 0.0f);
 
     shader_->SetVec3("viewPos", globals.cameraPos);
 	shader_->SetMat4("projection", globals.projection);
