@@ -1,8 +1,10 @@
 #include "flat-chunk-generator.h"
 
+#include "fbm-noise.h"
+
 ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
 {
-    const float height = -1.0f;
+    //const float height = -1.0f;
 
     ChunkData chunk;
     std::vector<Vertex> vertices;
@@ -13,23 +15,62 @@ ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
         {
             float u = (float)i / region.resolution;
             float v = (float)j / region.resolution;
+            
+            float vertX = region.coord.x * region.worldSize + u * region.worldSize;
+            float vertZ = region.coord.y * region.worldSize + v * region.worldSize;
+
+            float height = HeightAt(vertX, vertZ);
 
             vertices.push_back(
             {
                 { 
-                    region.coord.x * region.worldSize + u * region.worldSize,
+                    vertX,
                     height,
-                    region.coord.y * region.worldSize + v * region.worldSize
+                    vertZ
                 },
-                { 0, 1, 0},
+                { 0, 0, 0},
                 { u, v },
                 { 0, 0, 0},
                 { 0, 0, 0}
             });
         }
     }
-
+    
     const unsigned int row = region.resolution + 1;
+    const float d = region.worldSize / region.resolution;
+
+    for (unsigned int i = 0; i <= region.resolution; i++)
+    {
+        for (unsigned int j = 0; j <= region.resolution; j++)
+        {
+            glm::vec3 normal;
+            float u = (float)i / region.resolution;
+            float v = (float)j / region.resolution;
+            float vertX = region.coord.x * region.worldSize + u * region.worldSize;
+            float vertZ = region.coord.y * region.worldSize + v * region.worldSize;
+
+            if (i == 0 || i == region.resolution || j == 0 || j == region.resolution)
+            {
+                float dXp = HeightAt(vertX + d, vertZ);
+                float dXn = HeightAt(vertX - d, vertZ);
+                float dZp = HeightAt(vertX, vertZ + d);
+                float dZn = HeightAt(vertX, vertZ - d);
+                normal = glm::normalize(glm::vec3(dXn - dXp, 2.0f * d, dZn - dZp));
+            }
+            else
+            { 
+                float dXp = vertices.at((i+1) * row + j).Position.y;
+                float dXn = vertices.at((i-1) * row + j).Position.y;
+                float dZp = vertices.at(i * row + j + 1).Position.y;
+                float dZn = vertices.at(i * row + j - 1).Position.y;
+                normal = glm::normalize(glm::vec3(dXn - dXp, 2.0f * d, dZn - dZp));
+            }
+            vertices[i * row + j].Normal = normal;
+        }
+    }
+
+    chunk.vertices = vertices;
+
     chunk.indices.reserve(region.resolution * region.resolution * 6);
 
     for (unsigned int i = 0; i < region.resolution; i++)
@@ -51,7 +92,11 @@ ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
         }
     }
 
-    chunk.vertices = vertices;
 
     return chunk;
+}
+
+float FlatChunkGenerator::HeightAt(float x, float z) const
+{
+    return FBMNoise::GenNoise(octaves_, lacunatity_, gain_, glm::vec2(x, z) * baseFreq_) * heightScale_ + heightOffset_;
 }

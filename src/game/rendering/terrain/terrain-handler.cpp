@@ -6,14 +6,14 @@ TerrainHandler::TerrainHandler()
 {
     chunkGenerator_ = std::make_unique<FlatChunkGenerator>();
 
-    for (int x = -10; x <= 10; x++)
+    for (int x = -3; x <= 3; x++)
     {
-        for (int z = -10; z <= 10; z++)
+        for (int z = -3; z <= 3; z++)
         {
             ChunkRegion region {
                 { x, z },
-                10.0f,
-                16
+                30.0f,
+                32
             };
             ChunkData chunkData = chunkGenerator_->Generate(region);
             chunks_.push_back(chunkHandler_.UploadChunk(chunkData));

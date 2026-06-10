@@ -2,9 +2,9 @@
 
 layout (location = 0) in float vertID;
 layout (location = 1) in vec3 offset;
+layout (location = 2) in vec3 randoms;
 
 out vec3 FragPos;
-out vec3 Normal;
 
 out vec3 RotatedNormal1;
 out vec3 RotatedNormal2;
@@ -34,27 +34,26 @@ void main()
     Side = side;
     float segment = floor(vertID / 2.0);
     float currentSegmentLevel = segment / SEGS;
-    float rand = fract(dot(offset.xz, vec2(1.0, 1.0)) * 1254);
-    float angle = rand * 2 * 3.14159;
+    float angle = randoms.x * 2 * 3.14159;
 
 
     // Building geometry
-    float randHeight = fract(dot(offset.xz, vec2(-2.0, 11.0)) * 5124);
+    float randHeight = randoms.y;
     float x = (side - 0.5) * WIDTH * (1.0 - pow(currentSegmentLevel,5));
     float y = currentSegmentLevel * GRASS_HEIGHT * randHeight;
 
     vec3 local = vec3(x, y, 0.0);
 
     // Deforming
-    float randLean = fract(dot(offset.xz, vec2(3.0, -1.0)) * 2454) * currentSegmentLevel;
+    float randLean = randoms.z * currentSegmentLevel;
     float randomWindNoise = snoise(vec2(time * 0.3) + offset.xz) * 0.1;
     mat3 leanMat = RotateX(randLean + randomWindNoise);
     vec3 bent = leanMat * local;
     vec3 rotated = RotateY(angle) * bent;
 
     // snoise is [-1,1] -> angle needs to be 0..2PI
-    float windDir = snoise(vec2(time * 0.1) + offset.xz * 0.05);
-    windDir = (windDir * 0.5 + 0.5) * 2.0 * 3.14159;
+    float windDir = snoise(vec2(time * 0.01) + offset.xz * 0.005);
+    windDir = (windDir * 0.5 + 0.5) * 3.14159;
     float windStrength = snoise(vec2(time * 0.25) + offset.xz * 0.025);
     windStrength = (windStrength * 0.5 + 0.5) * 2;
 
@@ -64,26 +63,16 @@ void main()
 
     // Calculating normal for lighting
     vec3 norm = vec3(0.0, 0.0, 1.0);
-    Normal = RotateY(angle) * norm;
-    RotatedNormal1 = RotateY(3.14159 * 0.3) * Normal;
-    RotatedNormal2 = RotateY(3.14159 * -0.3) * Normal;
+    norm = leanMat * norm;
+    norm = RotateY(angle) * norm;
+    norm = RotateY(windDir) * (RotateX(windLean) * (RotateY(-windDir) * norm));
+    RotatedNormal1 = RotateY(3.14159 * 0.3) * norm;
+    RotatedNormal2 = RotateY(3.14159 * -0.3) * norm;
 
     vec3 world = offset + windBent;
     HeightPercent = currentSegmentLevel;
     FragPos = world.xyz;
     gl_Position = projection * view * vec4(world, 1.0);
-}
-
-vec3 RotateY(vec3 what, float angle)
-{
-    float c = cos(angle);
-    float s = sin(angle);
-
-    return vec3(
-        what.x * c + what.z * s,
-        what.y,
-        -what.x * s + what.z * c
-    );
 }
 
 mat3 RotateX(float angle)

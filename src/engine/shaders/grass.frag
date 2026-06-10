@@ -16,6 +16,7 @@ struct PointLight {
 
 	vec3 ambient;
 	vec3 diffuse;
+	vec3 specular;
 
 	float constant;
 	float linear;
@@ -25,7 +26,6 @@ struct PointLight {
 #define MAX_POINT_LIGHTS 128
 
 in vec3 FragPos;
-in vec3 Normal;
 
 in vec3 RotatedNormal1;
 in vec3 RotatedNormal2;
@@ -37,9 +37,10 @@ uniform DirLight dirLight;
 uniform PointLight pointLights[MAX_POINT_LIGHTS];
 uniform int numPointLights;
 
+const float shininess = 32.0;
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 albedo, float heightPercent);
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 albedo);
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 albedo, float heightPercent);
 
 void main()
 {
@@ -50,14 +51,12 @@ void main()
     vec3 viewDir = normalize(viewPos - FragPos);
 
     vec3 N = mix(RotatedNormal1, RotatedNormal2, Side);
-
-    if (dot(N, viewDir) < 0.0)
-        N = -N;
+    N = normalize(N);
 
     vec3 result = CalcDirLight(dirLight, N, viewDir, color, HeightPercent);
 
     for (int i = 0; i < numPointLights; i++)
-        result += CalcPointLight(pointLights[i], N, FragPos, viewDir, color);
+        result += CalcPointLight(pointLights[i], N, FragPos, viewDir, color, HeightPercent);
 
 
     FragColor   = vec4(result, 1.0);
@@ -67,27 +66,38 @@ void main()
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 albedo, float heightPercent)
 {
 	vec3 lightDir = normalize(-light.direction);
-	float diff = max(dot(normal, lightDir), 0.0);
+	float diff = abs(dot(normal, lightDir));
 
-	vec3 ambient = light.ambient * albedo;
-    ambient *= mix(0.3, 1.0, heightPercent);
+	vec3 N = (dot(normal, viewDir) < 0.0) ? -normal : normal;
+	vec3 H = normalize(lightDir + viewDir);
+	float spec = pow(max(dot(N, H), 0.0), shininess);
+
+	vec3 ambient = light.ambient * albedo * mix(0.3, 1.0, heightPercent);
 	vec3 diffuse = light.diffuse * diff * albedo;
-	return (ambient + diffuse);
+	vec3 specular = light.specular * spec * heightPercent;
+	return (ambient + diffuse + specular);
 }
 
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 albedo)
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 albedo, float heightPercent)
 {
 	vec3 lightDir = normalize(light.position - fragPos);
-	float diff = max(dot(normal, lightDir), 0.0);
+	float diff = abs(dot(normal, lightDir));
 
 	float distance = length(light.position - fragPos);
 	float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
 
 	vec3 ambient = light.ambient * albedo;
 	vec3 diffuse = light.diffuse * diff * albedo;
+
+	vec3 N = (dot(normal, viewDir) < 0.0) ? -normal : normal;
+	vec3 H = normalize(lightDir + viewDir);
+	float spec = pow(max(dot(N, H), 0.0), shininess);
+	vec3 specular = light.specular * spec;
 	
 	ambient *= attenuation;
 	diffuse *= attenuation;
+	specular *= attenuation;
+	specular *= heightPercent;
 
-	return (ambient + diffuse);
+	return (ambient + diffuse + specular);
 }

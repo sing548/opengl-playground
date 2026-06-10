@@ -24,18 +24,16 @@ Grass::Grass()
     for (int i = 0; i < GRASS_BLADES_VERTICES; i++)
         vertIDs.push_back((float)i);
 
-    
-    
-
     ChunkRegion region {
-        { -40, -40 },
-        80.0f,
+        { -30, -30 },
+        60.0f,
         16
     };
 
-    std::vector<glm::vec3> offsets = GenerateOffsets(region, 20);
-    
+    std::vector<glm::vec3> offsets = GenerateOffsets(region, 18);
     instanceCount_ = (int) offsets.size();
+    std::vector<glm::vec3> randoms = GenerateRandoms(instanceCount_);
+    
 
     std::vector<unsigned int> indices;
     for (int i = 0; i + 2 < GRASS_BLADES_VERTICES; ++i)
@@ -46,6 +44,7 @@ Grass::Grass()
     glGenVertexArrays(1, &vao_);
     glGenBuffers(1, &vertIDVBO_);
     glGenBuffers(1, &offsetVBO_);
+    glGenBuffers(1, &randomsVBO_);
     glGenBuffers(1, &indexBufferEBO_);
 
     glBindVertexArray(vao_);
@@ -60,6 +59,12 @@ Grass::Grass()
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1,3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
     glVertexAttribDivisor(1, 1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, randomsVBO_);
+    glBufferData(GL_ARRAY_BUFFER, randoms.size() * sizeof(glm::vec3), randoms.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2,3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+    glVertexAttribDivisor(2, 1);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferEBO_);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
@@ -115,10 +120,6 @@ void Grass::Render(const FrameGlobals& globals)
 
 std::vector<glm::vec3> Grass::GenerateOffsets(const ChunkRegion& region, float density)
 {
-    const int NUM_GRASS_X = 1024, NUM_GRASS_Z = 1024;
-    const float GRASS_SPACING = 0.08f;
-
-
     const int bladesPerAxis = std::max(1, (int)std::round(region.worldSize * density));
     const float cellSize = region.worldSize / bladesPerAxis;
 
@@ -128,8 +129,6 @@ std::vector<glm::vec3> Grass::GenerateOffsets(const ChunkRegion& region, float d
 
     std::vector<glm::vec3> offsets;
     offsets.reserve(bladesPerAxis * bladesPerAxis);
-
-
 
     for (int x = 0; x < bladesPerAxis; ++x)
     {
@@ -144,14 +143,19 @@ std::vector<glm::vec3> Grass::GenerateOffsets(const ChunkRegion& region, float d
         }
     }
 
-    /*for (int x = 0; x < NUM_GRASS_X; ++x)
-        for (int z = 0; z < NUM_GRASS_Z; ++z)
-        {
-            float xOffset = (float)distrib(gen);
-            float zOffset = (float)distrib(gen);
-            offsets.push_back({ x * GRASS_SPACING + xOffset, height_, z * GRASS_SPACING + zOffset});
-        }
-    */
-
     return offsets;
+}
+
+std::vector<glm::vec3> Grass::GenerateRandoms(int count)
+{
+    std::vector<glm::vec3> randoms;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> distrib(0.0, 1.0);
+
+    for (int i = 0; i < count; i++)
+        randoms.push_back({ (float)distrib(gen), (float)distrib(gen), (float)distrib(gen)});
+
+    return randoms;
 }
