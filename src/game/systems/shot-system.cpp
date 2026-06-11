@@ -3,7 +3,7 @@
 #include "system-structs.h"
 #include "../game-world/game-world.h"
 
-void ShotSystem::Update(SystemsContext ctx)
+void ShotSystem::Update(SystemsContext& ctx)
 {
     /*for (auto& [id, data] : ctx.world.GetShotData())
     {

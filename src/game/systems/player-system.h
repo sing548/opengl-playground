@@ -11,7 +11,7 @@ struct SystemsContext;
 
 class PlayerSystem {
 public:
-    void Update(SystemsContext ctx);
+    void Update(SystemsContext& ctx);
 private:
     uint32_t localPredCounter = 0x8000000;
     void ExecuteInput(float dT,

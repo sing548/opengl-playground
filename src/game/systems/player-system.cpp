@@ -6,7 +6,7 @@
 #include "../spawner/spawner.h"
 #include "../game-world/game-world.h"
 
-void PlayerSystem::Update(SystemsContext ctx)
+void PlayerSystem::Update(SystemsContext& ctx)
 {
     if (ctx.replay || ctx.authoritative)
         ExecuteInput(ctx.dT, ctx.world, ctx.assMan, ctx.current, ctx.previous, ctx.localPlayerId, ctx.authoritative, ctx.settings.at("simple_flight"), ctx.bridge);

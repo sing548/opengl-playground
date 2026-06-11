@@ -8,7 +8,7 @@ class AssetManager;
 
 class NpcSystem {
 public:
-    void Update(SystemsContext context);
+    void Update(SystemsContext& context);
 private:
 };
 

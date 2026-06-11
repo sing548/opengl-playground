@@ -224,6 +224,7 @@ void Engine::Run()
                     gameWorld_,
                     *assMan_,
                     *netwBridg_,
+                    *terrainHandler_,
                     currentStateAsMap_,
                     previousStateAsMap_,
                     playerId_,
@@ -339,6 +340,7 @@ void Engine::HandleLogic(float deltaTime)
         gameWorld_,
         *assMan_,
         *netwBridg_,
+        *terrainHandler_,
         currentInputStates_,
         previousInputStates_,
         playerId_,
@@ -351,6 +353,7 @@ void Engine::HandleLogic(float deltaTime)
     npcSystem_.Update(context);
     playerSystem_.Update(context);
     shotSystem_.Update(context);
+    terrainSystem_.Update(context);
 }
 
 void Engine::AdjustCamera()
@@ -634,7 +637,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 
     if (settings_["terrain"])
     {
-        for (auto& mp : terrainHandler_->GetChunks())
+        for (auto& [iv, mp] : terrainHandler_->GetChunks())
         {
             DrawCommand dc;
             dc.mesh = mp.get();

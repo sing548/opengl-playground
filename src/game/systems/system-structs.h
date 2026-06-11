@@ -8,6 +8,7 @@ class GameWorld;
 class InputState;
 class AssetManager;
 class NetworkBridge;
+class TerrainHandler;
 
 struct SystemsContext
 {
@@ -15,6 +16,7 @@ struct SystemsContext
     GameWorld& world;
     AssetManager& assMan;
     NetworkBridge& bridge;
+    TerrainHandler& terrainHandler;
     std::unordered_map<uint32_t, InputState> current;
     std::unordered_map<uint32_t, InputState> previous;
     uint32_t localPlayerId;

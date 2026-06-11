@@ -6,7 +6,7 @@
 #include "../spawner/spawner.h"
 #include "../game-world/game-world.h"
 
-void NpcSystem::Update(SystemsContext context)
+void NpcSystem::Update(SystemsContext& context)
 {
     int n = 0;
 

@@ -71,6 +71,7 @@ add_executable(OpenGLPlayground
     src/game/systems/physics-system.cpp
     src/game/systems/player-system.cpp
     src/game/systems/shot-system.cpp
+    src/game/systems/terrain-system.cpp
 
     src/main.cpp
     include/glad/glad.c

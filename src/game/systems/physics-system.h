@@ -9,7 +9,7 @@ struct SystemsContext;
 
 class PhysicsSystem {
 public:
-    void Update(SystemsContext ctx);
+    void Update(SystemsContext& ctx);
 private:
     void MoveModels(float dT, GameWorld& gameWorld, bool authoritative);
     void MoveModel(float dT, Scene& Scene, unsigned int id, const glm::vec3& change);

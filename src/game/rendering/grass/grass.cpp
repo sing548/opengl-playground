@@ -84,16 +84,14 @@ void Grass::Render(const FrameGlobals& globals)
 {
     shader_->Use();
 
-    glm::vec3 dirLight(-1.0f, -1.0f, 0.0f);
-
     shader_->SetVec3("viewPos", globals.cameraPos);
 	shader_->SetMat4("projection", globals.projection);
 	shader_->SetMat4("view", globals.view);
     shader_->SetFloat("time", globals.time);
 
-	shader_->SetVec3("dirLight.direction", dirLight);
-	shader_->SetVec3("dirLight.ambient", glm::vec3(0.2f, 0.22f, 0.25f));   
-	shader_->SetVec3("dirLight.diffuse", glm::vec3(0.4f, 0.42f, 0.45f));
+	shader_->SetVec3("dirLight.direction", globals.dirLight.direction);
+	shader_->SetVec3("dirLight.ambient", globals.dirLight.ambient);   
+	shader_->SetVec3("dirLight.diffuse", globals.dirLight.diffuse);
 
     constexpr size_t kMaxLights = 128;
     const size_t n = std::min(globals.pointLights.size(), kMaxLights);
@@ -120,8 +118,8 @@ void Grass::Render(const FrameGlobals& globals)
 
 std::vector<glm::vec3> Grass::GenerateOffsets(const ChunkRegion& region, float density)
 {
-    const int bladesPerAxis = std::max(1, (int)std::round(region.worldSize * density));
-    const float cellSize = region.worldSize / bladesPerAxis;
+    const int bladesPerAxis = std::max(1, (int)std::round(region.regionSize * density));
+    const float cellSize = region.regionSize / bladesPerAxis;
 
     std::random_device rd;
     std::mt19937 gen(rd());

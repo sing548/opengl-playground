@@ -34,6 +34,13 @@ public:
 
     Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
 
+	// https://en.cppreference.com/cpp/language/rule_of_three
+	~Mesh();
+	Mesh(const Mesh&)			 = delete;
+	Mesh& operator=(const Mesh&) = delete;
+	Mesh(Mesh&&) noexcept;
+	Mesh& operator=(Mesh&&) noexcept;
+
     void Draw(Shader &shader) const;
 private:
     unsigned int VBO_, EBO_;

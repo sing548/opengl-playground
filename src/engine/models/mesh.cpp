@@ -8,6 +8,45 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std:
 	SetupMesh();
 }
 
+Mesh::~Mesh()
+{
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO_);
+	glDeleteBuffers(1, &EBO_);
+}
+
+Mesh::Mesh(Mesh&& m) noexcept
+	: vertices(std::move(m.vertices)), indices(std::move(m.indices)),
+	  textures(std::move(m.textures)), VAO(m.VAO), VBO_(m.VBO_), EBO_(m.EBO_)
+{
+	m.VAO = 0;
+	m.VBO_ = 0;
+	m.EBO_ = 0;
+}
+
+Mesh& Mesh::operator=(Mesh&& other) noexcept
+{
+	if (this == &other)
+		return *this;
+
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO_);
+	glDeleteBuffers(1, &EBO_);
+
+	vertices = std::move(other.vertices);
+	indices = std::move(other.indices);
+	textures = std::move(other.textures);
+	VAO = other.VAO;
+	VBO_ = other.VBO_;
+	EBO_ = other.EBO_;
+
+	other.VAO = 0;
+	other.VBO_ = 0;
+	other.EBO_ = 0;
+
+	return *this;
+}
+
 void Mesh::Draw(Shader &shader) const
 {
 	unsigned int diffuseNr	= 1;

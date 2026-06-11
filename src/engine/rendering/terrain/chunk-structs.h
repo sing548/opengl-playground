@@ -11,6 +11,6 @@ struct ChunkData {
 
 struct ChunkRegion {
     glm::ivec2  coord;
-    float       worldSize;
+    float       regionSize;
     int         resolution;
 };

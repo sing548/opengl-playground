@@ -4,8 +4,6 @@
 
 ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
 {
-    //const float height = -1.0f;
-
     ChunkData chunk;
     std::vector<Vertex> vertices;
 
@@ -16,8 +14,8 @@ ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
             float u = (float)i / region.resolution;
             float v = (float)j / region.resolution;
             
-            float vertX = region.coord.x * region.worldSize + u * region.worldSize;
-            float vertZ = region.coord.y * region.worldSize + v * region.worldSize;
+            float vertX = region.coord.x * region.regionSize + u * region.regionSize;
+            float vertZ = region.coord.y * region.regionSize + v * region.regionSize;
 
             float height = HeightAt(vertX, vertZ);
 
@@ -37,7 +35,7 @@ ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
     }
     
     const unsigned int row = region.resolution + 1;
-    const float d = region.worldSize / region.resolution;
+    const float d = region.regionSize / region.resolution;
 
     for (unsigned int i = 0; i <= region.resolution; i++)
     {
@@ -46,8 +44,8 @@ ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
             glm::vec3 normal;
             float u = (float)i / region.resolution;
             float v = (float)j / region.resolution;
-            float vertX = region.coord.x * region.worldSize + u * region.worldSize;
-            float vertZ = region.coord.y * region.worldSize + v * region.worldSize;
+            float vertX = region.coord.x * region.regionSize + u * region.regionSize;
+            float vertZ = region.coord.y * region.regionSize + v * region.regionSize;
 
             if (i == 0 || i == region.resolution || j == 0 || j == region.resolution)
             {
@@ -92,11 +90,10 @@ ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
         }
     }
 
-
     return chunk;
 }
 
 float FlatChunkGenerator::HeightAt(float x, float z) const
 {
-    return FBMNoise::GenNoise(octaves_, lacunatity_, gain_, glm::vec2(x, z) * baseFreq_) * heightScale_ + heightOffset_;
+    return FBMNoise::GenNoise(octaves_, lacunarity_, gain_, glm::vec2(x, z) * baseFreq_) * heightScale_ + heightOffset_;
 }

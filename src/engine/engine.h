@@ -15,6 +15,7 @@
 #include "../game/systems/physics-system.h"
 #include "../game/systems/player-system.h"
 #include "../game/systems/shot-system.h"
+#include "../game/systems/terrain-system.h"
 #include "../game/game-world/game-world.h"
 
 #include "../game/rendering/materials/model-material.h"
@@ -61,6 +62,7 @@ private:
     PlayerSystem playerSystem_;
     ShotSystem shotSystem_;
     CameraSystem cameraSystem_;
+    TerrainSystem terrainSystem_;
 
     void ChangeSetting(std::string key, bool value);
     glm::vec2 maxScreenSize_;

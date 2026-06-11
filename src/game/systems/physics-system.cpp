@@ -3,7 +3,7 @@
 #include "system-structs.h"
 #include "../game-world/game-world.h"
 
-void PhysicsSystem::Update(SystemsContext ctx)
+void PhysicsSystem::Update(SystemsContext& ctx)
 {
     if (!ctx.replay)
     {

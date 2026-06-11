@@ -11,7 +11,7 @@ public:
     float HeightAt(float x, float z) const;
 private:
     const int octaves_ = 5;
-    const float lacunatity_ = 2.0f;
+    const float lacunarity_ = 2.0f;
     const float gain_ = 0.5f;
 
     const float baseFreq_ = 0.03f;

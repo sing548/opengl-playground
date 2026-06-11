@@ -7,15 +7,13 @@ ModelMaterial::ModelMaterial(Shader* shader) : Material(shader)
 void ModelMaterial::ApplyFrame(const FrameGlobals& globals)
 {
     shader_->Use();
-	glm::vec3 dirLight(-1.0f, -1.0f, 0.0f);
-
 	shader_->SetVec3("viewPos", globals.cameraPos);
 	shader_->SetMat4("projection", globals.projection);
 	shader_->SetMat4("view", globals.view);
 
-	shader_->SetVec3("dirLight.direction", dirLight);
-	shader_->SetVec3("dirLight.ambient", glm::vec3(0.2f, 0.22f, 0.25f));   
-	shader_->SetVec3("dirLight.diffuse", glm::vec3(0.4f, 0.42f, 0.45f));
+	shader_->SetVec3("dirLight.direction", globals.dirLight.direction);
+	shader_->SetVec3("dirLight.ambient", globals.dirLight.ambient);   
+	shader_->SetVec3("dirLight.diffuse", globals.dirLight.diffuse);
 
     constexpr size_t kMaxLights = 128;
     const size_t n = std::min(globals.pointLights.size(), kMaxLights);
