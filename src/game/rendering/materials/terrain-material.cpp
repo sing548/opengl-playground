@@ -33,6 +33,12 @@ void TerrainMaterial::ApplyFrame(const FrameGlobals& globals)
         shader_->SetFloat(str + ".quadratic", light.quadratic);
     }
     shader_->SetInt("numPointLights", static_cast<int>(n));
+
+
+    shader_->SetFloat("snowStart", -9.0f);
+    shader_->SetFloat("snowEnd", -6.0f);
+    shader_->SetFloat("rockStart", 0.2f);
+    shader_->SetFloat("rockEnd", 0.4f);
 }
 
 void TerrainMaterial::ApplyInstance(const glm::mat4& model, const glm::vec4& tint)

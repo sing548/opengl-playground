@@ -2,13 +2,14 @@
 
 #include "system-structs.h"
 #include "../game-world/game-world.h"
+#include "../rendering/terrain/terrain-handler.h"
 
 void PhysicsSystem::Update(SystemsContext& ctx)
 {
     if (!ctx.replay)
     {
         MoveModels(ctx.dT, ctx.world, ctx.authoritative);
-        CheckHits(ctx.world, ctx.authoritative, ctx.settings.at("predictive_client"));
+        CheckHits(ctx.world, ctx.terrainHandler, ctx.authoritative, ctx.settings.at("predictive_client"));
         CorrectZOffset(ctx.world.GetScene());
     }
     else
@@ -54,7 +55,7 @@ void PhysicsSystem::MoveModel(float dT, Scene& scene, unsigned int id, const glm
     if (abs(position.z) > scene.currentFurthestPosition.z) scene.currentFurthestPosition.z = abs(position.z);
 }
 
-void PhysicsSystem::CheckHits(GameWorld& gameWorld, bool authoritative, bool predictive)
+void PhysicsSystem::CheckHits(GameWorld& gameWorld, TerrainHandler& terrain, bool authoritative, bool predictive)
 {
     if (predictive && !authoritative) return;
     
@@ -64,6 +65,15 @@ void PhysicsSystem::CheckHits(GameWorld& gameWorld, bool authoritative, bool pre
     {
         bool shotConsumed = false;
         const Model& shot = scene.GetModelByReference(shotId);
+
+        bool collided = CollideTerrain(terrain, scene, shotId, true);
+
+        if (collided) 
+        {
+            gameWorld.MarkEntityForDelete(shotId);
+            shotConsumed = true;
+            continue;
+        }
 
         for (auto& [playerId, playerData] : gameWorld.GetPlayerData())
         {
@@ -111,13 +121,29 @@ void PhysicsSystem::CheckHits(GameWorld& gameWorld, bool authoritative, bool pre
 
     auto& players = gameWorld.GetPlayerData();
     for (auto a = players.begin(); a != players.end(); ++a)
+    {
         for (auto b = std::next(a); b != players.end(); ++b)
             TryCollide(scene, a->first, b->first);
 
+        if(authoritative && CollideTerrain(terrain, scene, a->first))
+        {
+            a->second.lastHit = 0.2f;
+            a->second.lifes -= 1;
+        }
+    }
+    
     auto& npcs = gameWorld.GetNpcData();
     for (auto a = npcs.begin(); a != npcs.end(); ++a)
+    {
         for (auto b = std::next(a); b != npcs.end(); ++b)
             TryCollide(scene, a->first, b->first);
+
+        if(authoritative && CollideTerrain(terrain, scene, a->first))
+        {
+            a->second.lastHit = 0.2f;
+            a->second.lifes -= 1;
+        }
+    }
 
     for (auto& [playerId, _] : players)
         for (auto& [npcId, _] : npcs)
@@ -184,4 +210,36 @@ void PhysicsSystem::CorrectZOffset(Scene& scene)
             model.second.SetPosition(pos);
         }
     }
+}
+
+bool PhysicsSystem::CollideTerrain(TerrainHandler& terrain, Scene& scene, uint32_t id, bool fragile)
+{
+    bool collision = false;
+
+    auto& model = scene.GetModelByReference(id);
+    auto col = terrain.CheckCollision(model.GetPosition(), model.GetRadius());
+
+    glm::vec3 velocity = model.GetVelocity();
+
+    float velocityN = glm::dot(velocity, col.normal);
+
+    const float crashSpeed = 0.5f;
+
+    if (!col.collided) return collision;
+
+    if (!fragile && col.collided && velocityN > -crashSpeed)
+    {
+        velocity -= glm::min(velocityN, 0.0f) * col.normal;
+        model.SetVelocity(velocity);
+        model.SetPosition(model.GetPosition() + col.normal * col.penetration);
+    }
+    else
+    {
+        collision = true;
+        velocity -= 2* velocityN * col.normal;
+        model.SetVelocity(velocity);
+        model.SetPosition(model.GetPosition() + col.normal * col.penetration);
+    }
+
+    return collision;
 }

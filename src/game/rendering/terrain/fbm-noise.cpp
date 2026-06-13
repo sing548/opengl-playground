@@ -5,7 +5,9 @@ float FBMNoise::GenNoise(int octaves, float lacunarity, float gain, glm::vec2 po
     float y = 0.0f, amp = 1.0f, frequency = 1.0f, norm = 0.0f;
     for (int i = 0; i < octaves; i++)
     { 
-        y += amp * snoise(pos * frequency);
+        float n = snoise(pos * frequency);
+        n = 1.0f - fabs(n);
+        y += amp * n;
         norm += amp;
         frequency *= lacunarity;
         amp *= gain;

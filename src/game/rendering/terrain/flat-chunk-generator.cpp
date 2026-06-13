@@ -97,3 +97,14 @@ float FlatChunkGenerator::HeightAt(float x, float z) const
 {
     return FBMNoise::GenNoise(octaves_, lacunarity_, gain_, glm::vec2(x, z) * baseFreq_) * heightScale_ + heightOffset_;
 }
+
+glm::vec3 FlatChunkGenerator::NormalAt(glm::vec3 pos) const 
+{
+    float epsilon = 0.1f;
+    float dXp = HeightAt(pos.x + epsilon, pos.z);
+    float dXn = HeightAt(pos.x - epsilon, pos.z);
+    float dZp = HeightAt(pos.x, pos.z + epsilon);
+    float dZn = HeightAt(pos.x, pos.z - epsilon);
+
+    return glm::normalize(glm::vec3(dXn - dXp, 2.0f * epsilon, dZn - dZp));
+}

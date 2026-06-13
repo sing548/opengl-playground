@@ -22,17 +22,23 @@ struct IVec2Hash {
     }
 };
 
-
 public:
+struct TerrainCollision {
+    bool collided;
+    float penetration;
+    glm::vec3 normal;
+};
+
     TerrainHandler();
     void HandleChunksForArea(const glm::ivec2& area);
     const std::unordered_map<glm::ivec2,std::shared_ptr<Mesh>, IVec2Hash>& GetChunks() const { return chunks_; }
     const float GetRegionSize() const { return regionSize_; };
     const int GetRegionResolution() const { return regionResolution_; }; 
-private:
+    TerrainCollision CheckCollision(glm::vec3 pos, float radius);
 
+private:
     const float regionSize_ = 30.0f;
-    const int regionResolution_ = 32;
+    const int regionResolution_ = 64;
     const int hysteresis_ = 5;
 
     std::unordered_map<glm::ivec2, std::shared_ptr<Mesh>, IVec2Hash> chunks_;

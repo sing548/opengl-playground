@@ -31,17 +31,35 @@ uniform vec3 viewPos;
 uniform DirLight dirLight;
 uniform PointLight pointLights[MAX_POINT_LIGHTS];
 uniform int numPointLights;
+uniform float snowStart;
+uniform float snowEnd;
+uniform float rockStart;
+uniform float rockEnd;
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 albedo);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 albedo);
 
 void main()
 {
-    float tile = 1.0;
-    float c = mod(floor(FragPos.x / tile) + floor(FragPos.z / tile), 2.0);
-    vec3 albedo = mix(vec3(0.15), vec3(0.6), c);
+	// use if needed
+    //float tile = 1.0;
+    //float c = mod(floor(FragPos.x / tile) + floor(FragPos.z / tile), 2.0);
+	//vec3 albedo = mix(vec3(0.15), vec3(0.6), c);
 
-    vec3 N = normalize(Normal);
+	vec3 N = normalize(Normal);
+
+	vec3 grass = vec3(0.1, 0.3, 0.05);
+	vec3 rock = vec3(0.3, 0.3, 0.3);
+	vec3 snow = vec3(0.8, 0.8, 0.8);
+
+	float slope = 1.0 - N.y;
+
+	float snowyness = smoothstep(snowStart, snowEnd, FragPos.y);
+	vec3 ground = mix(grass, snow, snowyness);
+
+	float rockyness = smoothstep(rockStart, rockEnd, slope);
+	vec3 albedo = mix(ground, rock, rockyness);
+
     vec3 viewDir = normalize(viewPos - FragPos);
 
     vec3 result = CalcDirLight(dirLight, N, viewDir, albedo);
