@@ -25,7 +25,7 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     settings_["mouse_looking"] = mouseLooking;
     bool thirdPerson = false;
     settings_["third_person"] = thirdPerson;
-    bool skyBox = false;
+    bool skyBox = true;
     settings_["sky_box"] = skyBox;
     bool debug_view = false;
     settings_["debug_view"] = debug_view;

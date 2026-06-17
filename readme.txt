@@ -8,6 +8,7 @@ What's implemented so far:
 - Message serialization (protobuf / msgpack)
 - Basic gameplay systems
 - CMake build with optional vcpkg, Linux & Windows
+- Procedural generation of terrain
 
 Build:
 
@@ -24,6 +25,9 @@ Build:
 
   For faster debugging:
   cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build
+
+  Release version:
+  cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release && cmake --build build-release
 
   Windows (vcpkg):
     cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=S:/src/vcpkg_win/scripts/buildsystems/vcpkg.cmake
