@@ -121,8 +121,10 @@ if(WIN32)
     )
 endif()
 
-# Sanitizers in Debug builds (Linux/macOS; GCC and Clang only)
-option(ENABLE_SANITIZERS "Enable ASan + UBSan in Debug builds" ON)
+# Sanitizers in explicitly created Debug builds,
+# otherwise performance degredation is too big for debugging
+# (Linux/macOS; GCC and Clang only)
+option(ENABLE_SANITIZERS "Enable ASan + UBSan in Debug builds" OFF)
 
 if(ENABLE_SANITIZERS AND NOT MSVC
    AND CMAKE_BUILD_TYPE STREQUAL "Debug")

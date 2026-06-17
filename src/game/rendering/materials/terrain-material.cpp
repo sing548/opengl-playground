@@ -1,7 +1,21 @@
 #include "terrain-material.h"
 
-TerrainMaterial::TerrainMaterial(Shader* shader) : Material(shader)
+#include "../../../engine/helpers/file-helper.h"
+
+TerrainMaterial::TerrainMaterial(Shader* shader, AssetManager& assMan) : Material(shader), assMan_(assMan)
 {
+    grass_ = assMan_.LoadTexture(std::filesystem::path(
+                    FileHelper::GetAssetsDir()) / "textures" / "rocky_terrain_02_1k" / "rocky_terrain_02_diff_1k.jpg", true);
+    gNorm_ = assMan_.LoadTexture(std::filesystem::path(
+                    FileHelper::GetAssetsDir()) / "textures" / "rocky_terrain_02_1k" / "rocky_terrain_02_nor_gl_1k.jpg");
+    rock_ = assMan_.LoadTexture(std::filesystem::path(
+                    FileHelper::GetAssetsDir()) / "textures" / "seaside_rock_1k" / "seaside_rock_diff_1k.jpg");
+    rNorm_ = assMan_.LoadTexture(std::filesystem::path(
+                    FileHelper::GetAssetsDir()) / "textures" / "seaside_rock_1k" / "seaside_rock_nor_gl_1k.jpg");
+    snow_ = assMan_.LoadTexture(std::filesystem::path(
+                    FileHelper::GetAssetsDir()) / "textures" / "snow_02_1k"/ "snow_02_diff_1k.jpg", true);
+    gNorm_ = assMan_.LoadTexture(std::filesystem::path(
+                    FileHelper::GetAssetsDir()) / "textures" / "snow_02_1k" / "snow_02_nor_gl_1k.jpg");
 }
 
 void TerrainMaterial::ApplyFrame(const FrameGlobals& globals)
@@ -39,6 +53,37 @@ void TerrainMaterial::ApplyFrame(const FrameGlobals& globals)
     shader_->SetFloat("snowEnd", -6.0f);
     shader_->SetFloat("rockStart", 0.2f);
     shader_->SetFloat("rockEnd", 0.4f);
+
+    shader_->SetFloat("fogStart", 100.0f);
+    shader_->SetFloat("fogEnd", 500.0f);
+    shader_->SetVec3("fogColor", glm::vec3(0.1f, 0.1f, 0.1f));
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, grass_);
+    shader_->SetInt("grassTex", 0);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, rock_);
+    shader_->SetInt("rockTex", 1);
+
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, snow_);
+    shader_->SetInt("snowTex", 2);
+
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, gNorm_);
+    shader_->SetInt("grassNormal", 3);
+
+    glActiveTexture(GL_TEXTURE4);
+    glBindTexture(GL_TEXTURE_2D, gNorm_);
+    shader_->SetInt("rockNormal", 4);
+
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, gNorm_);
+    shader_->SetInt("snowNormal", 5);
+
+
+    shader_->SetFloat("texScale", 0.2);
 }
 
 void TerrainMaterial::ApplyInstance(const glm::mat4& model, const glm::vec4& tint)

@@ -111,6 +111,10 @@ void Grass::Render(const FrameGlobals& globals)
     }
     shader_->SetInt("numPointLights", static_cast<int>(n));
 
+    shader_->SetFloat("fogStart", 100.0f);
+    shader_->SetFloat("fogEnd", 500.0f);
+    shader_->SetVec3("fogColor", glm::vec3(0.1f, 0.1f, 0.1f));
+
     glBindVertexArray(vao_);
     glDrawElementsInstanced(GL_TRIANGLES, indexCount_, GL_UNSIGNED_INT, 0, instanceCount_);
     glBindVertexArray(0);

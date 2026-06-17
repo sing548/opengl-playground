@@ -1,5 +1,17 @@
 #include "asset-manager.h"
 
+unsigned int AssetManager::LoadTexture(const std::string& fullPath, bool srgb)
+{
+	if (HasTexture(fullPath))
+		return textureCache_[fullPath];
+	
+	auto textureId = TextureFromFile(fullPath, srgb);
+
+	textureCache_.emplace(fullPath, textureId);
+
+	return textureCache_[fullPath];
+}
+
 std::vector<std::shared_ptr<Mesh>> AssetManager::LoadModel(const std::string& path) {
     if (HasModel(path))
         return modelCache_[path];
@@ -10,10 +22,6 @@ std::vector<std::shared_ptr<Mesh>> AssetManager::LoadModel(const std::string& pa
         return modelCache_[path];
 
     throw std::runtime_error("Failed to load Model. Look in AssetManager");
-}
-
-bool AssetManager::HasModel(const std::string& path) {
-    return modelCache_.find(path) != modelCache_.end();
 }
 
 void AssetManager::LoadModelInternal(const std::string& path)
@@ -28,10 +36,8 @@ void AssetManager::LoadModelInternal(const std::string& path)
 		return;
 	}
 
-	
 	std::filesystem::path p(path);
 	std::string directory = p.parent_path().string();
-	//std::string directory = path.substr(0, path.find_last_of('/'));
 	ProcessNode(scene->mRootNode, scene, directory, path);
 }
 
@@ -154,8 +160,11 @@ std::vector<Texture> AssetManager::LoadMaterialTextures(aiMaterial* mat, aiTextu
 	
         if (!skip)
 		{
+			std::string fullPath = std::string(str.C_Str());
+			fullPath = (std::filesystem::path(directory) / fullPath).string();
+
 			Texture texture;
-			texture.id = TextureFromFile(str.C_Str(), directory);
+			texture.id = TextureFromFile(fullPath);
 			texture.type = typeName;
 			texture.path = str.C_Str();
 			textures.push_back(texture);
@@ -175,14 +184,12 @@ std::vector<Texture> AssetManager::LoadMaterialTextures(aiMaterial* mat, aiTextu
     return textures;
 }
 
-unsigned int AssetManager::TextureFromFile(const char* path, const std::string& directory, bool gamma)
+unsigned int AssetManager::TextureFromFile(const std::string& fullPath, bool gamma)
 {
-	std::string filename = std::string(path);
-	filename = (std::filesystem::path(directory) / filename).string();
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
 	int width, height, nrComponents;
-	unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
+	unsigned char* data = stbi_load(fullPath.c_str(), &width, &height, &nrComponents, 0);
 	
     if (data)
 	{
@@ -206,7 +213,7 @@ unsigned int AssetManager::TextureFromFile(const char* path, const std::string& 
 	}
 	else
 	{
-		std::cout << "Texture failed to load at path: " << filename << std::endl;
+		std::cout << "Texture failed to load at path: " << fullPath << std::endl;
 		stbi_image_free(data);
 	}
 

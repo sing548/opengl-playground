@@ -10,21 +10,36 @@ TerrainHandler::TerrainHandler()
 
 void TerrainHandler::HandleChunksForArea(const glm::ivec2& area)
 {
-    int renderedArea = 5;
-
-    for (int i =  area.x - renderedArea; i <= area.x + renderedArea; i++)
+    for (int i =  area.x - renderArea_; i <= area.x + renderArea_; i++)
     {
-        for (int j = area.y - renderedArea; j <= area.y + renderedArea; j++)
+        for (int j = area.y - renderArea_; j <= area.y + renderArea_; j++)
         {
-            if (chunks_.find({ i, j}) == chunks_.end())
+            auto it = chunks_.find({ i, j });
+            int dist = std::max(std::abs(i - area.x), std::abs(j - area.y));
+            bool lowLod = dist > lowLodArea_;
+            bool deleted = false;
+
+            if (it != chunks_.end() && (
+                lowLod && it->second.lod != lowLodRegionResolution_ ||
+                    !lowLod && it->second.lod != regionResolution_
+                ))
+            {
+                chunks_.erase({ i, j });
+                deleted = true;
+            }
+
+            if (deleted || it == chunks_.end())
             {
                 ChunkRegion region {
                     { i, j },
                     regionSize_,
-                    regionResolution_
+                    lowLod ?  lowLodRegionResolution_ : regionResolution_
                 };
                 ChunkData data = chunkGenerator_->Generate(region);
-                chunks_.emplace(glm::ivec2(i, j), chunkHandler_.UploadChunk(data));
+                Chunk chunk;
+                chunk.mesh = chunkHandler_.UploadChunk(data);
+                chunk.lod = lowLod ?  lowLodRegionResolution_ : regionResolution_;
+                chunks_.emplace(glm::ivec2(i, j), chunk);
             }
         }
     }
@@ -33,8 +48,8 @@ void TerrainHandler::HandleChunksForArea(const glm::ivec2& area)
     {
         glm::ivec2 chunk = it->first;
 
-        if (chunk.x < area.x - renderedArea - hysteresis_ || chunk.x > area.x + renderedArea + hysteresis_  ||
-            chunk.y < area.y - renderedArea - hysteresis_  || chunk.y > area.y + renderedArea + hysteresis_ )
+        if (chunk.x < area.x - renderArea_ - hysteresis_ || chunk.x > area.x + renderArea_ + hysteresis_  ||
+            chunk.y < area.y - renderArea_ - hysteresis_  || chunk.y > area.y + renderArea_ + hysteresis_ )
             it = chunks_.erase(it);
         else
             ++it;

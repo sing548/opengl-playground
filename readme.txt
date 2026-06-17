@@ -19,6 +19,12 @@ Build:
     cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=/mnt/xxx/src/opengl/vcpkg/scripts/buildsystems/vcpkg.cmake
     cmake --build build
 
+  For debugging with sanitizers:
+  cmake -S . -B build-san -DENABLE_SANITIZERS=ON && cmake --build build-san
+
+  For faster debugging:
+  cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build
+
   Windows (vcpkg):
     cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=S:/src/vcpkg_win/scripts/buildsystems/vcpkg.cmake
     cmake --build build --config Release

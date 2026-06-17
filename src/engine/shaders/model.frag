@@ -34,6 +34,9 @@ uniform sampler2D texture_emissive1;
 uniform DirLight dirLight;
 uniform PointLight pointLights[MAX_POINT_LIGHTS];
 uniform int numPointLights;
+uniform float fogStart;
+uniform float fogEnd;
+uniform vec3 fogColor;
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
@@ -51,11 +54,16 @@ void main()
 
 	result += CalcEmissiveLight();
 
+	float dist = length(viewPos - FragPos);
+	float fogStrength = smoothstep(fogStart, fogEnd, dist);
+	result = mix(result, fogColor, fogStrength);
+
 	FragColor = vec4(result, 1.0);
 
 	float brightness = dot(FragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+	
 	if (brightness > 1.0)
-		BrightColor = vec4(FragColor.rgb, 1.0);
+		BrightColor = vec4(result, 1.0);
 	else
 		BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
 }

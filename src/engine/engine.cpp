@@ -123,7 +123,7 @@ void Engine::TempBuildRenderHelpers()
 
     modelMat_ = std::make_unique<ModelMaterial>(modelShader_.get());
 	hitboxMat_ = std::make_unique<HitboxMaterial>(hitboxShader_.get());
-    terrainMat_ = std::make_unique<TerrainMaterial>(terrainShader_.get());
+    terrainMat_ = std::make_unique<TerrainMaterial>(terrainShader_.get(), *assMan_);
 }
 
 AssetManager& Engine::GetAssMan()
@@ -640,7 +640,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
         for (auto& [iv, mp] : terrainHandler_->GetChunks())
         {
             DrawCommand dc;
-            dc.mesh = mp.get();
+            dc.mesh = mp.mesh.get();
             dc.material = terrainMat_.get();
             dc.transform = glm::mat4(1.0f);
             dc.renderPass = settings_["debug_view"] ? RenderPass::Debug : RenderPass::Opaque;

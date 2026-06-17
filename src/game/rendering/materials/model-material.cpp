@@ -31,6 +31,10 @@ void ModelMaterial::ApplyFrame(const FrameGlobals& globals)
         shader_->SetFloat(str + ".quadratic", light.quadratic);
     }
     shader_->SetInt("numPointLights", static_cast<int>(n));
+
+    shader_->SetFloat("fogStart", 100.0f);
+    shader_->SetFloat("fogEnd", 500.0f);
+    shader_->SetVec3("fogColor", glm::vec3(0.1f, 0.1f, 0.1f));
 };
 
 void ModelMaterial::ApplyInstance(const glm::mat4& model, const glm::vec4& tint)
