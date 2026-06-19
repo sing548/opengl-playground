@@ -10,18 +10,18 @@ TerrainHandler::TerrainHandler()
 
 void TerrainHandler::HandleChunksForArea(const glm::ivec2& area)
 {
-    for (int i =  area.x - renderArea_; i <= area.x + renderArea_; i++)
+    for (int i =  area.x - TerrainConfig::RenderArea; i <= area.x + TerrainConfig::RenderArea; i++)
     {
-        for (int j = area.y - renderArea_; j <= area.y + renderArea_; j++)
+        for (int j = area.y - TerrainConfig::RenderArea; j <= area.y + TerrainConfig::RenderArea; j++)
         {
             auto it = chunks_.find({ i, j });
             int dist = std::max(std::abs(i - area.x), std::abs(j - area.y));
-            bool lowLod = dist > lowLodArea_;
+            bool lowLod = dist > TerrainConfig::LowLoDArea;
             bool deleted = false;
 
             if (it != chunks_.end() && (
-                lowLod && it->second.lod != lowLodRegionResolution_ ||
-                    !lowLod && it->second.lod != regionResolution_
+                lowLod && it->second.lod != TerrainConfig::LowLodRegionResolution ||
+                    !lowLod && it->second.lod != TerrainConfig::RegionResolution
                 ))
             {
                 chunks_.erase({ i, j });
@@ -32,13 +32,13 @@ void TerrainHandler::HandleChunksForArea(const glm::ivec2& area)
             {
                 ChunkRegion region {
                     { i, j },
-                    regionSize_,
-                    lowLod ?  lowLodRegionResolution_ : regionResolution_
+                    TerrainConfig::RegionSize,
+                    lowLod ?  TerrainConfig::LowLodRegionResolution : TerrainConfig::RegionResolution
                 };
                 ChunkData data = chunkGenerator_->Generate(region);
                 Chunk chunk;
                 chunk.mesh = chunkHandler_.UploadChunk(data);
-                chunk.lod = lowLod ?  lowLodRegionResolution_ : regionResolution_;
+                chunk.lod = lowLod ?  TerrainConfig::LowLodRegionResolution : TerrainConfig::RegionResolution;
                 chunks_.emplace(glm::ivec2(i, j), chunk);
             }
         }
@@ -48,8 +48,10 @@ void TerrainHandler::HandleChunksForArea(const glm::ivec2& area)
     {
         glm::ivec2 chunk = it->first;
 
-        if (chunk.x < area.x - renderArea_ - hysteresis_ || chunk.x > area.x + renderArea_ + hysteresis_  ||
-            chunk.y < area.y - renderArea_ - hysteresis_  || chunk.y > area.y + renderArea_ + hysteresis_ )
+        if (chunk.x < area.x - TerrainConfig::RenderArea - TerrainConfig::Hysteresis ||
+            chunk.x > area.x + TerrainConfig::RenderArea + TerrainConfig::Hysteresis ||
+            chunk.y < area.y - TerrainConfig::RenderArea - TerrainConfig::Hysteresis ||
+            chunk.y > area.y + TerrainConfig::RenderArea + TerrainConfig::Hysteresis )
             it = chunks_.erase(it);
         else
             ++it;

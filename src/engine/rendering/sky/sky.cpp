@@ -70,8 +70,10 @@ Sky::~Sky()
     glDeleteTextures(1, &cubemap_);
 }
 
-void Sky::Render(const FrameGlobals& globals)
+void Sky::Render(const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings)
 {
+    if (!settings.at("sky_box")) return;
+    
     shader_->Use();
     glm::mat4 viewNoTranslation = glm::mat4(glm::mat3(globals.view)); // remove translation
     shader_->SetMat4("view", viewNoTranslation);

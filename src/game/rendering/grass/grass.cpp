@@ -80,8 +80,10 @@ Grass::~Grass()
     glDeleteBuffers(1, &indexBufferEBO_);
 }
 
-void Grass::Render(const FrameGlobals& globals)
+void Grass::Render(const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings)
 {
+    if (!settings.at("grass")) return;
+
     shader_->Use();
 
     shader_->SetVec3("viewPos", globals.cameraPos);

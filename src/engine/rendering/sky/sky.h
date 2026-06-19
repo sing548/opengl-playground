@@ -10,16 +10,19 @@
 #include <glad/glad.h>
 
 #include "../render-list.h"
+#include "../i-scene-rendererable.h"
+
 #include "../../shaders/shader.h"
 #include "../../helpers/file-helper.h"
 
-class Sky 
+class Sky : public ISceneRenderable
 {
 public:
     Sky(std::vector<std::string> facePaths);
     ~Sky();
 
-    void Render(const FrameGlobals& globals);
+    void Render(const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings) override;
+    RenderPass GetRenderPass() { return RenderPass::Skybox; };
 private:
     std::unique_ptr<Shader> shader_;
     unsigned int vao_, vbo_;

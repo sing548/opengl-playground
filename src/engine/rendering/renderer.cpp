@@ -1,4 +1,5 @@
 #include "renderer.h"
+#include "stb/stb_image.h"
 
 Renderer::Renderer(unsigned int width, unsigned int height)
 {
@@ -98,20 +99,6 @@ Renderer::Renderer(unsigned int width, unsigned int height)
 		backgroundRGBA_.w
 	};
 	black_ = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-	std::string base = (std::filesystem::path(FileHelper::GetAssetsDir()) / "skybox" / "NASA2").string();
-	std::vector<std::string> faces
-	{
-	    (std::filesystem::path(base) / "posx.png").string(),
-	    (std::filesystem::path(base) / "negx.png").string(),
-	    (std::filesystem::path(base) / "posy.png").string(),
-	    (std::filesystem::path(base) / "negy.png").string(),
-	    (std::filesystem::path(base) / "posz.png").string(),
-	    (std::filesystem::path(base) / "negz.png").string()
-	};
-	sky_ = std::make_unique<Sky>(faces);
-
-	grass_ = std::make_unique<Grass>();
 }
 
 void Renderer::Draw(const RenderList& renderList, const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings)
@@ -153,17 +140,13 @@ void Renderer::Draw(const RenderList& renderList, const FrameGlobals& globals, c
 		cmd->mesh->Draw(cmd->material->GetShader());
 	}
 
-	if (settings.at("sky_box")) {
-		ApplyPassState(RenderPass::Skybox);
-		sky_->Render(globals);
-	}
-
-	if (settings.at("grass"))
+	for (auto* rendererable : sceneRenderables_) 
 	{
-		settings.at("debug_view") ? 
-			ApplyPassState(RenderPass::Debug) : 
-			ApplyPassState(RenderPass::Opaque);
-		grass_->Render(globals);
+		auto state = rendererable->GetRenderPass();
+		if (state == RenderPass::Opaque && settings.at("debug_view"))
+			state = RenderPass::Debug;
+		ApplyPassState(state);
+		rendererable->Render(globals, settings);
 	}
 	
 	// ---------- Post-processing / Render to screen ----------

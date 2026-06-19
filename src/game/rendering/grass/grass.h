@@ -6,18 +6,21 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
+#include "../../../engine/rendering/i-scene-rendererable.h"
+
 struct ChunkRegion;
 struct FrameGlobals;
 
 class Shader;
 
-class Grass
+class Grass : public ISceneRenderable
 {
 public:
     Grass();
     ~Grass();
 
-    void Render(const FrameGlobals& globals);
+    void Render(const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings) override;
+    RenderPass GetRenderPass() override { return RenderPass::Opaque; };
 private:
     float height_ = -1.0f;
     std::unique_ptr<Shader> shader_;

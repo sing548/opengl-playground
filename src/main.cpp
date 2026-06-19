@@ -11,6 +11,8 @@
 #include "engine/rendering/renderer.h"
 #include "engine/engine.h"
 
+#include "engine/rendering/sky/sky.h"
+#include "game/rendering/grass/grass.h"
 
 int main(int argc, const char *argv[]) {
 
@@ -84,6 +86,23 @@ int main(int argc, const char *argv[]) {
         std::cerr << "Failed to initialize GLFW" << e.what() << std::endl;
         return -1;
     }
+
+    std::string base = (std::filesystem::path(FileHelper::GetAssetsDir()) / "skybox" / "NASA2").string();
+	std::vector<std::string> faces
+	{
+	    (std::filesystem::path(base) / "posx.png").string(),
+	    (std::filesystem::path(base) / "negx.png").string(),
+	    (std::filesystem::path(base) / "posy.png").string(),
+	    (std::filesystem::path(base) / "negy.png").string(),
+	    (std::filesystem::path(base) / "posz.png").string(),
+	    (std::filesystem::path(base) / "negz.png").string()
+	};
+	std::unique_ptr<Sky> sky = std::make_unique<Sky>(faces);
+	std::unique_ptr<Grass> grass = std::make_unique<Grass>();
+
+    // Currently needs to be ordered at creation - Skybox last
+    engine->AddSceneRenderable(std::move(grass));
+    engine->AddSceneRenderable(std::move(sky));
 
     engine->Run();
 

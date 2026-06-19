@@ -7,6 +7,7 @@
 
 #include <glm/glm.hpp>
 
+#include "terrain-config.h"
 #include "../../../engine/rendering/terrain/chunk-handler.h"
 
 struct FrameGlobals;
@@ -37,18 +38,10 @@ struct Chunk {
     TerrainHandler();
     void HandleChunksForArea(const glm::ivec2& area);
     const std::unordered_map<glm::ivec2, Chunk, IVec2Hash>& GetChunks() const { return chunks_; }
-    const float GetRegionSize() const { return regionSize_; };
-    const int GetRegionResolution() const { return regionResolution_; }; 
+    const float GetRegionSize() const { return TerrainConfig::RegionSize; }; 
     TerrainCollision CheckCollision(glm::vec3 pos, float radius);
 
 private:
-    const int renderArea_ = 10;
-    const int lowLodArea_ = 7;
-    const float regionSize_ = 30.0f;
-    const int regionResolution_ = 64;
-    const int lowLodRegionResolution_ = 16;
-    const int hysteresis_ = 5;
-
     std::unordered_map<glm::ivec2, Chunk, IVec2Hash> chunks_;
     ChunkHandler chunkHandler_;
     std::unique_ptr<IChunkGenerator> chunkGenerator_;

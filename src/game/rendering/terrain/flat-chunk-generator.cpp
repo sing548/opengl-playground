@@ -1,6 +1,7 @@
 #include "flat-chunk-generator.h"
 
 #include "fbm-noise.h"
+#include "terrain-config.h"
 
 ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
 {
@@ -95,7 +96,11 @@ ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
 
 float FlatChunkGenerator::HeightAt(float x, float z) const
 {
-    return FBMNoise::GenNoise(octaves_, lacunarity_, gain_, glm::vec2(x, z) * baseFreq_) * heightScale_ + heightOffset_;
+    return FBMNoise::GenNoise(
+                TerrainConfig::Octaves,
+                TerrainConfig::Lacunarity,
+                TerrainConfig::Gain,
+                glm::vec2(x, z) * TerrainConfig::BaseFreq) * TerrainConfig::HeightScale + TerrainConfig::HeightOffset;
 }
 
 glm::vec3 FlatChunkGenerator::NormalAt(glm::vec3 pos) const 

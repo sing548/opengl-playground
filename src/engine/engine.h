@@ -41,6 +41,8 @@ public:
     AssetManager& GetAssMan();
     Window& GetWindow() { return *window_; };
 
+    void AddSceneRenderable(std::unique_ptr<ISceneRenderable> r);
+
 private:
     const unsigned int WIDTH = 1920;
     const unsigned int HEIGHT = 1080;
@@ -52,6 +54,8 @@ private:
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<Renderer> renderer_;
     std::unique_ptr<AssetManager> assMan_;
+
+    std::vector<std::unique_ptr<ISceneRenderable>> sceneRenderables_;
 
     std::unique_ptr<NetworkBridge> netwBridg_;
 

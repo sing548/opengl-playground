@@ -1,5 +1,6 @@
 #include "terrain-material.h"
 
+#include "../terrain/terrain-config.h"
 #include "../../../engine/helpers/file-helper.h"
 
 TerrainMaterial::TerrainMaterial(Shader* shader, AssetManager& assMan) : Material(shader), assMan_(assMan)
@@ -9,13 +10,15 @@ TerrainMaterial::TerrainMaterial(Shader* shader, AssetManager& assMan) : Materia
     gNorm_ = assMan_.LoadTexture(std::filesystem::path(
                     FileHelper::GetAssetsDir()) / "textures" / "rocky_terrain_02_1k" / "rocky_terrain_02_nor_gl_1k.jpg");
     rock_ = assMan_.LoadTexture(std::filesystem::path(
-                    FileHelper::GetAssetsDir()) / "textures" / "seaside_rock_1k" / "seaside_rock_diff_1k.jpg");
+                    FileHelper::GetAssetsDir()) / "textures" / "seaside_rock_1k" / "seaside_rock_diff_1k.jpg", true);
     rNorm_ = assMan_.LoadTexture(std::filesystem::path(
                     FileHelper::GetAssetsDir()) / "textures" / "seaside_rock_1k" / "seaside_rock_nor_gl_1k.jpg");
     snow_ = assMan_.LoadTexture(std::filesystem::path(
                     FileHelper::GetAssetsDir()) / "textures" / "snow_02_1k"/ "snow_02_diff_1k.jpg", true);
     gNorm_ = assMan_.LoadTexture(std::filesystem::path(
                     FileHelper::GetAssetsDir()) / "textures" / "snow_02_1k" / "snow_02_nor_gl_1k.jpg");
+
+    
 }
 
 void TerrainMaterial::ApplyFrame(const FrameGlobals& globals)
@@ -48,16 +51,6 @@ void TerrainMaterial::ApplyFrame(const FrameGlobals& globals)
     }
     shader_->SetInt("numPointLights", static_cast<int>(n));
 
-
-    shader_->SetFloat("snowStart", -9.0f);
-    shader_->SetFloat("snowEnd", -6.0f);
-    shader_->SetFloat("rockStart", 0.2f);
-    shader_->SetFloat("rockEnd", 0.4f);
-
-    shader_->SetFloat("fogStart", 100.0f);
-    shader_->SetFloat("fogEnd", 500.0f);
-    shader_->SetVec3("fogColor", glm::vec3(0.1f, 0.1f, 0.1f));
-
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, grass_);
     shader_->SetInt("grassTex", 0);
@@ -75,13 +68,21 @@ void TerrainMaterial::ApplyFrame(const FrameGlobals& globals)
     shader_->SetInt("grassNormal", 3);
 
     glActiveTexture(GL_TEXTURE4);
-    glBindTexture(GL_TEXTURE_2D, gNorm_);
+    glBindTexture(GL_TEXTURE_2D, rNorm_);
     shader_->SetInt("rockNormal", 4);
 
     glActiveTexture(GL_TEXTURE5);
-    glBindTexture(GL_TEXTURE_2D, gNorm_);
+    glBindTexture(GL_TEXTURE_2D, sNorm_);
     shader_->SetInt("snowNormal", 5);
 
+    shader_->SetFloat("snowStart", TerrainConfig::SnowStart);
+    shader_->SetFloat("snowEnd", TerrainConfig::SnowEnd);
+    shader_->SetFloat("rockStart", TerrainConfig::RockStart);
+    shader_->SetFloat("rockEnd", TerrainConfig::RockEnd);
+
+    shader_->SetFloat("fogStart", TerrainConfig::FogStart);
+    shader_->SetFloat("fogEnd", TerrainConfig::FogEnd);
+    shader_->SetVec3("fogColor", glm::vec3(TerrainConfig::FogColor, TerrainConfig::FogColor, TerrainConfig::FogColor));
 
     shader_->SetFloat("texScale", 0.2);
 }

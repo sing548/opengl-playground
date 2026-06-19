@@ -108,6 +108,13 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
 
 Engine::~Engine() = default;
 
+void Engine::AddSceneRenderable(std::unique_ptr<ISceneRenderable> r)
+{
+    sceneRenderables_.push_back(std::move(r));
+    int size = sceneRenderables_.size();
+    renderer_->AddSceneRenderable(sceneRenderables_.at(size - 1).get());
+};
+
 void Engine::TempBuildRenderHelpers()
 {
     std::string modelVert  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.vert").string();
