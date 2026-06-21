@@ -1,14 +1,18 @@
 #ifndef TERRAIN_SYSTEM_H
 #define TERRAIN_SYSYTEM_H
 
+#include "../../engine/systems/i-gameplay-system.h"
+
 #include "../rendering/terrain/terrain-handler.h"
 
 struct SystemsContext;
 
-class TerrainSystem
+class TerrainSystem : public IGameplaySystem
 {
 public:
-    void Update(SystemsContext& ctx);
+    void Update(SystemsContext& ctx) override;
+    GameplayPhase GetPhase() const override { return GameplayPhase::Simulation; }
+    int GetOrder() const override { return 40; }
 private:
     glm::ivec2 lastArea_ { INT_MAX, INT_MAX };
 };

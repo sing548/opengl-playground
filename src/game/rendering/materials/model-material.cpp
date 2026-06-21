@@ -1,6 +1,6 @@
 #include "model-material.h"
 
-ModelMaterial::ModelMaterial(Shader* shader) : Material(shader) 
+ModelMaterial::ModelMaterial(std::unique_ptr<Shader> shader) : Material(std::move(shader)) 
 {
 };
 

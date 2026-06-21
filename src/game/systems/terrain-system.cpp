@@ -1,6 +1,7 @@
 #include "terrain-system.h"
 
-#include "system-structs.h"
+#include "../../engine/systems/system-structs.h"
+
 #include "../game-world/game-world.h"
 
 void TerrainSystem::Update(SystemsContext& ctx)

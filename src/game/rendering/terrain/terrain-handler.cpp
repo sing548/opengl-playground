@@ -69,7 +69,7 @@ TerrainHandler::TerrainCollision TerrainHandler::CheckCollision(glm::vec3 pos, f
 
     float bottom = pos.y - radius;
     // ToDo: Move HeightOffset to TerrainConfig struct and out of ChunkGenerator
-    if (bottom > 18.0f /*heightOffset - will be moved*/)
+    if (bottom > TerrainConfig::MaxHeight /*heightOffset - will be moved*/)
     {
         return col;
     }

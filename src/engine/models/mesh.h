@@ -11,6 +11,8 @@
 #include <vector>
 #include <string>
 
+enum MaterialId : uint16_t { Default = 0 };
+
 struct Vertex {
 	glm::vec3 Position;
 	glm::vec3 Normal;
@@ -27,13 +29,13 @@ struct Texture {
 
 class Mesh {
 public:
-    std::vector<Vertex>			vertices;
-	std::vector<unsigned int>	indices;
-	std::vector<Texture>		textures;
-	unsigned int VAO;
+std::vector<Vertex>			vertices;
+std::vector<unsigned int>	indices;
+std::vector<Texture>		textures;
+unsigned int VAO;
 
     Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
-
+	
 	// https://en.cppreference.com/cpp/language/rule_of_three
 	~Mesh();
 	Mesh(const Mesh&)			 = delete;
@@ -42,8 +44,12 @@ public:
 	Mesh& operator=(Mesh&&) noexcept;
 
     void Draw(Shader &shader) const;
+	uint16_t GetMaterialId() { return matId_; }
+
 private:
-    unsigned int VBO_, EBO_;
+
+	unsigned int VBO_, EBO_;
+	uint16_t matId_ = MaterialId::Default;
 
     void SetupMesh();
 };

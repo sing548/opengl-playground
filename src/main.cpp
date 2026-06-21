@@ -11,8 +11,20 @@
 #include "engine/rendering/renderer.h"
 #include "engine/engine.h"
 
+#include "game/systems/camera-system.h"
+#include "game/systems/npc-system.h"
+#include "game/systems/physics-system.h"
+#include "game/systems/player-system.h"
+#include "game/systems/shot-system.h"
+#include "game/systems/terrain-system.h"
+
 #include "engine/rendering/sky/sky.h"
 #include "game/rendering/grass/grass.h"
+#include "game/rendering/materials/game-material.h"
+
+#include "game/rendering/materials/model-material.h"
+#include "game/rendering/materials/hitbox-material.h"
+#include "game/rendering/materials/terrain-material.h"
 
 int main(int argc, const char *argv[]) {
 
@@ -103,6 +115,44 @@ int main(int argc, const char *argv[]) {
     // Currently needs to be ordered at creation - Skybox last
     engine->AddSceneRenderable(std::move(grass));
     engine->AddSceneRenderable(std::move(sky));
+
+    auto phys = std::make_unique<PhysicsSystem>();
+    engine->AddGameplaySystem(std::move(phys));
+
+    auto npc = std::make_unique<NpcSystem>();
+    engine->AddGameplaySystem(std::move(npc));
+
+    auto player = std::make_unique<PlayerSystem>();
+    engine->AddGameplaySystem(std::move(player));
+
+    auto shot = std::make_unique<ShotSystem>();
+    engine->AddGameplaySystem(std::move(shot));
+
+    auto terr = std::make_unique<TerrainSystem>();
+    engine->AddGameplaySystem(std::move(terr));
+
+    auto cam = std::make_unique<CameraSystem>();
+    engine->AddGameplaySystem(std::move(cam));
+
+    std::string modelVert  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.vert").string();
+    std::string modelFrag  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.frag").string();
+	std::string hitboxVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "hitbox.vert").string();
+	std::string hitboxFrag = (std::filesystem::path(FileHelper::GetShaderDir()) / "hitbox.frag").string();
+    std::string terrainVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "terrain.vert").string();
+	std::string terrainFrag = (std::filesystem::path(FileHelper::GetShaderDir()) / "terrain.frag").string();
+    
+    auto modelShader  = std::make_unique<Shader>(modelVert.c_str(), modelFrag.c_str());
+	auto hitboxShader = std::make_unique<Shader>(hitboxVert.c_str(), hitboxFrag.c_str());
+    auto terrainShader = std::make_unique<Shader>(terrainVert.c_str(), terrainFrag.c_str());
+
+    auto modelMat = std::make_unique<ModelMaterial>(std::move(modelShader));
+    engine->AddMaterial(GameMaterial::Model, std::move(modelMat));
+
+    auto hitboxMat = std::make_unique<HitboxMaterial>(std::move(hitboxShader));
+    engine->AddMaterial(GameMaterial::Hitbox, std::move(hitboxMat));
+
+    auto terrainMat = std::make_unique<TerrainMaterial>(std::move(terrainShader), engine->GetAssMan());
+    engine->AddMaterial(GameMaterial::Terrain, std::move(terrainMat));
 
     engine->Run();
 

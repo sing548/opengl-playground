@@ -2,6 +2,7 @@
 #define PLAYER_SYSTEM_H
 
 #include "../../engine/models/scene.h"
+#include "../../engine/systems/i-gameplay-system.h"
 #include "../../game/networking/network-bridge/shared-strucs.h"
 
 class GameWorld;
@@ -9,9 +10,13 @@ class NetworkBridge;
 
 struct SystemsContext;
 
-class PlayerSystem {
+class PlayerSystem : public IGameplaySystem
+{
 public:
-    void Update(SystemsContext& ctx);
+    void Update(SystemsContext& ctx) override;
+    GameplayPhase GetPhase() const override { return GameplayPhase::Simulation; }
+    int GetOrder() const override { return 20; }
+    bool CanReplay() override { return true; }
 private:
     uint32_t localPredCounter = 0x8000000;
     void ExecuteInput(float dT,

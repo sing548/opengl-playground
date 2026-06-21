@@ -1,8 +1,8 @@
 #include "player-system.h"
 
-#include "../networking/network-bridge/network-bridge.h"
+#include "../../engine/systems/system-structs.h"
 
-#include "system-structs.h"
+#include "../networking/network-bridge/network-bridge.h"
 #include "../spawner/spawner.h"
 #include "../game-world/game-world.h"
 

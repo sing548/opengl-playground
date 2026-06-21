@@ -3,7 +3,8 @@
 #include "../terrain/terrain-config.h"
 #include "../../../engine/helpers/file-helper.h"
 
-TerrainMaterial::TerrainMaterial(Shader* shader, AssetManager& assMan) : Material(shader), assMan_(assMan)
+TerrainMaterial::TerrainMaterial(std::unique_ptr<Shader> shader, AssetManager& assMan) 
+                : Material(std::move(shader)), assMan_(assMan)
 {
     grass_ = assMan_.LoadTexture(std::filesystem::path(
                     FileHelper::GetAssetsDir()) / "textures" / "rocky_terrain_02_1k" / "rocky_terrain_02_diff_1k.jpg", true);
@@ -15,7 +16,7 @@ TerrainMaterial::TerrainMaterial(Shader* shader, AssetManager& assMan) : Materia
                     FileHelper::GetAssetsDir()) / "textures" / "seaside_rock_1k" / "seaside_rock_nor_gl_1k.jpg");
     snow_ = assMan_.LoadTexture(std::filesystem::path(
                     FileHelper::GetAssetsDir()) / "textures" / "snow_02_1k"/ "snow_02_diff_1k.jpg", true);
-    gNorm_ = assMan_.LoadTexture(std::filesystem::path(
+    sNorm_ = assMan_.LoadTexture(std::filesystem::path(
                     FileHelper::GetAssetsDir()) / "textures" / "snow_02_1k" / "snow_02_nor_gl_1k.jpg");
 
     
@@ -84,7 +85,7 @@ void TerrainMaterial::ApplyFrame(const FrameGlobals& globals)
     shader_->SetFloat("fogEnd", TerrainConfig::FogEnd);
     shader_->SetVec3("fogColor", glm::vec3(TerrainConfig::FogColor, TerrainConfig::FogColor, TerrainConfig::FogColor));
 
-    shader_->SetFloat("texScale", 0.2);
+    shader_->SetFloat("texScale", TerrainConfig::TexScale);
 }
 
 void TerrainMaterial::ApplyInstance(const glm::mat4& model, const glm::vec4& tint)

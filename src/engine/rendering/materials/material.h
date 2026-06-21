@@ -3,6 +3,8 @@
 
 #include <glm/ext/matrix_clip_space.hpp>
 
+#include <memory>
+
 #include "../../rendering/render-list.h"
 #include "../../shaders/shader.h"
 
@@ -14,8 +16,8 @@ public:
     virtual void ApplyInstance(const glm::mat4& model, const glm::vec4& tint) = 0;
     virtual Shader& GetShader() {{ return *shader_;}};
 protected:
-    explicit Material(Shader* shader) : shader_(shader) { }
-    Shader* shader_ = nullptr;
+    explicit Material(std::unique_ptr<Shader> shader) : shader_(std::move(shader)) { }
+    std::unique_ptr<Shader> shader_ = nullptr;
 };
 
 #endif

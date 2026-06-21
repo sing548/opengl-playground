@@ -1,6 +1,7 @@
 #include "shot-system.h"
 
-#include "system-structs.h"
+#include "../../engine/systems/system-structs.h"
+
 #include "../game-world/game-world.h"
 
 void ShotSystem::Update(SystemsContext& ctx)

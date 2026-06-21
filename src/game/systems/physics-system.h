@@ -3,14 +3,19 @@
 
 #include "../../engine/models/scene.h"
 #include "../../engine/window/window.h"
+#include "../../engine/systems/i-gameplay-system.h"
 
 class GameWorld;
 class TerrainHandler;
 struct SystemsContext;
 
-class PhysicsSystem {
+class PhysicsSystem : public IGameplaySystem
+{
 public:
-    void Update(SystemsContext& ctx);
+    void Update(SystemsContext& ctx) override;
+    GameplayPhase GetPhase() const override { return GameplayPhase::Simulation; }
+    bool CanReplay() override { return true; }
+    int GetOrder() const override { return 0; }
 private:
     void MoveModels(float dT, GameWorld& gameWorld, bool authoritative);
     void MoveModel(float dT, Scene& Scene, unsigned int id, const glm::vec3& change);

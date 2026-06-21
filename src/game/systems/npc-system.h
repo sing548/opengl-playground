@@ -1,14 +1,19 @@
 #ifndef NPC_SYSTEM_H
 #define NPC_SYSTEM_H
 
+#include "../../engine/systems/i-gameplay-system.h"
+
 struct SystemsContext;
 
 class GameWorld;
 class AssetManager;
 
-class NpcSystem {
+class NpcSystem : public IGameplaySystem
+{
 public:
-    void Update(SystemsContext& context);
+    void Update(SystemsContext& context) override;
+    GameplayPhase GetPhase() const override { return GameplayPhase::Simulation; }
+    int GetOrder() const override { return 10; }
 private:
 };
 

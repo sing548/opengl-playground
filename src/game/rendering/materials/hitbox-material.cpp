@@ -1,6 +1,6 @@
 #include "hitbox-material.h"
 
-HitboxMaterial::HitboxMaterial(Shader* shader) : Material(shader) 
+HitboxMaterial::HitboxMaterial(std::unique_ptr<Shader> shader) : Material(std::move(shader)) 
 {
 };
 

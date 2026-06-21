@@ -9,7 +9,7 @@
 class TerrainMaterial : public Material
 {
 public:
-    explicit TerrainMaterial(Shader* s, AssetManager& assMan);
+    explicit TerrainMaterial(std::unique_ptr<Shader> s, AssetManager& assMan);
 
     void ApplyFrame(const FrameGlobals& g) override;
     void ApplyInstance(const glm::mat4& model, const glm::vec4& tint) override;

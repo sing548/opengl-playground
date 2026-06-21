@@ -10,17 +10,9 @@
 #include "rendering/renderer.h"
 #include "models/asset-manager.h"
 
-#include "../game/systems/camera-system.h"
-#include "../game/systems/npc-system.h"
-#include "../game/systems/physics-system.h"
-#include "../game/systems/player-system.h"
-#include "../game/systems/shot-system.h"
-#include "../game/systems/terrain-system.h"
-#include "../game/game-world/game-world.h"
+#include "systems/i-gameplay-system.h"
 
-#include "../game/rendering/materials/model-material.h"
-#include "../game/rendering/materials/hitbox-material.h"
-#include "../game/rendering/materials/terrain-material.h"
+#include "../game/game-world/game-world.h"
 
 #include <map>
 #include <string>
@@ -41,8 +33,10 @@ public:
     AssetManager& GetAssMan();
     Window& GetWindow() { return *window_; };
 
+    void AddGameplaySystem(std::unique_ptr<IGameplaySystem> system) { systems_.push_back(std::move(system)); }
     void AddSceneRenderable(std::unique_ptr<ISceneRenderable> r);
-
+    void AddMaterial(uint16_t id, std::unique_ptr<Material> m) { materials_.emplace(id, std::move(m)); }
+    Material* GetMaterial(uint16_t id) { return materials_.at(id).get(); }
 private:
     const unsigned int WIDTH = 1920;
     const unsigned int HEIGHT = 1080;
@@ -55,18 +49,14 @@ private:
     std::unique_ptr<Renderer> renderer_;
     std::unique_ptr<AssetManager> assMan_;
 
-    std::vector<std::unique_ptr<ISceneRenderable>> sceneRenderables_;
-
+    
     std::unique_ptr<NetworkBridge> netwBridg_;
-
+    
     GameWorld gameWorld_;
-
-    NpcSystem npcSystem_; 
-    PhysicsSystem physicsSystem_;
-    PlayerSystem playerSystem_;
-    ShotSystem shotSystem_;
-    CameraSystem cameraSystem_;
-    TerrainSystem terrainSystem_;
+    
+    std::vector<std::unique_ptr<IGameplaySystem>> systems_;
+    std::vector<std::unique_ptr<ISceneRenderable>> sceneRenderables_;
+    std::unordered_map<uint16_t, std::unique_ptr<Material>> materials_;
 
     void ChangeSetting(std::string key, bool value);
     glm::vec2 maxScreenSize_;
@@ -84,6 +74,7 @@ private:
     bool m_bNetworking = false;
     bool m_bServer = false;
 
+    void ExecuteSystems(GameplayPhase phase, float dT);
     void HandleLogic(float deltaTime);
     void ReconcileNetwork();
     void UpdateServerNetworking();
@@ -94,18 +85,10 @@ private:
     void AddNewPlayer(uint32_t id);
     void RotateModel(unsigned int id, const glm::vec3& change);
 
-    void AdjustCamera();
+    void SortSystems();
     
     //------------------- TEMP, will be moved to more appropriate class ---------------------
-    std::unique_ptr<Shader> screenShader_;
-    std::unique_ptr<Shader> modelShader_;
-    std::unique_ptr<Shader> hitboxShader_;
-    std::unique_ptr<Shader> terrainShader_;
     std::tuple<RenderList, FrameGlobals> BuildRenderList();
-    void TempBuildRenderHelpers();
-    std::unique_ptr<ModelMaterial> modelMat_;
-    std::unique_ptr<HitboxMaterial> hitboxMat_;
-    std::unique_ptr<TerrainMaterial> terrainMat_;
 
     //------------- TEMP, only for testing terrain while implementing
     std::unique_ptr<TerrainHandler> terrainHandler_;

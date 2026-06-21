@@ -1,6 +1,7 @@
 #include "physics-system.h"
 
-#include "system-structs.h"
+#include "../../engine/systems/system-structs.h"
+
 #include "../game-world/game-world.h"
 #include "../rendering/terrain/terrain-handler.h"
 

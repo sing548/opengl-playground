@@ -9,7 +9,7 @@
 class ModelMaterial : public Material
 {
 public:
-    explicit ModelMaterial(Shader* s);
+    explicit ModelMaterial(std::unique_ptr<Shader> s);
 
     void ApplyFrame(const FrameGlobals& g) override;
     void ApplyInstance(const glm::mat4& model, const glm::vec4& tint) override;

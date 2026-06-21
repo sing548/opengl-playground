@@ -1,8 +1,12 @@
 #include "engine.h"
 
+#include <algorithm>
+
+#include "systems/system-structs.h"
+
 #include "../game/spawner/spawner.h"
-#include "../game/systems/system-structs.h"
 #include "../game/rendering/terrain/terrain-handler.h"
+#include "../game/rendering/materials/game-material.h"
 #include "../game/rendering/terrain/flat-chunk-generator.h"
 #include "../game/networking/network-bridge/network-bridge.h"
 
@@ -101,8 +105,6 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
         netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Offline, "", 0);
     }
 
-    TempBuildRenderHelpers();
-
     terrainHandler_ = std::make_unique<TerrainHandler>();
 }
 
@@ -114,24 +116,6 @@ void Engine::AddSceneRenderable(std::unique_ptr<ISceneRenderable> r)
     int size = sceneRenderables_.size();
     renderer_->AddSceneRenderable(sceneRenderables_.at(size - 1).get());
 };
-
-void Engine::TempBuildRenderHelpers()
-{
-    std::string modelVert  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.vert").string();
-    std::string modelFrag  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.frag").string();
-	std::string hitboxVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "hitbox.vert").string();
-	std::string hitboxFrag = (std::filesystem::path(FileHelper::GetShaderDir()) / "hitbox.frag").string();
-    std::string terrainVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "terrain.vert").string();
-	std::string terrainFrag = (std::filesystem::path(FileHelper::GetShaderDir()) / "terrain.frag").string();
-    
-    modelShader_  = std::make_unique<Shader>(modelVert.c_str(), modelFrag.c_str());
-	hitboxShader_ = std::make_unique<Shader>(hitboxVert.c_str(), hitboxFrag.c_str());
-    terrainShader_ = std::make_unique<Shader>(terrainVert.c_str(), terrainFrag.c_str());
-
-    modelMat_ = std::make_unique<ModelMaterial>(modelShader_.get());
-	hitboxMat_ = std::make_unique<HitboxMaterial>(hitboxShader_.get());
-    terrainMat_ = std::make_unique<TerrainMaterial>(terrainShader_.get(), *assMan_);
-}
 
 AssetManager& Engine::GetAssMan()
 {
@@ -167,6 +151,8 @@ void Engine::Run()
     float deltaTime = 0.0f;
     float lastFrame = 0.0f;
     uint32_t newClient = 0;
+
+    SortSystems();
 
     while (!glfwWindowShouldClose(window_->Get())) {
 
@@ -228,6 +214,7 @@ void Engine::Run()
                 SystemsContext context = SystemsContext
                 {
                     fixedDelta,
+                    *window_,
                     gameWorld_,
                     *assMan_,
                     *netwBridg_,
@@ -244,15 +231,18 @@ void Engine::Run()
                 {
                     previousStateAsMap_[playerId_] = currentStateAsMap_[playerId_];
                     currentStateAsMap_[playerId_] = state;
-                    playerSystem_.Update(context);
-                    physicsSystem_.Update(context);
+
+                    for (auto& system : systems_)
+                    {
+                        if (!system->CanReplay()) continue;
+
+                        system->Update(context);
+                    }
                 }
             }
         }
 
-        bool adjust = settings_["adjust_camera"];
-        if (adjust)
-            AdjustCamera();
+        ExecuteSystems(GameplayPhase::PreRender, currentFrame - lastFrame);
 
         auto [rL, fG] = BuildRenderList();
         
@@ -341,9 +331,15 @@ void Engine::HandleLogic(float deltaTime)
         killedPlayers_.push_back(id);
     }
 
+    ExecuteSystems(GameplayPhase::Simulation, deltaTime);
+}
+
+void Engine::ExecuteSystems(GameplayPhase phase, float dT)
+{
     SystemsContext context = SystemsContext
     {
-        deltaTime,
+        dT,
+        *window_,
         gameWorld_,
         *assMan_,
         *netwBridg_,
@@ -355,63 +351,25 @@ void Engine::HandleLogic(float deltaTime)
         false,
         settings_
     };
-    
-    physicsSystem_.Update(context);
-    npcSystem_.Update(context);
-    playerSystem_.Update(context);
-    shotSystem_.Update(context);
-    terrainSystem_.Update(context);
+
+    for (auto& system : systems_)
+    {
+        if (system->GetPhase() != phase) continue;
+
+        system->Update(context);
+    }
 }
 
-void Engine::AdjustCamera()
+void Engine::SortSystems()
 {
-    if (settings_["third_person"]) {
-        if (playerId_ == 0 || !gameWorld_.GetScene().ModelExists(playerId_)) return;
-
-        const auto& model = gameWorld_.GetScene().GetModelByReference(playerId_);
-        glm::vec3 modelPos = model.GetPosition();
-        
-        // Offset from the model in its local orientation
-        glm::vec3 offset = model.GetForward() * glm::vec3(-8.0f, -8.0f, -8.0f);
-        glm::vec3 cameraPos = modelPos + offset + glm::vec3(0.0f, 1.5f, 0.0f);
-    
-        // Update camera position
-        window_->UpdateCameraPosition(cameraPos);
-    
-        // Compute direction from camera to model
-        glm::vec3 front = glm::normalize(modelPos - cameraPos);
-        window_->UpdateCameraOrientation(front);
-    } else {
-        auto currentPosition = window_->GetCamera().Position;
-        float minHeight = 20.0f;
-        float maxHeight = 100.0f;
-
-        float fovyRadians = glm::radians(window_->GetCamera().Zoom);
-        float aspect = (float) WIDTH/ (float)HEIGHT;
-
-        float halfFovTan = tanf(fovyRadians * 0.5f);
-
-        // Required heights in each axis
-        float requiredX = (abs(gameWorld_.GetScene().currentFurthestPosition.x) + 1.5f) / (halfFovTan * aspect);
-        float requiredZ = (abs(gameWorld_.GetScene().currentFurthestPosition.z) + 1.5f)/ halfFovTan;
-
-        // Take the larger
-        float h = std::max(requiredX, requiredZ);
-
-        // Clamp
-        h = std::clamp(h, minHeight, maxHeight);
-
-        float oldHeight = window_->GetCamera().Position.y;
-
-        float changeRate = 0.5f;
-
-        if (abs(h - oldHeight) > changeRate) {
-            if (h > oldHeight) h = oldHeight + changeRate;
-            if (h < oldHeight) h = oldHeight - changeRate;
-        }
-
-        window_->UpdateCameraPosition(glm::vec3(0, h, 0));
-    }
+    std::sort(systems_.begin(), systems_.end(),
+        [](const std::unique_ptr<IGameplaySystem>& a,
+           const std::unique_ptr<IGameplaySystem>& b)
+        {
+            if (a->GetPhase() != b->GetPhase())
+                return a->GetPhase() < b->GetPhase();
+            return a->GetOrder() < b->GetOrder();
+        });
 }
 
 void Engine::AddNewPlayer(uint32_t id)
@@ -571,7 +529,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			DrawCommand dc;
 
 			dc.mesh = mesh.get();
-			dc.material = modelMat_.get();
+			dc.material = GetMaterial(mesh->GetMaterialId());
 			dc.transform = modelProjection;
 			dc.tint = {1,1,1,1};
 			dc.renderPass = settings_["debug_view"] ? RenderPass::Debug : RenderPass::Opaque;
@@ -584,7 +542,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			DrawCommand dc;
 
 			dc.mesh = model.GetHitboxMesh();
-			dc.material = hitboxMat_.get();
+			dc.material = GetMaterial(GameMaterial::Hitbox);
 			
 			glm::mat4 modelMat = glm::mat4(1.0f);
     		modelMat = glm::translate(modelMat, model.GetPosition());
@@ -606,7 +564,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			
 			DrawCommand dc;
 			dc.mesh = model.GetHitboxMesh();
-			dc.material = hitboxMat_.get();
+			dc.material = GetMaterial(GameMaterial::Hitbox);
 
 			glm::mat4 modelMat = glm::mat4(1.0f);
     		modelMat = glm::translate(modelMat, model.GetPosition());
@@ -628,7 +586,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 
 			DrawCommand dc;
 			dc.mesh = model.GetHitboxMesh();
-			dc.material = hitboxMat_.get();
+			dc.material = GetMaterial(GameMaterial::Hitbox);
 
 			glm::mat4 modelMat = glm::mat4(1.0f);
     		modelMat = glm::translate(modelMat, model.GetPosition());
@@ -648,7 +606,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
         {
             DrawCommand dc;
             dc.mesh = mp.mesh.get();
-            dc.material = terrainMat_.get();
+            dc.material = GetMaterial(GameMaterial::Terrain);
             dc.transform = glm::mat4(1.0f);
             dc.renderPass = settings_["debug_view"] ? RenderPass::Debug : RenderPass::Opaque;
             rl.commands.push_back(dc);
