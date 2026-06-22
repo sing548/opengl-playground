@@ -2,9 +2,8 @@
 
 #include <glad/glad.h>
 #include "stb_image.h"
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
+
+#include "../helpers/file-helper.h"
 
 Mesh* Model::hitboxSphere_ = nullptr;
 bool Model::hitboxSphereInitialized_ = false;

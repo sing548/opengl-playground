@@ -4,12 +4,13 @@
 #include <stdexcept>
 #include <string>
 
+#include "engine/engine.h"
+#include "engine/models/scene.h"
+#include "engine/models/model.h"
 #include "engine/window/window.h"
 #include "engine/shaders/shader.h"
-#include "engine/models/model.h"
-#include "engine/models/scene.h"
 #include "engine/rendering/renderer.h"
-#include "engine/engine.h"
+#include "engine/helpers/file-helper.h"
 
 #include "game/systems/camera-system.h"
 #include "game/systems/npc-system.h"
@@ -25,6 +26,7 @@
 #include "game/rendering/materials/model-material.h"
 #include "game/rendering/materials/hitbox-material.h"
 #include "game/rendering/materials/terrain-material.h"
+
 
 int main(int argc, const char *argv[]) {
 
@@ -153,6 +155,9 @@ int main(int argc, const char *argv[]) {
 
     auto terrainMat = std::make_unique<TerrainMaterial>(std::move(terrainShader), engine->GetAssMan());
     engine->AddMaterial(GameMaterial::Terrain, std::move(terrainMat));
+
+    auto tH = std::make_unique<TerrainHandler>();
+    engine->AddTerrainHandler(std::move(tH));
 
     engine->Run();
 

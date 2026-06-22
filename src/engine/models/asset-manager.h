@@ -1,16 +1,17 @@
 #ifndef ASSET_MANAGER_H
 #define ASSET_MANAGER_H
 
-#include <string>
-#include <unordered_map>
-#include <memory>
-#include <vector>
-#include "mesh.h"
+#include <assimp/scene.h>
+#include <assimp/Importer.hpp>
+
 #include "stb/stb_image.h"
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
+#include <string>
+#include <memory>
+#include <vector>
+#include <unordered_map>
+
+#include "mesh.h"
 
 class AssetManager {
 public:

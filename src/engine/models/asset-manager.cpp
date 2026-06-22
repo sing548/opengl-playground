@@ -1,5 +1,7 @@
 #include "asset-manager.h"
 
+#include <assimp/postprocess.h>
+
 unsigned int AssetManager::LoadTexture(const std::string& fullPath, bool srgb)
 {
 	if (HasTexture(fullPath))

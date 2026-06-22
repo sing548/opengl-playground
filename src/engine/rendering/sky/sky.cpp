@@ -1,5 +1,7 @@
 #include "sky.h"
 
+#include "../../helpers/file-helper.h"
+
 Sky::Sky(std::vector<std::string> facePaths)
 {
 

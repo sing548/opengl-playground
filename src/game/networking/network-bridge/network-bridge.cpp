@@ -1,7 +1,6 @@
 #include "network-bridge.h"
 
 #include <chrono>
-#include <thread>
 
 #include "../../../engine/models/asset-manager.h"
 #include "../../../engine/net-transport/client-transport.h"

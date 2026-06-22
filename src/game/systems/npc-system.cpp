@@ -1,6 +1,5 @@
 #include "npc-system.h"
 
-#include "../../engine/models/asset-manager.h"
 #include "../../engine/systems/system-structs.h"
 
 #include "../spawner/spawner.h"

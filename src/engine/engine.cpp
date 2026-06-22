@@ -1,15 +1,13 @@
 #include "engine.h"
 
+#include <thread>
 #include <algorithm>
 
 #include "systems/system-structs.h"
 
 #include "../game/spawner/spawner.h"
-#include "../game/rendering/terrain/terrain-handler.h"
 #include "../game/rendering/materials/game-material.h"
-#include "../game/rendering/terrain/flat-chunk-generator.h"
 #include "../game/networking/network-bridge/network-bridge.h"
-
 
 Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
 {
@@ -104,8 +102,6 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
 
         netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Offline, "", 0);
     }
-
-    terrainHandler_ = std::make_unique<TerrainHandler>();
 }
 
 Engine::~Engine() = default;

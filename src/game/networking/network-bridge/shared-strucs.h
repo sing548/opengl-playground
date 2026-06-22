@@ -1,7 +1,7 @@
 #pragma once
-#include <cstdint>
-#include <string>
+
 #include <vector>
+#include <cstdint>
 #include <msgpack.hpp>
 #include <glm/vec3.hpp>
 #include <glm/ext/quaternion_float.hpp>

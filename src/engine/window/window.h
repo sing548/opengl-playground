@@ -3,11 +3,11 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <iostream>
-#include <stdexcept>
-#include <memory>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
+
+#include <memory>
+
 #include "../camera/camera.h"
 #include "../input-manager/input-manager.h"
 

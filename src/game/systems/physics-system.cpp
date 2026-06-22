@@ -1,9 +1,9 @@
 #include "physics-system.h"
 
 #include "../../engine/systems/system-structs.h"
+#include "../../engine/rendering/terrain/i-terrain-handler.h"
 
 #include "../game-world/game-world.h"
-#include "../rendering/terrain/terrain-handler.h"
 
 void PhysicsSystem::Update(SystemsContext& ctx)
 {
@@ -56,7 +56,7 @@ void PhysicsSystem::MoveModel(float dT, Scene& scene, unsigned int id, const glm
     if (abs(position.z) > scene.currentFurthestPosition.z) scene.currentFurthestPosition.z = abs(position.z);
 }
 
-void PhysicsSystem::CheckHits(GameWorld& gameWorld, TerrainHandler& terrain, bool authoritative, bool predictive)
+void PhysicsSystem::CheckHits(GameWorld& gameWorld, ITerrainHandler& terrain, bool authoritative, bool predictive)
 {
     if (predictive && !authoritative) return;
     
@@ -213,7 +213,7 @@ void PhysicsSystem::CorrectZOffset(Scene& scene)
     }
 }
 
-bool PhysicsSystem::CollideTerrain(TerrainHandler& terrain, Scene& scene, uint32_t id, bool fragile)
+bool PhysicsSystem::CollideTerrain(ITerrainHandler& terrain, Scene& scene, uint32_t id, bool fragile)
 {
     bool collision = false;
 

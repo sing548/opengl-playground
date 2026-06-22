@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 #include <memory>
-#include <iostream>
 
 #include "stb/stb_image.h"
 #include <glad/glad.h>
@@ -13,7 +12,6 @@
 #include "../i-scene-rendererable.h"
 
 #include "../../shaders/shader.h"
-#include "../../helpers/file-helper.h"
 
 class Sky : public ISceneRenderable
 {

@@ -3,25 +3,23 @@
 
 #include <glm/glm.hpp>
 
+#include <string>
+
 #include "window/window.h"
 #include "camera/camera.h"
-#include "models/model.h"
-#include "input-manager/input-manager.h"
-#include "rendering/renderer.h"
+#include "rendering/renderer.h" 
 #include "models/asset-manager.h"
+#include "input-manager/input-manager.h"
+#include "rendering/terrain/i-terrain-handler.h"
 
 #include "systems/i-gameplay-system.h"
 
 #include "../game/game-world/game-world.h"
 
-#include <map>
-#include <string>
-#include <thread>
-
 enum class EngineMode { Standalone, Server, Client };
 
 class NetworkBridge;
-class TerrainHandler;
+class ITerrainHandler;
 
 class Engine {
 public:
@@ -36,6 +34,7 @@ public:
     void AddGameplaySystem(std::unique_ptr<IGameplaySystem> system) { systems_.push_back(std::move(system)); }
     void AddSceneRenderable(std::unique_ptr<ISceneRenderable> r);
     void AddMaterial(uint16_t id, std::unique_ptr<Material> m) { materials_.emplace(id, std::move(m)); }
+    void AddTerrainHandler(std::unique_ptr<ITerrainHandler> tH) { terrainHandler_ = std::move(tH); }
     Material* GetMaterial(uint16_t id) { return materials_.at(id).get(); }
 private:
     const unsigned int WIDTH = 1920;
@@ -91,7 +90,7 @@ private:
     std::tuple<RenderList, FrameGlobals> BuildRenderList();
 
     //------------- TEMP, only for testing terrain while implementing
-    std::unique_ptr<TerrainHandler> terrainHandler_;
+    std::unique_ptr<ITerrainHandler> terrainHandler_;
 };
 
 #endif

@@ -2,8 +2,7 @@
 
 #include <algorithm>
 
-#include "../../spawner/spawner.h"
-#include "../../game-world/game-world.h"
+#include "../../../engine/models/scene.h"
 #include "../network-bridge/shared-strucs.h"
 
 void Interpolator::FeedSnapshot(uint32_t tick, const std::vector<EntityState>& entities)

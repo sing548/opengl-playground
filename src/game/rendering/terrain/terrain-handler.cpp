@@ -1,12 +1,13 @@
 #include "terrain-handler.h"
 
 #include "flat-chunk-generator.h"
-#include "../../../engine/rendering/render-list.h"
 
 TerrainHandler::TerrainHandler()
 {
     chunkGenerator_ = std::make_unique<FlatChunkGenerator>();
 }
+
+TerrainHandler::~TerrainHandler() = default;
 
 void TerrainHandler::HandleChunksForArea(const glm::ivec2& area)
 {

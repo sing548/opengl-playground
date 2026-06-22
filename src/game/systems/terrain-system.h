@@ -1,9 +1,8 @@
 #ifndef TERRAIN_SYSTEM_H
 #define TERRAIN_SYSYTEM_H
 
-#include "../../engine/systems/i-gameplay-system.h"
-
 #include "../rendering/terrain/terrain-handler.h"
+#include "../../engine/systems/i-gameplay-system.h"
 
 struct SystemsContext;
 

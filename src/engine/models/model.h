@@ -5,18 +5,15 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "mesh.h"
-#include "../shaders/shader.h"
-#include "asset-manager.h"
-#include "../helpers/file-helper.h"
-
-#include <string>
-#include <fstream>
-#include <sstream>
-#include <iostream>
-#include <vector>
 #include <array>
+#include <string>
+#include <vector>
 #include <string_view>
+
+#include "mesh.h"
+#include "asset-manager.h"
+#include "../shaders/shader.h"
+
 
 struct PhysicalInfo {
     glm::vec3 position_          {0.0f};

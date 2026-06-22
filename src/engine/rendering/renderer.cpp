@@ -1,6 +1,8 @@
 #include "renderer.h"
 #include "stb/stb_image.h"
 
+#include "../helpers/file-helper.h"
+
 Renderer::Renderer(unsigned int width, unsigned int height)
 {
 	std::string screenVert = (std::filesystem::path(FileHelper::GetShaderDir()) / "screen.vert").string();

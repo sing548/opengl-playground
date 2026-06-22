@@ -2,7 +2,6 @@
 #define NETW_BRIDG_H
 
 #include <map>
-#include <span>
 #include <deque>
 #include <memory>
 #include <string>

@@ -4,9 +4,8 @@
 #include <cassert>
 #include <iostream>
 
-#include <steam/steam_api_common.h>
-#include <steam/steamnetworkingsockets.h>
 #include <steam/isteamnetworkingutils.h>
+#include <steam/steamnetworkingsockets.h>
 
 namespace
 {
