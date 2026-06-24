@@ -2,7 +2,7 @@
 
 #include "flat-chunk-generator.h"
 
-TerrainHandler::TerrainHandler()
+TerrainHandler::TerrainHandler(std::unique_ptr<Material> material) : material_(std::move(material)) 
 {
     chunkGenerator_ = std::make_unique<FlatChunkGenerator>();
 }
@@ -69,8 +69,7 @@ TerrainHandler::TerrainCollision TerrainHandler::CheckCollision(glm::vec3 pos, f
     };
 
     float bottom = pos.y - radius;
-    // ToDo: Move HeightOffset to TerrainConfig struct and out of ChunkGenerator
-    if (bottom > TerrainConfig::MaxHeight /*heightOffset - will be moved*/)
+    if (bottom > TerrainConfig::MaxHeight)
     {
         return col;
     }
@@ -84,4 +83,22 @@ TerrainHandler::TerrainCollision TerrainHandler::CheckCollision(glm::vec3 pos, f
         col.normal = chunkGenerator_->NormalAt(pos);
     
     return col;
+}
+
+std::vector<DrawCommand> TerrainHandler::BuildDrawCommands(RenderPass rp)
+{
+    std::vector<DrawCommand> dcs;
+    dcs.reserve(chunks_.size());
+
+    for (auto& [iv, mp] : chunks_)
+    {
+        DrawCommand dc;
+        dc.mesh = mp.mesh.get();
+        dc.material = material_.get();
+        dc.transform = glm::mat4(1.0f);
+        dc.renderPass = rp;
+        dcs.push_back(dc);
+    }
+
+    return dcs;
 }

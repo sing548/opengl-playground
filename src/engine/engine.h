@@ -53,9 +53,12 @@ private:
     
     GameWorld gameWorld_;
     
+    std::unique_ptr<ITerrainHandler> terrainHandler_;
+
     std::vector<std::unique_ptr<IGameplaySystem>> systems_;
     std::vector<std::unique_ptr<ISceneRenderable>> sceneRenderables_;
     std::unordered_map<uint16_t, std::unique_ptr<Material>> materials_;
+    
 
     void ChangeSetting(std::string key, bool value);
     glm::vec2 maxScreenSize_;
@@ -88,9 +91,6 @@ private:
     
     //------------------- TEMP, will be moved to more appropriate class ---------------------
     std::tuple<RenderList, FrameGlobals> BuildRenderList();
-
-    //------------- TEMP, only for testing terrain while implementing
-    std::unique_ptr<ITerrainHandler> terrainHandler_;
 };
 
 #endif

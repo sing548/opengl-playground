@@ -148,15 +148,13 @@ int main(int argc, const char *argv[]) {
     auto terrainShader = std::make_unique<Shader>(terrainVert.c_str(), terrainFrag.c_str());
 
     auto modelMat = std::make_unique<ModelMaterial>(std::move(modelShader));
-    engine->AddMaterial(GameMaterial::Model, std::move(modelMat));
+    engine->AddMaterial(static_cast<uint16_t>(GameMaterial::Model), std::move(modelMat));
 
     auto hitboxMat = std::make_unique<HitboxMaterial>(std::move(hitboxShader));
-    engine->AddMaterial(GameMaterial::Hitbox, std::move(hitboxMat));
+    engine->AddMaterial(static_cast<uint16_t>(GameMaterial::Hitbox), std::move(hitboxMat));
 
     auto terrainMat = std::make_unique<TerrainMaterial>(std::move(terrainShader), engine->GetAssMan());
-    engine->AddMaterial(GameMaterial::Terrain, std::move(terrainMat));
-
-    auto tH = std::make_unique<TerrainHandler>();
+    auto tH = std::make_unique<TerrainHandler>(std::move(terrainMat));
     engine->AddTerrainHandler(std::move(tH));
 
     engine->Run();

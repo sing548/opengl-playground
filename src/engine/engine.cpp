@@ -6,7 +6,6 @@
 #include "systems/system-structs.h"
 
 #include "../game/spawner/spawner.h"
-#include "../game/rendering/materials/game-material.h"
 #include "../game/networking/network-bridge/network-bridge.h"
 
 Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
@@ -512,7 +511,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 	}
 
 	RenderList rl;
-
+    uint16_t hbm;
 	for (auto& [id, model] : models)
 	{
 		glm::mat4 modelProjection = glm::mat4(1.0f);
@@ -520,6 +519,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 		modelProjection *=  glm::mat4_cast(glm::quat(model.GetRotation()));
 		modelProjection = glm::scale(modelProjection, model.GetScale());
 
+        
 		for (auto& mesh : model.GetMeshes())
 		{
 			DrawCommand dc;
@@ -529,8 +529,11 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			dc.transform = modelProjection;
 			dc.tint = {1,1,1,1};
 			dc.renderPass = settings_["debug_view"] ? RenderPass::Debug : RenderPass::Opaque;
-
+            
 			rl.commands.push_back(dc);
+
+            // ToDo: Update when refactoring BuildRenderList. Clean enough for now
+            hbm = mesh->GetHitboxMaterialId();
 		}
 
 		if (settings_["hitboxes"])
@@ -538,7 +541,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			DrawCommand dc;
 
 			dc.mesh = model.GetHitboxMesh();
-			dc.material = GetMaterial(GameMaterial::Hitbox);
+			dc.material = GetMaterial(hbm);
 			
 			glm::mat4 modelMat = glm::mat4(1.0f);
     		modelMat = glm::translate(modelMat, model.GetPosition());
@@ -560,7 +563,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			
 			DrawCommand dc;
 			dc.mesh = model.GetHitboxMesh();
-			dc.material = GetMaterial(GameMaterial::Hitbox);
+			dc.material = GetMaterial(hbm);
 
 			glm::mat4 modelMat = glm::mat4(1.0f);
     		modelMat = glm::translate(modelMat, model.GetPosition());
@@ -582,7 +585,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 
 			DrawCommand dc;
 			dc.mesh = model.GetHitboxMesh();
-			dc.material = GetMaterial(GameMaterial::Hitbox);
+			dc.material = GetMaterial(hbm);
 
 			glm::mat4 modelMat = glm::mat4(1.0f);
     		modelMat = glm::translate(modelMat, model.GetPosition());
@@ -598,15 +601,8 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 
     if (settings_["terrain"])
     {
-        for (auto& [iv, mp] : terrainHandler_->GetChunks())
-        {
-            DrawCommand dc;
-            dc.mesh = mp.mesh.get();
-            dc.material = GetMaterial(GameMaterial::Terrain);
-            dc.transform = glm::mat4(1.0f);
-            dc.renderPass = settings_["debug_view"] ? RenderPass::Debug : RenderPass::Opaque;
-            rl.commands.push_back(dc);
-        }
+        std::vector<DrawCommand> dcs = terrainHandler_->BuildDrawCommands(settings_["debug_view"] ? RenderPass::Debug : RenderPass::Opaque);
+        rl.commands.append_range(dcs);
     }
 
     return std::tuple(rl, fg);

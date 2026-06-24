@@ -11,7 +11,7 @@
 #include <vector>
 #include <string>
 
-enum MaterialId : uint16_t { Default = 0 };
+enum class MaterialId : uint16_t { Default = 0, HitboxDefault = 1 };
 
 struct Vertex {
 	glm::vec3 Position;
@@ -45,11 +45,12 @@ unsigned int VAO;
 
     void Draw(Shader &shader) const;
 	uint16_t GetMaterialId() { return matId_; }
-
+	uint16_t GetHitboxMaterialId() { return hitboxMatId_; }
 private:
 
 	unsigned int VBO_, EBO_;
-	uint16_t matId_ = MaterialId::Default;
+	uint16_t matId_ = static_cast<uint16_t>(MaterialId::Default);
+	uint16_t hitboxMatId_ = static_cast<uint16_t>(MaterialId::HitboxDefault);
 
     void SetupMesh();
 };

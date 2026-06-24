@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-enum GameMaterial : uint16_t {
+enum class GameMaterial : uint16_t {
     Model = 0, Hitbox = 1, Terrain = 2
 };
 
