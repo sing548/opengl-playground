@@ -24,6 +24,6 @@ public:
     static constexpr float RockEnd = 0.4f;
     static constexpr float FogStart = 100.0f;
     static constexpr float FogEnd = 400.0f;
-    static constexpr float FogColor = 0.1f;
+    static constexpr float FogColor = 0.01f;
     static constexpr float TexScale = 0.2f;
 };

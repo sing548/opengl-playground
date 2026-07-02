@@ -171,7 +171,7 @@ void PhysicsSystem::TryCollide(Scene& scene, uint32_t idA, uint32_t idB)
 
         n /= dist;
 
-        float overlap = (modelA.GetRadius() - modelB.GetRadius()) - dist;
+        float overlap = (modelA.GetRadius() + modelB.GetRadius()) - dist;
 
         if (overlap > 0)
         {

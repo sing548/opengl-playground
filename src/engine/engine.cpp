@@ -237,7 +237,7 @@ void Engine::Run()
             }
         }
 
-        ExecuteSystems(GameplayPhase::PreRender, currentFrame - lastFrame);
+        ExecuteSystems(GameplayPhase::PreRender, deltaTime);
 
         auto [rL, fG] = BuildRenderList();
         

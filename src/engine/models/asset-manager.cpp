@@ -165,8 +165,10 @@ std::vector<Texture> AssetManager::LoadMaterialTextures(aiMaterial* mat, aiTextu
 			std::string fullPath = std::string(str.C_Str());
 			fullPath = (std::filesystem::path(directory) / fullPath).string();
 
+			bool gamma = typeName == "texture_diffuse" || typeName == "texture_emissive";
+
 			Texture texture;
-			texture.id = TextureFromFile(fullPath);
+			texture.id = TextureFromFile(fullPath, gamma);
 			texture.type = typeName;
 			texture.path = str.C_Str();
 			textures.push_back(texture);
@@ -196,16 +198,26 @@ unsigned int AssetManager::TextureFromFile(const std::string& fullPath, bool gam
     if (data)
 	{
 		GLenum format;
+		GLenum internalFormat;
 		
 		if (nrComponents == 1)
+		{
 			format = GL_RED;
+			internalFormat = GL_RED;
+		}
 		else if (nrComponents == 3)
+		{
 			format = GL_RGB;
+			internalFormat = gamma ? GL_SRGB8 : GL_RGB;
+		}
 		else if (nrComponents == 4)
+		{
 			format = GL_RGBA;
+			internalFormat = gamma ? GL_SRGB8_ALPHA8 : GL_RGBA;
+		}
 	
         glBindTexture(GL_TEXTURE_2D, textureID);
-		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);

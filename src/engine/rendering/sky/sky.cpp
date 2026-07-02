@@ -103,7 +103,8 @@ unsigned int Sky::LoadCubemap(std::vector<std::string> faces)
 		if (data)
 		{
 			int format = nrChannels == 4 ? GL_RGBA : GL_RGB;
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+            int internalFormat = nrChannels == 4 ? GL_SRGB8_ALPHA8 : GL_SRGB8;
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 			stbi_image_free(data);
 		}
 		else 
