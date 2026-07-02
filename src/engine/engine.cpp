@@ -367,6 +367,16 @@ void Engine::SortSystems()
         });
 }
 
+void Engine::SortRenderables()
+{
+    std::sort(sceneRenderables_.begin(), sceneRenderables_.end(),
+        [](const std::unique_ptr<ISceneRenderable>& a,
+           const std::unique_ptr<ISceneRenderable>& b)
+        {
+            return a->GetOrder() < b->GetOrder();
+        });
+}
+
 void Engine::AddNewPlayer(uint32_t id)
 {
     PhysicalInfo pi = PhysicalInfo();

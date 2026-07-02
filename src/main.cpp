@@ -21,6 +21,8 @@
 
 #include "engine/rendering/sky/sky.h"
 #include "game/rendering/grass/grass.h"
+#include "game/rendering/flight/con-trail.h"
+#include "game/rendering/flight/drive-plume.h"
 #include "game/rendering/materials/game-material.h"
 
 #include "game/rendering/materials/model-material.h"
@@ -111,12 +113,16 @@ int main(int argc, const char *argv[]) {
 	    (std::filesystem::path(base) / "posz.png").string(),
 	    (std::filesystem::path(base) / "negz.png").string()
 	};
-	std::unique_ptr<Sky> sky = std::make_unique<Sky>(faces);
-	std::unique_ptr<Grass> grass = std::make_unique<Grass>();
 
-    // Currently needs to be ordered at creation - Skybox last
-    engine->AddSceneRenderable(std::move(grass));
+    std::unique_ptr<Sky> sky = std::make_unique<Sky>(faces);
     engine->AddSceneRenderable(std::move(sky));
+	std::unique_ptr<Grass> grass = std::make_unique<Grass>();
+    engine->AddSceneRenderable(std::move(grass));
+    std::unique_ptr<DrivePlume> dp = std::make_unique<DrivePlume>(engine->GetGameWorld());
+    //engine->AddSceneRenderable(std::move(dp));
+    std::unique_ptr<ConTrail> ct = std::make_unique<ConTrail>(engine->GetGameWorld());
+    engine->AddSceneRenderable(std::move(ct));
+
 
     auto phys = std::make_unique<PhysicsSystem>();
     engine->AddGameplaySystem(std::move(phys));

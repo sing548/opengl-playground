@@ -30,6 +30,7 @@ public:
     void Run();
     AssetManager& GetAssMan();
     Window& GetWindow() { return *window_; };
+    GameWorld& GetGameWorld() { return gameWorld_; }
 
     void AddGameplaySystem(std::unique_ptr<IGameplaySystem> system) { systems_.push_back(std::move(system)); }
     void AddSceneRenderable(std::unique_ptr<ISceneRenderable> r);
@@ -88,6 +89,7 @@ private:
     void RotateModel(unsigned int id, const glm::vec3& change);
 
     void SortSystems();
+    void SortRenderables();
     
     //------------------- TEMP, will be moved to more appropriate class ---------------------
     std::tuple<RenderList, FrameGlobals> BuildRenderList();

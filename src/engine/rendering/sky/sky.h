@@ -21,6 +21,7 @@ public:
 
     void Render(const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings) override;
     RenderPass GetRenderPass() { return RenderPass::Skybox; };
+    int GetOrder() override { return 10; };
 private:
     std::unique_ptr<Shader> shader_;
     unsigned int vao_, vbo_;

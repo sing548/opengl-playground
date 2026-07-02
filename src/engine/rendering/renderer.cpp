@@ -207,25 +207,43 @@ void Renderer::ApplyPassState(RenderPass pass)
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         	glEnable(GL_DEPTH_TEST);
         	glDepthMask(GL_TRUE);
-			glDepthFunc(GL_LESS);  
+			glDepthFunc(GL_LESS);
+			glDisable(GL_BLEND);
 			break;
 		case RenderPass::Skybox:
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			glDepthFunc(GL_LEQUAL);
+			glDepthMask(GL_FALSE);
+			glDisable(GL_BLEND);
+			break;
+		case RenderPass::Transparent:
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			glEnable(GL_DEPTH_TEST);
+			glDepthMask(GL_FALSE);
+			glEnable(GL_BLEND);
+			glBlendFunci(0, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glBlendFunci(1, GL_ZERO, GL_ONE);
+			break;
+		case RenderPass::Emissive:
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 			glDepthMask(GL_FALSE);
 			break;
 		case RenderPass::Debug:
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         	glEnable(GL_DEPTH_TEST);
         	glDepthMask(GL_TRUE); 
-			glDepthFunc(GL_LESS);  
+			glDepthFunc(GL_LESS);
+			glDisable(GL_BLEND);
 			break;
 	}
 }
 
 void Renderer::PostProcessing()
 {
-	glDisable(GL_DEPTH_TEST);  
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_BLEND);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glDepthMask(GL_TRUE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);  // back to default framebuffer

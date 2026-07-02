@@ -21,6 +21,7 @@ public:
 
     void Render(const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings) override;
     RenderPass GetRenderPass() override { return RenderPass::Opaque; };
+    int GetOrder() override { return 0; };
 private:
     float height_ = -1.0f;
     std::unique_ptr<Shader> shader_;

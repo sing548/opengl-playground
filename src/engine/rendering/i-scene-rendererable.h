@@ -7,6 +7,7 @@ struct ISceneRenderable {
     virtual ~ISceneRenderable() = default;
     virtual void Render(const FrameGlobals&, const std::unordered_map<std::string, bool>&) = 0;
     virtual RenderPass GetRenderPass() = 0;
+    virtual int GetOrder() = 0;
 };
 
 #endif

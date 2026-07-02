@@ -58,6 +58,8 @@ add_executable(OpenGLPlayground
     src/game/game-world/game-world.cpp
     src/game/networking/interpolator/interpolator.cpp
     src/game/networking/network-bridge/network-bridge.cpp
+    src/game/rendering/flight/con-trail.cpp
+    src/game/rendering/flight/drive-plume.cpp
     src/game/rendering/grass/grass.cpp
     src/game/rendering/materials/hitbox-material.cpp
     src/game/rendering/materials/model-material.cpp

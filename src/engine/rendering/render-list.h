@@ -10,9 +10,11 @@ class Shader;
 class Material;
 
 enum class RenderPass : uint16_t {
-	Opaque 	= 0,
-	Skybox	= 1,
-	Debug	= 2
+	Opaque 		= 0,
+	Skybox		= 1,
+	Transparent = 2,
+	Emissive 	= 3,
+	Debug		= 4
 };
 
 struct DrawCommand {
