@@ -10,13 +10,14 @@ namespace spawner
     {
         auto& shooter = gameWorld.GetScene().GetModelByReference(shooterId);
         glm::vec3 shotBaseOrientation = glm::vec3(1.0f, 0.0f, 0.0f);
+        glm::vec3 baseUp = glm::vec3(0.0f, 1.0f, 0.0f);
         float speedBoost = 0.15f;
         
         pi.position_ = pi.position_ + shooter.GetForward();
         pi.velocity_ = shooter.GetVelocity() + shooter.GetForward() * speedBoost;   
         pi.scale_ = glm::vec3(0.05f);
 
-        Model shot(Model::GetModelPath(ModelType::SHOT), pi, assMan, ModelType::SHOT, shotBaseOrientation, true, 0.05f);
+        Model shot(Model::GetModelPath(ModelType::SHOT), pi, assMan, ModelType::SHOT, shotBaseOrientation, baseUp, true, 0.05f);
         id = gameWorld.GetScene().AddModel(shot, id);
         gameWorld.AddShot(id, shooterId, predicted, tick);
 
@@ -25,8 +26,10 @@ namespace spawner
 
     uint32_t SpawnShotFromNetwork(GameWorld& gameWorld, AssetManager& assMan, PhysicalInfo pi, uint32_t shooterId, uint32_t id)
     {
+        glm::vec3 baseUp = glm::vec3(0.0f, 1.0f, 0.0f);
         glm::vec3 shotBaseOrientation = glm::vec3(1.0f, 0.0f, 0.0f);
-        Model shot(Model::GetModelPath(ModelType::SHOT), pi, assMan, ModelType::SHOT, shotBaseOrientation, true, 0.05f);
+
+        Model shot(Model::GetModelPath(ModelType::SHOT), pi, assMan, ModelType::SHOT, shotBaseOrientation, baseUp, true, 0.05f);
         id = gameWorld.GetScene().AddModel(shot, id);
         gameWorld.AddShot(id, shooterId);
 
@@ -35,7 +38,8 @@ namespace spawner
 
     uint32_t SpawnNpc(GameWorld& gameWorld, AssetManager& assMan, PhysicalInfo pi, uint32_t id)
     {
-        Model npc(Model::GetModelPath(ModelType::PLAYER), pi, assMan, ModelType::NPC, glm::vec3(-1.0f, 0.0f, 0.0f));
+        glm::vec3 baseUp = glm::vec3(0.0f, 1.0f, 0.0f);
+        Model npc(Model::GetModelPath(ModelType::PLAYER), pi, assMan, ModelType::NPC, glm::vec3(-1.0f, 0.0f, 0.0f), baseUp);
         id = gameWorld.GetScene().AddModel(npc, id);
         gameWorld.AddNpc(id);
 
@@ -44,8 +48,10 @@ namespace spawner
 
     uint32_t SpawnPlayer(GameWorld& gameWorld, AssetManager& assMan, PhysicalInfo pi, uint32_t id)
     {
+        glm::vec3 baseUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
         PlayerData pd = PlayerData();
-        Model player(Model::GetModelPath(ModelType::PLAYER), pi, assMan, ModelType::PLAYER, glm::vec3(-1.0f, 0.0f, 0.0f));
+        Model player(Model::GetModelPath(ModelType::PLAYER), pi, assMan, ModelType::PLAYER, glm::vec3(-1.0f, 0.0f, 0.0f), baseUp);
         id = gameWorld.GetScene().AddModel(player, id);
         gameWorld.AddPlayer(id, pd);
 

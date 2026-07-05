@@ -42,15 +42,17 @@ public:
     bool gammaCorrection;
 
     
-    Model(float radius, PhysicalInfo pi, ModelType type, glm::vec3 baseOrientation);
-    Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, glm::vec3 baseOrientation, bool gamma = false, float radius = 0.7);
-    Model(std::string_view const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, glm::vec3 baseOrientation, bool gamma = false, float radius = 0.7);
+    Model(float radius, PhysicalInfo pi, ModelType type, glm::vec3 baseOrientation, glm::vec3 baseUp);
+    Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, glm::vec3 baseOrientation, glm::vec3 baseUp, bool gamma = false, float radius = 0.7);
+    Model(std::string_view const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, glm::vec3 baseOrientation, glm::vec3 baseUp, bool gamma = false, float radius = 0.7);
     
     void Draw(Shader shader);
     void DrawHitbox(Shader shader);
     glm::vec3 GetPosition() const { return physicalInfo_.position_; };
     glm::vec3 GetScale() const { return physicalInfo_.scale_; };
     glm::quat GetRotation() const { return physicalInfo_.rotation_; };
+    glm::vec3 GetUp() const { return GetRotation() * baseOrientation_; };
+    glm::vec3 GetRight() const { return GetRotation() * baseOrientation_; };
     glm::vec3 GetForward() const { return GetRotation() * baseOrientation_; };
     glm::vec3 GetBaseOrientation() const { return baseOrientation_; };
     glm::vec3 GetVelocity() const { return physicalInfo_.velocity_; };
@@ -79,6 +81,8 @@ private:
 
     static const std::array<std::filesystem::path, static_cast<size_t>(ModelType::Count)> ModelPaths;
 
+    glm::vec3 baseUp_;
+    glm::vec3 baseRight_;
     glm::vec3 baseOrientation_;
     PhysicalInfo physicalInfo_;
     std::vector<std::shared_ptr<Mesh>> meshes_;

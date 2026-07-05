@@ -8,14 +8,14 @@
 
 struct InputState {
     uint32_t  id   = 0;
-    bool left      = false;
-    bool right     = false;
-    bool forward   = false;
-    bool backward  = false;
+    float pitch    = 0;
+    float yaw      = 0;
+    float roll     = 0;
+    float thrust   = 0;
     bool shoot     = false;
     uint32_t tick  = 0;
 
-    MSGPACK_DEFINE(id, left, right, forward, backward, shoot, tick);
+    MSGPACK_DEFINE(id, pitch, yaw, roll, thrust, shoot, tick);
 };
 
 struct EntityState {

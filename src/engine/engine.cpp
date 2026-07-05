@@ -34,14 +34,16 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     settings_["hitboxes"] = hitboxes;
     bool bloom = true;
     settings_["bloom"] = bloom;
-    bool simpleFlight = true;
-    settings_["simple_flight"] = simpleFlight;
     bool predictiveClient = true;
     settings_["predictive_client"] = predictiveClient;
     bool terrain = false;
     settings_["terrain"] = terrain;
     bool grass = true;
     settings_["grass"] = grass;
+    bool freeFlight = false;
+    settings_["free_flight"] = freeFlight;
+    bool simpleFlight = true;
+    settings_["simple_flight"] = simpleFlight;
 
     camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 60.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0F, -90.0F);
     
@@ -411,10 +413,10 @@ void Engine::CollectInputs(float deltaTime)
     
     InputState state = currentInputStates_.at(playerId_);
 
-    state.left      = glfwGetKey(window_->Get(), GLFW_KEY_A) == GLFW_PRESS;
-    state.right     = glfwGetKey(window_->Get(), GLFW_KEY_D) == GLFW_PRESS;
-    state.forward   = glfwGetKey(window_->Get(), GLFW_KEY_W) == GLFW_PRESS;
-    state.backward  = glfwGetKey(window_->Get(), GLFW_KEY_S) == GLFW_PRESS;
+    state.yaw       = glfwGetKey(window_->Get(), GLFW_KEY_A) == GLFW_PRESS ? 1.0f : 0.0f;
+    state.pitch     = glfwGetKey(window_->Get(), GLFW_KEY_D) == GLFW_PRESS ? 1.0f : 0.0f;
+    state.roll      = glfwGetKey(window_->Get(), GLFW_KEY_W) == GLFW_PRESS ? 1.0f : 0.0f;
+    state.thrust    = glfwGetKey(window_->Get(), GLFW_KEY_S) == GLFW_PRESS ? 1.0f : 0.0f;
     state.shoot     = glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS;
 
     currentInputStates_.at(playerId_) = state;
