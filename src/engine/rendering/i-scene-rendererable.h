@@ -1,6 +1,9 @@
 #ifndef I_SCENE_RENDERABLE
 #define I_SCENE_RENDERABLE
 
+#include <string>
+#include <unordered_map>
+
 #include "render-list.h"
 
 struct ISceneRenderable {

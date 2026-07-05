@@ -20,9 +20,21 @@ RemovedEntities GameWorld::RemoveMarkedEntities()
         playerData_.erase(id);
         std::cout << "Removed entity: " << id << std::endl;
     }
+
+    HandleDeaths(removed);
+
     scene_.RemoveMarkedModels();
 
     return removed;
+}
+
+void GameWorld::HandleDeaths(RemovedEntities& removed)
+{
+    for (uint32_t id : removed.players)
+        pendingDeaths_.push_back({ scene_.GetModelByReference(id).GetPosition() });
+
+    for (uint32_t id : removed.npcs)
+        pendingDeaths_.push_back({ scene_.GetModelByReference(id).GetPosition() });
 }
 
 // ------------ ToDo: Implement before further implementation of systems

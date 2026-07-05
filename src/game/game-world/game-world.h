@@ -1,10 +1,11 @@
 #ifndef GAME_WORLD_H
 #define GAME_WORLD_H
 
-#include <unordered_map>
 #include <cstdint>
+#include <unordered_map>
 
 #include "../../engine/models/scene.h"
+#include <utility>
 
 struct ShotData
 {
@@ -35,6 +36,10 @@ struct RemovedEntities
     std::vector<uint32_t> players;
 };
 
+struct DeathEvent {
+    glm::vec3 position;
+};
+
 class GameWorld {
 public:
     auto& GetScene() { return scene_;};
@@ -42,6 +47,7 @@ public:
 
     void MarkEntityForDelete(uint32_t id);
     RemovedEntities RemoveMarkedEntities();
+    void HandleDeaths(RemovedEntities& removed);
 
     // NOTE: This won't scale indefinetely. Once it grows, switch pattern
     auto& GetPlayerData(uint32_t id) { return playerData_.at(id); };
@@ -59,6 +65,8 @@ public:
     auto& GetShotData() { return shotData_; };
     const auto& GetShotData() const { return shotData_; };
 
+    std::vector<DeathEvent> DrainDeaths() { return std::exchange(pendingDeaths_, {}); };
+
     uint32_t AddPlayer(uint32_t id, PlayerData playerData);
     uint32_t AddNpc(uint32_t id);
     uint32_t AddShot(uint32_t id, uint32_t shooterId, bool predicted = false, uint32_t creationTick = 0);
@@ -69,12 +77,14 @@ public:
     bool IsPlayer(uint32_t id) const { return playerData_.contains(id); };
     bool IsNpc(uint32_t id) const { return npcData_.contains(id); };
     bool IsShot(uint32_t id) const { return shotData_.contains(id); };
-
 private:
+
     Scene scene_;
     std::unordered_map<uint32_t, NpcData> npcData_;
     std::unordered_map<uint32_t, ShotData> shotData_;
     std::unordered_map<uint32_t, PlayerData> playerData_;
+
+    std::vector<DeathEvent> pendingDeaths_;
 };
 
 #endif

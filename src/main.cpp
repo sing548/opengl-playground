@@ -23,6 +23,7 @@
 #include "game/rendering/grass/grass.h"
 #include "game/rendering/flight/con-trail.h"
 #include "game/rendering/flight/drive-plume.h"
+#include "game/rendering/vfx/death-explosion.h"
 #include "game/rendering/materials/game-material.h"
 
 #include "game/rendering/materials/model-material.h"
@@ -120,6 +121,8 @@ int main(int argc, const char *argv[]) {
     engine->AddSceneRenderable(std::move(grass));
     std::unique_ptr<DrivePlume> dp = std::make_unique<DrivePlume>(engine->GetGameWorld());
     //engine->AddSceneRenderable(std::move(dp));
+    std::unique_ptr<DeathExplosion> deathExplosion = std::make_unique<DeathExplosion>(engine->GetGameWorld());
+    engine->AddSceneRenderable(std::move(deathExplosion));
     std::unique_ptr<ConTrail> ct = std::make_unique<ConTrail>(engine->GetGameWorld());
     engine->AddSceneRenderable(std::move(ct));
 
