@@ -12,7 +12,7 @@ public:
     static constexpr float RegionSize = 30.0f;
     static constexpr int RegionResolution = 64;
     static constexpr int LowLodRegionResolution = 16;
-    static constexpr int Hysteresis = 5;
+    static constexpr int Hysteresis = 7;
     static constexpr int Octaves = 5;
     static constexpr float Lacunarity = 2.0f;
     static constexpr float Gain = 0.5f;

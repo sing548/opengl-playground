@@ -66,6 +66,14 @@ public:
     void RotateBy(glm::quat delta) { physicalInfo_.rotation_ = delta * physicalInfo_.rotation_; };
     void SetVelocity(glm::vec3 speed) { physicalInfo_.velocity_ = speed; };
     void SetRotationSpeed(glm::vec3 speed) { physicalInfo_.angularVelocity_ = speed; };
+
+    const PhysicalInfo& GetPhysicalInfo() const { return physicalInfo_; };
+    void SetPreviousInfo(PhysicalInfo pi) { previousInfo_ = pi; };
+    const PhysicalInfo& GetPreviousInfo() const { return previousInfo_; };
+    void SetInterpolatedInfo(PhysicalInfo pi) { interpolatedInfo_ = pi; };
+    const PhysicalInfo& GetInterpolatedInfo() const { return interpolatedInfo_; };
+    glm::vec3 GetInterpolatedPosition() const { return interpolatedInfo_.position_; };
+    glm::quat GetInterpolatedRotation() const { return interpolatedInfo_.rotation_; };
     
     void CreateHitboxSphere();
     
@@ -81,6 +89,8 @@ private:
 
     glm::vec3 baseOrientation_;
     PhysicalInfo physicalInfo_;
+    PhysicalInfo previousInfo_;
+    PhysicalInfo interpolatedInfo_;
     std::vector<std::shared_ptr<Mesh>> meshes_;
 };
 

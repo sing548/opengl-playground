@@ -79,8 +79,9 @@ void DrivePlume::Render(const FrameGlobals& globals, const std::unordered_map<st
     for (auto& [id, _] : world_.GetNpcData())
     {
         auto& model = world_.GetScene().GetModelByReference(id);
+        const auto& interpolatedPi = model.GetInterpolatedInfo();
 
-        glm::vec3 nozzle = model.GetPosition() - model.GetForward() * 0.5f;
+        glm::vec3 nozzle = interpolatedPi.position_ - (interpolatedPi.rotation_ * model.GetBaseOrientation()) * 0.5f;
         float velo = glm::length(model.GetVelocity());
         nozzleData.push_back(glm::vec4(nozzle, velo));
         n++;

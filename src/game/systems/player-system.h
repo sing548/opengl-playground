@@ -5,6 +5,8 @@
 #include "../../engine/systems/i-gameplay-system.h"
 #include "../../game/networking/network-bridge/shared-strucs.h"
 
+#include "system-order.h"
+
 class GameWorld;
 class NetworkBridge;
 
@@ -15,7 +17,7 @@ class PlayerSystem : public IGameplaySystem
 public:
     void Update(SystemsContext& ctx) override;
     GameplayPhase GetPhase() const override { return GameplayPhase::Simulation; }
-    int GetOrder() const override { return 20; }
+    int GetOrder() const override { return static_cast<int>(SystemOrder::PlayerSystem); }
     bool CanReplay() override { return true; }
 private:
     uint32_t localPredCounter = 0x8000000;

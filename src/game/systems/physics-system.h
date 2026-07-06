@@ -4,6 +4,8 @@
 #include "../../engine/models/scene.h"
 #include "../../engine/systems/i-gameplay-system.h"
 
+#include "system-order.h"
+
 class GameWorld;
 class ITerrainHandler;
 struct SystemsContext;
@@ -14,7 +16,7 @@ public:
     void Update(SystemsContext& ctx) override;
     GameplayPhase GetPhase() const override { return GameplayPhase::Simulation; }
     bool CanReplay() override { return true; }
-    int GetOrder() const override { return 0; }
+    int GetOrder() const override { return static_cast<int>(SystemOrder::PhysicsSystem); }
 private:
     void MoveModels(float dT, GameWorld& gameWorld, bool authoritative);
     void MoveModel(float dT, Scene& Scene, unsigned int id, const glm::vec3& change);

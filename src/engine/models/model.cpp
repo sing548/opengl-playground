@@ -16,14 +16,14 @@ const std::array<std::filesystem::path, static_cast<size_t>(ModelType::Count)>  
 
 
 Model::Model(float radius, PhysicalInfo pi, ModelType type, glm::vec3 baseOrientation) : gammaCorrection(false), 
-	physicalInfo_ (pi), radius_(radius), type_(type), baseOrientation_(baseOrientation)
+	physicalInfo_ (pi), previousInfo_(pi), radius_(radius), type_(type), baseOrientation_(baseOrientation)
 {
 	if (!hitboxSphereInitialized_)
 		CreateHitboxSphere();
 }
 
 Model::Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, glm::vec3 baseOrientation, bool gamma, float radius) 
-    : gammaCorrection(gamma), physicalInfo_(pi), radius_(radius), type_(type), baseOrientation_(baseOrientation)
+    : gammaCorrection(gamma), physicalInfo_(pi), previousInfo_(pi), radius_(radius), type_(type), baseOrientation_(baseOrientation)
 {
     path_ = path;
 	meshes_ = assMan.LoadModel(path);
@@ -33,7 +33,7 @@ Model::Model(std::string const &path, PhysicalInfo pi, AssetManager& assMan, Mod
 }
 
 Model::Model(std::string_view const &path, PhysicalInfo pi, AssetManager& assMan, ModelType type, glm::vec3 baseOrientation, bool gamma, float radius) 
-    : gammaCorrection(gamma), physicalInfo_(pi), radius_(radius), type_(type), baseOrientation_(baseOrientation)
+    : gammaCorrection(gamma), physicalInfo_(pi), previousInfo_(pi), radius_(radius), type_(type), baseOrientation_(baseOrientation)
 {
     path_ = path;
     meshes_ = assMan.LoadModel(path_);

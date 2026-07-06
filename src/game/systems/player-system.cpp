@@ -35,6 +35,17 @@ void PlayerSystem::ExecuteInput(float dT,
         if (!gameWorld.GetScene().ModelExists(id)) continue;
         auto& model = gameWorld.GetScene().GetModelByReference(id);
 
+        auto forward = model.GetForward();
+
+        /*float rate = 2.1f;
+
+        glm::quat change = 
+            glm::angleAxis(state.pitch * rate * dT, model.GetRight())
+          * glm::angleAxis(state.yaw   * rate * dT, model.GetUp())
+          * glm::angleAxis(state.roll  * rate * dT, model.GetForward());  
+
+        RotateModel(id, gameWorld.GetScene(), change, lockRAndV);*/
+
         if (state.left) 
             RotateModel(id, gameWorld.GetScene(), glm::angleAxis(glm::radians(2.1f), glm::vec3(0, 1, 0)), lockRAndV);
 

@@ -28,6 +28,23 @@ public:
     NetworkBridge(Role role, const std::string& serverAddr, int port);
     ~NetworkBridge();
     void PollEvents(GameWorld& world, AssetManager& assMan);
+    const Role GetRole() { return role_; };
+
+#pragma region network-debug
+    std::tuple<float, float> ReadRenderDrift() 
+    {
+        auto val = std::tuple<float, float> 
+        {
+            renderTimeDriftSum_ / (float) renderTimeDriftNum_,
+            renderTimeDriftMax_
+        };
+        renderTimeDriftNum_ = 0;
+        renderTimeDriftSum_ = 0;
+        renderTimeDriftMax_ = 0;
+        return val;
+    };
+    int GetPendingStateSize() { return pendingStates_.size(); }
+#pragma endregion
 
 #pragma region Server
     void ManageGameStateDistribution(GameWorld& gameWorld, float dT);
@@ -77,16 +94,24 @@ private:
     uint32_t playerId_ = 0;
     uint32_t previousTick_ = 0;
 
+    int   renderTimeDriftNum_ = 0;
+    float renderTimeDriftSum_ = 0;
+    float renderTimeDriftMax_ = 0;
+
     const float renderDelay_ = 0.1f;
     
     std::chrono::steady_clock::time_point timeAtLastTick_;
     std::chrono::steady_clock::time_point lastUpdateTime_;
 
     EntityState latestPlayerState_;
+    uint32_t    latestStateTick_    = 0;
+    uint32_t    latestAckTick_      = 0;
+    bool        latestStateValid_   = false;
 
     float serverClock_ = 0.0f;
     bool serverClockInit_ = false;
 
+    std::map<uint32_t, InputState> emptyStates_;
     std::map<uint32_t, InputState> sentInputStates_;
 
     std::deque<GameState> pendingStates_;

@@ -12,10 +12,11 @@ void CameraSystem::Update(SystemsContext& ctx)
         if (ctx.localPlayerId == 0 || !ctx.world.GetScene().ModelExists(ctx.localPlayerId)) return;
 
         const auto& model = ctx.world.GetScene().GetModelByReference(ctx.localPlayerId);
-        glm::vec3 modelPos = model.GetPosition();
+        const auto& interpolatedPi = model.GetInterpolatedInfo();
+        glm::vec3 modelPos = interpolatedPi.position_;
         
         // Offset from the model in its local orientation
-        glm::vec3 offset = model.GetForward() * glm::vec3(-8.0f, -8.0f, -8.0f);
+        glm::vec3 offset = interpolatedPi.rotation_ * model.GetBaseOrientation() * glm::vec3(-8.0f, -8.0f, -8.0f);
         glm::vec3 cameraPos = modelPos + offset + glm::vec3(0.0f, 1.5f, 0.0f);
     
         // Update camera position

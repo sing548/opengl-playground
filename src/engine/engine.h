@@ -77,7 +77,7 @@ private:
     bool m_bNetworking = false;
     bool m_bServer = false;
 
-    void ExecuteSystems(GameplayPhase phase, float dT);
+    void ExecuteSystems(GameplayPhase phase, float dT, float alpha = 0.0f);
     void HandleLogic(float deltaTime);
     void ReconcileNetwork();
     void UpdateServerNetworking();

@@ -24,6 +24,7 @@ struct SystemsContext
     uint32_t localPlayerId;
     bool authoritative;
     bool replay;
+    float alpha;
     const std::unordered_map<std::string, bool>&  settings;
 };
 

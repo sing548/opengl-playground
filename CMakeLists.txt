@@ -69,9 +69,11 @@ add_executable(OpenGLPlayground
     src/game/rendering/terrain/terrain-handler.cpp
     src/game/rendering/vfx/death-explosion.cpp
     src/game/spawner/spawner.cpp
+    src/game/systems/blending-system.cpp
     src/game/systems/camera-system.cpp
     src/game/systems/npc-system.cpp
     src/game/systems/physics-system.cpp
+    src/game/systems/pi-history-system.cpp
     src/game/systems/player-system.cpp
     src/game/systems/shot-system.cpp
     src/game/systems/terrain-system.cpp

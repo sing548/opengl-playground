@@ -116,6 +116,8 @@ Window::Window(unsigned int width, unsigned int height, std::unique_ptr<Camera> 
 		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 	}
 
+	// ToDo: Make vsync a setting
+	glfwSwapInterval(1);
 	//glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
@@ -132,7 +134,6 @@ WindowSize Window::GetSize()
 void Window::SwapBuffers()
 {
 	glfwSwapBuffers(window_);
-	glfwPollEvents();
 }
 
 void Window::UpdateCameraPosition(glm::vec3 position)

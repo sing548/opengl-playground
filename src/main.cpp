@@ -12,9 +12,11 @@
 #include "engine/rendering/renderer.h"
 #include "engine/helpers/file-helper.h"
 
+#include "game/systems/blending-system.h"
 #include "game/systems/camera-system.h"
 #include "game/systems/npc-system.h"
 #include "game/systems/physics-system.h"
+#include "game/systems/pi-history-system.h"
 #include "game/systems/player-system.h"
 #include "game/systems/shot-system.h"
 #include "game/systems/terrain-system.h"
@@ -144,6 +146,12 @@ int main(int argc, const char *argv[]) {
 
     auto cam = std::make_unique<CameraSystem>();
     engine->AddGameplaySystem(std::move(cam));
+
+    auto hist = std::make_unique<PiHistorySystem>();
+    engine->AddGameplaySystem(std::move(hist));
+
+    auto blend = std::make_unique<BlendingSystem>();
+    engine->AddGameplaySystem(std::move(blend));
 
     std::string modelVert  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.vert").string();
     std::string modelFrag  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.frag").string();

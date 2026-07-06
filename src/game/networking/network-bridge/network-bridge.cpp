@@ -144,6 +144,9 @@ std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const GameWorld& 
     transientState.tick = currentTick_;
     definitiveState.tick = currentTick_;
 
+    definitiveState.playerToLastProcessedInput = latestInputTickPerPlayer_;
+    transientState.playerToLastProcessedInput  = latestInputTickPerPlayer_;
+
     // Destroyed entities
     for (unsigned int id : pendingRemoved_)
     {
@@ -170,7 +173,6 @@ std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const GameWorld& 
             e.sourceTick         = model.type_ == ModelType::SHOT ? gameWorld.GetShotData(id).creationTick : 0;
 
             definitiveState.createdEntities.push_back(e);
-            definitiveState.playerToLastProcessedInput = latestInputTickPerPlayer_;
         }
         else
         {
@@ -186,7 +188,6 @@ std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const GameWorld& 
 				e.angularVelocity   = model.GetRotationSpeed();
 	
 				transientState.entities.push_back(e);
-                transientState.playerToLastProcessedInput = latestInputTickPerPlayer_;
 			}
         }
     }
@@ -418,11 +419,19 @@ void NetworkBridge::PollInternalClient()
 
                             for (auto& ent : gs.entities)
                             {
-                                if (ent.id == playerId_)
+                                if (ent.id != playerId_) continue;
+
+                                auto ack = gs.playerToLastProcessedInput.find(playerId_);
+
+                                if (ack != gs.playerToLastProcessedInput.end() && gs.tick >= latestStateTick_)
                                 {
-                                    latestPlayerState_ = ent;
-                                    break;
+                                    latestAckTick_      = ack->second;
+                                    latestStateTick_    = gs.tick;
+                                    latestPlayerState_  = ent;
+                                    latestStateValid_   = true;
                                 }
+
+                                break;
                             }
 
                             gs.entities.clear();
@@ -539,24 +548,18 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
 
 std::map<uint32_t, InputState>& NetworkBridge::ResetPlayerToLastInputState(GameWorld& world)
 {
-    if (!world.GetScene().ModelExists(playerId_) || pendingStates_.empty() || playerId_ == 0)
-        return sentInputStates_;
+    if (!latestStateValid_ || playerId_ == 0 || !world.GetScene().ModelExists(playerId_))
+        return emptyStates_;
 
     auto& playerModel = world.GetScene().GetModelByReference(playerId_);
 
-    const auto& gs = pendingStates_.back();
-
-    auto it = gs.playerToLastProcessedInput.find(playerId_);
-    if (it == gs.playerToLastProcessedInput.end())
-        return sentInputStates_;
-
-    playerModel.SetPosition(latestPlayerState_.position);
+        playerModel.SetPosition(latestPlayerState_.position);
     playerModel.SetScale(latestPlayerState_.scale);
     playerModel.SetRotation(latestPlayerState_.rotation);
     playerModel.SetVelocity(latestPlayerState_.velocity);
     playerModel.SetRotationSpeed(latestPlayerState_.angularVelocity);
 
-    sentInputStates_.erase(sentInputStates_.begin(), sentInputStates_.upper_bound(it->second));
+    sentInputStates_.erase(sentInputStates_.begin(), sentInputStates_.upper_bound(latestAckTick_));
 
     return sentInputStates_;
 }
@@ -581,6 +584,11 @@ float NetworkBridge::CalculateRenderTime()
         serverClock_ += dT;
 
         float drift = target - serverClock_;
+
+        ++renderTimeDriftNum_;
+        renderTimeDriftSum_ += drift;
+        if (drift > renderTimeDriftMax_)
+            renderTimeDriftMax_ = drift;
         
         if (std::abs(drift) > 0.2f) serverClock_ = target;
         else                        serverClock_ += drift * 0.05f;

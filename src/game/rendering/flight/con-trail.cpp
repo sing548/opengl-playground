@@ -132,9 +132,10 @@ void ConTrail::ExtendDeque(uint32_t id)
 {
     auto now = std::chrono::steady_clock::now();
     auto& model = world_.GetScene().GetModelByReference(id);
+    const auto& interpolatedPi = model.GetInterpolatedInfo();
 
-    glm::vec3 pos = model.GetPosition();
-    glm::quat rot = model.GetRotation();
+    glm::vec3 pos = interpolatedPi.position_;
+    glm::quat rot = interpolatedPi.rotation_;
 
     auto& queue = trails_[id];
 

@@ -43,6 +43,9 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     bool grass = true;
     settings_["grass"] = grass;
 
+    bool logNetwork = true;
+    settings_["log_network"] = logNetwork;
+
     camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 60.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0F, -90.0F);
     
     inputManager_ = std::make_unique<InputManager>();
@@ -144,14 +147,22 @@ void Engine::Run()
     float fpsTime = 0.0f;
     float logicTime = 0.0f;
     float deltaTime = 0.0f;
-    float lastFrame = 0.0f;
+    double lastFrame = 0.0f;
+
+    int stepsHist[3] = {0, 0, 0};
+
+    uint32_t lastReplayedMaxTick_ = 0;
+    int numDistanceForReset = 0;
+    float distanceForPlayerReset = 0.0f;
+    float biggestDistanceForReset = 0.0f;
+    glm::vec3 oldPlayerPos;
     uint32_t newClient = 0;
 
     SortSystems();
 
     while (!glfwWindowShouldClose(window_->Get())) {
 
-        float currentFrame = glfwGetTime();
+        double currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         deltaTime = std::min(deltaTime, 0.25f);
 	    lastFrame = currentFrame;
@@ -161,18 +172,26 @@ void Engine::Run()
         
         glfwPollEvents();
 
-
         if (window_->WasWindowResized()) 
         {
             renderer_->ResizeWindow(window_->GetSize().width, window_->GetSize().height);
             window_->ClearResizedFlag();
         }
 
+        int stepsThisFrame = 0;
+
+        if (netwBridg_->GetRole() == NetworkBridge::Role::Client)
+            ReconcileNetwork();
+
         while (accTime >= fixedDelta)
         {
-            ReconcileNetwork();
+            if (netwBridg_->GetRole() == NetworkBridge::Role::Server)
+                ReconcileNetwork();
+                
             CollectInputs(fixedDelta);
+            ExecuteSystems(GameplayPhase::PreSimulation, fixedDelta);
             HandleLogic(fixedDelta);
+            ExecuteSystems(GameplayPhase::Simulation, fixedDelta);
 
             accTime -= fixedDelta;
 
@@ -190,12 +209,16 @@ void Engine::Run()
             if (logicTime >= 1) 
             {
                 std::cout << "Current Logic/s: " << j / logicTime << std::endl;
+
                 j = 0;
                 logicTime = 0;
             }
 
             gameWorld_.GetScene().ClearAddedModels();
+
+            ++stepsThisFrame;
         }
+        ++stepsHist[std::min(stepsThisFrame, 2)];
 
         if (m_bNetworking && !m_bServer)
         {
@@ -204,7 +227,15 @@ void Engine::Run()
 
             if (predictive)
             {
+                if (settings_["log_network"] && gameWorld_.GetScene().ModelExists(playerId_))
+                    oldPlayerPos = gameWorld_.GetScene().GetModelByReference(playerId_).GetPosition();
+
                 auto& statesToReplay = netwBridg_->ResetPlayerToLastInputState(gameWorld_);
+
+                uint32_t maxTick = statesToReplay.empty() ? lastReplayedMaxTick_
+                                          : statesToReplay.rbegin()->first;
+                bool newInputThisFrame = (maxTick != lastReplayedMaxTick_);
+                lastReplayedMaxTick_ = maxTick;
     
                 SystemsContext context = SystemsContext
                 {
@@ -219,6 +250,7 @@ void Engine::Run()
                     playerId_,
                     !(m_bNetworking && !m_bServer),
                     true,
+                    0.0f,
                     settings_
                 };
     
@@ -234,10 +266,20 @@ void Engine::Run()
                         system->Update(context);
                     }
                 }
+
+                if (!newInputThisFrame && settings_["log_network"] && gameWorld_.GetScene().ModelExists(playerId_))
+                {
+                    auto diff = glm::length(oldPlayerPos - gameWorld_.GetScene().GetModelByReference(playerId_).GetPosition());
+                    distanceForPlayerReset += diff;
+                    ++numDistanceForReset;
+                    
+                    if (diff > biggestDistanceForReset)
+                        biggestDistanceForReset = diff;
+                }
             }
         }
 
-        ExecuteSystems(GameplayPhase::PreRender, deltaTime);
+        ExecuteSystems(GameplayPhase::PreRender, deltaTime, accTime / fixedDelta);
 
         auto [rL, fG] = BuildRenderList();
         
@@ -251,6 +293,27 @@ void Engine::Run()
             std::cout << "Current FPS: " << i / fpsTime << std::endl;
             i = 0;
             fpsTime = 0;
+
+            if (m_bNetworking && settings_["log_network"])
+            {
+                auto [meanD, maxD] = netwBridg_->ReadRenderDrift();
+                std::cout << "Steps/frame: 0/1/2+: " << stepsHist[0] << "/" << stepsHist[1] << "/" << stepsHist[2] << "/" << ", mean drift: " << meanD << ", max drift: " << maxD;
+
+                if (!m_bServer)
+                {
+                    std::cout <<  ", buffer depth: " << netwBridg_->GetPendingStateSize();
+                    std::cout << ", mean distances: " << distanceForPlayerReset / (float) numDistanceForReset << ", biggest difference: " << biggestDistanceForReset;
+                    numDistanceForReset = 0;
+                    distanceForPlayerReset = 0.0f;
+                    biggestDistanceForReset = 0.0f;
+                }
+
+                std::cout << std::endl;
+
+                stepsHist[0] = 0;
+                stepsHist[1] = 0;
+                stepsHist[2] = 0;
+            }
         }
     }
     
@@ -325,11 +388,9 @@ void Engine::HandleLogic(float deltaTime)
     {
         killedPlayers_.push_back(id);
     }
-
-    ExecuteSystems(GameplayPhase::Simulation, deltaTime);
 }
 
-void Engine::ExecuteSystems(GameplayPhase phase, float dT)
+void Engine::ExecuteSystems(GameplayPhase phase, float dT, float alpha)
 {
     SystemsContext context = SystemsContext
     {
@@ -344,6 +405,7 @@ void Engine::ExecuteSystems(GameplayPhase phase, float dT)
         playerId_,
         !(m_bNetworking && !m_bServer),
         false,
+        alpha,
         settings_
     };
 
@@ -515,7 +577,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 	{
 		if (gameWorld_.IsShot(id)) {
 			PointLight pl;
-			pl.position = model.GetPosition();
+			pl.position = model.GetInterpolatedPosition();
 			fg.pointLights.push_back(pl);
 		}
 	}
@@ -525,8 +587,8 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 	for (auto& [id, model] : models)
 	{
 		glm::mat4 modelProjection = glm::mat4(1.0f);
-		modelProjection = glm::translate(modelProjection, model.GetPosition());
-		modelProjection *=  glm::mat4_cast(glm::quat(model.GetRotation()));
+		modelProjection = glm::translate(modelProjection, model.GetInterpolatedPosition());
+		modelProjection *=  glm::mat4_cast(glm::quat(model.GetInterpolatedRotation()));
 		modelProjection = glm::scale(modelProjection, model.GetScale());
 
         
@@ -554,7 +616,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			dc.material = GetMaterial(hbm);
 			
 			glm::mat4 modelMat = glm::mat4(1.0f);
-    		modelMat = glm::translate(modelMat, model.GetPosition());
+    		modelMat = glm::translate(modelMat, model.GetInterpolatedPosition());
     		modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
 
 			dc.transform = modelMat;
@@ -576,7 +638,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			dc.material = GetMaterial(hbm);
 
 			glm::mat4 modelMat = glm::mat4(1.0f);
-    		modelMat = glm::translate(modelMat, model.GetPosition());
+    		modelMat = glm::translate(modelMat, model.GetInterpolatedPosition());
     		modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
 
 			dc.transform = modelMat;
@@ -598,7 +660,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			dc.material = GetMaterial(hbm);
 
 			glm::mat4 modelMat = glm::mat4(1.0f);
-    		modelMat = glm::translate(modelMat, model.GetPosition());
+    		modelMat = glm::translate(modelMat, model.GetInterpolatedPosition());
     		modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
 
 			dc.transform = modelMat;
