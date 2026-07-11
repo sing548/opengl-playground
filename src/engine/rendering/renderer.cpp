@@ -1,6 +1,7 @@
 #include "renderer.h"
 #include "stb/stb_image.h"
 
+#include "../settings.h"
 #include "../helpers/file-helper.h"
 
 Renderer::Renderer(unsigned int width, unsigned int height)
@@ -103,7 +104,7 @@ Renderer::Renderer(unsigned int width, unsigned int height)
 	black_ = { 0.0f, 0.0f, 0.0f, 1.0f };
 }
 
-void Renderer::Draw(const RenderList& renderList, const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings)
+void Renderer::Draw(const RenderList& renderList, const FrameGlobals& globals, const Settings& settings)
 {
 	//ToDo: ECS (Entity Component System)
 	glEnable(GL_DEPTH_TEST);
@@ -145,15 +146,15 @@ void Renderer::Draw(const RenderList& renderList, const FrameGlobals& globals, c
 	for (auto* rendererable : sceneRenderables_) 
 	{
 		auto state = rendererable->GetRenderPass();
-		if (state == RenderPass::Opaque && settings.at("debug_view"))
+		if (state == RenderPass::Opaque && settings.debugView)
 			state = RenderPass::Debug;
 		ApplyPassState(state);
-		rendererable->Render(globals, settings);
+		rendererable->Render(globals);
 	}
 	
 	// ---------- Post-processing / Render to screen ----------
 	
-	if (settings.at("bloom"))
+	if (settings.bloom)
 	{
 		PostProcessing();
 	}
@@ -169,7 +170,7 @@ void Renderer::Draw(const RenderList& renderList, const FrameGlobals& globals, c
 		screenShader_->Use();
 		screenShader_->SetInt("screenTexture", 0);
 		screenShader_->SetInt("bloomTexture", 1);
-		screenShader_->SetInt("bloom", settings.at("bloom"));
+		screenShader_->SetInt("bloom", settings.bloom);
 		screenShader_->SetFloat("exposure", 1.0f);
 	
 		glActiveTexture(GL_TEXTURE0);

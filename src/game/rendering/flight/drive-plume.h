@@ -21,7 +21,7 @@ public:
     DrivePlume(GameWorld& world);
     ~DrivePlume();
 
-    void Render(const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings) override;
+    void Render(const FrameGlobals& globals) override;
     RenderPass GetRenderPass() override { return RenderPass::Emissive; };
     int GetOrder() override { return 20; };
 private:

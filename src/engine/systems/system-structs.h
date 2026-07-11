@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <unordered_map>
 
+#include "../settings.h"
+
 class Window;
 class GameWorld;
 class InputState;
@@ -25,7 +27,7 @@ struct SystemsContext
     bool authoritative;
     bool replay;
     float alpha;
-    const std::unordered_map<std::string, bool>&  settings;
+    Settings&  settings;
 };
 
 enum class GameplayPhase

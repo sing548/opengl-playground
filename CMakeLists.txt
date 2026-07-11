@@ -81,6 +81,14 @@ add_executable(OpenGLPlayground
     src/main.cpp
     include/glad/glad.c
     include/stb/stb_image.cpp
+
+    include/ImGui/imgui.cpp
+    include/ImGui/imgui_draw.cpp
+    include/ImGui/imgui_tables.cpp
+    include/ImGui/imgui_widgets.cpp
+    include/ImGui/imgui_demo.cpp
+    include/ImGui/backends/imgui_impl_glfw.cpp
+    include/ImGui/backends/imgui_impl_opengl3.cpp
 )
 
 # Modern target-based includes
@@ -88,6 +96,8 @@ target_include_directories(OpenGLPlayground PRIVATE
     include
     include/stb
     include/GameNetworkingSockets/include
+    include/ImGui
+    include/ImGui/backends
 )
 
 # Linking

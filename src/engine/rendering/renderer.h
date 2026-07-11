@@ -14,12 +14,14 @@
 #include "../rendering/materials/material.h"
 #include "../rendering/i-scene-rendererable.h"
 
+struct Settings;
+
 class Renderer
 {
 public:
     Renderer(unsigned int width, unsigned int height);
 
-    void Draw(const RenderList& renderList, const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings);
+    void Draw(const RenderList& renderList, const FrameGlobals& globals, const Settings& settings);
     void AddSceneRenderable(ISceneRenderable* r) { sceneRenderables_.push_back(r); };
     void ResizeWindow(unsigned int width, unsigned int height);
 private:

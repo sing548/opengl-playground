@@ -53,6 +53,9 @@ struct FrameGlobals {
 
 	DirectionalLight	dirLight;
 	std::vector<PointLight> pointLights;
+
+	bool skyBox;
+	bool grass;
 };
 
 #endif

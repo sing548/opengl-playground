@@ -42,7 +42,7 @@ ConTrail::~ConTrail()
     glDeleteBuffers(1, &pointsVBO_);
 }
 
-void ConTrail::Render(const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings)
+void ConTrail::Render(const FrameGlobals& globals)
 {
     float width = 0.04f;
 

@@ -54,7 +54,7 @@ DrivePlume::~DrivePlume()
     glDeleteBuffers(1, &indexBufferEBO_);
 }
 
-void DrivePlume::Render(const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings)
+void DrivePlume::Render(const FrameGlobals& globals)
 {
     shader_->Use();
 

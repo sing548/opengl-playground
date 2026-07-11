@@ -79,9 +79,9 @@ Grass::~Grass()
     glDeleteBuffers(1, &indexBufferEBO_);
 }
 
-void Grass::Render(const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings)
+void Grass::Render(const FrameGlobals& globals)
 {
-    if (!settings.at("grass")) return;
+    if (!globals.grass) return;
 
     shader_->Use();
 

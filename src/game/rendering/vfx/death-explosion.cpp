@@ -55,7 +55,7 @@ DeathExplosion::~DeathExplosion()
     glDeleteBuffers(1, &indexBufferEBO_);
 }
 
-void DeathExplosion::Render(const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings)
+void DeathExplosion::Render(const FrameGlobals& globals)
 {
     auto now = std::chrono::steady_clock::now();
 
