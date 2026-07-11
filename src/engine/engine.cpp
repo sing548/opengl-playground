@@ -3,8 +3,15 @@
 #include <thread>
 #include <algorithm>
 
-#include "systems/system-structs.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #include "logging/ext-std-log.h"
+#include "systems/system-structs.h"
+#include "net-transport/client-transport.h"
+#include "net-transport/server-transport.h"
+
 #include "../game/spawner/spawner.h"
 #include "../game/networking/network-bridge/network-bridge.h"
 
@@ -20,32 +27,6 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
         m_bNetworking = true;
     }
 
-    bool adjust = true;
-    settings_["adjust_camera"] = adjust;
-    bool mouseLooking = false;
-    settings_["mouse_looking"] = mouseLooking;
-    bool thirdPerson = false;
-    settings_["third_person"] = thirdPerson;
-    bool skyBox = true;
-    settings_["sky_box"] = skyBox;
-    bool debug_view = false;
-    settings_["debug_view"] = debug_view;
-    bool hitboxes = false;
-    settings_["hitboxes"] = hitboxes;
-    bool bloom = true;
-    settings_["bloom"] = bloom;
-    bool simpleFlight = true;
-    settings_["simple_flight"] = simpleFlight;
-    bool predictiveClient = true;
-    settings_["predictive_client"] = predictiveClient;
-    bool terrain = false;
-    settings_["terrain"] = terrain;
-    bool grass = true;
-    settings_["grass"] = grass;
-
-    bool logNetwork = true;
-    settings_["log_network"] = logNetwork;
-
     camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 60.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0F, -90.0F);
     
     inputManager_ = std::make_unique<InputManager>();
@@ -59,7 +40,7 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     glfwSetCursorPosCallback(window_->Get(), [](GLFWwindow* window, double xPos, double yPos) {
         Engine* engine = static_cast<Engine*>(glfwGetWindowUserPointer(window));
 
-        if (engine && engine->settings_["mouse_looking"]) {
+        if (engine && engine->settings_.mouseLooking) {
             engine->window_->mouse_callback(xPos, yPos);
         }
     });
@@ -104,6 +85,8 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
 
         netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Offline, "", 0);
     }
+
+    HandleImGui(0);
 }
 
 Engine::~Engine() = default;
@@ -172,6 +155,8 @@ void Engine::Run()
         
         glfwPollEvents();
 
+        HandleImGui(1);
+
         if (window_->WasWindowResized()) 
         {
             renderer_->ResizeWindow(window_->GetSize().width, window_->GetSize().height);
@@ -222,12 +207,12 @@ void Engine::Run()
 
         if (m_bNetworking && !m_bServer)
         {
-            bool predictive = settings_["predictive_client"];
+            bool predictive = settings_.predictiveClient;
             netwBridg_->MergeClientWithNetwork(gameWorld_, *assMan_, predictive);
 
             if (predictive)
             {
-                if (settings_["log_network"] && gameWorld_.GetScene().ModelExists(playerId_))
+                if (settings_.logNetwork && gameWorld_.GetScene().ModelExists(playerId_))
                     oldPlayerPos = gameWorld_.GetScene().GetModelByReference(playerId_).GetPosition();
 
                 auto& statesToReplay = netwBridg_->ResetPlayerToLastInputState(gameWorld_);
@@ -267,7 +252,7 @@ void Engine::Run()
                     }
                 }
 
-                if (!newInputThisFrame && settings_["log_network"] && gameWorld_.GetScene().ModelExists(playerId_))
+                if (!newInputThisFrame && settings_.logNetwork && gameWorld_.GetScene().ModelExists(playerId_))
                 {
                     auto diff = glm::length(oldPlayerPos - gameWorld_.GetScene().GetModelByReference(playerId_).GetPosition());
                     distanceForPlayerReset += diff;
@@ -284,6 +269,8 @@ void Engine::Run()
         auto [rL, fG] = BuildRenderList();
         
         renderer_->Draw(rL, fG, settings_);
+
+        HandleImGui(2);
         
         window_->SwapBuffers();
 
@@ -294,7 +281,7 @@ void Engine::Run()
             i = 0;
             fpsTime = 0;
 
-            if (m_bNetworking && settings_["log_network"])
+            if (m_bNetworking && settings_.logNetwork)
             {
                 auto [meanD, maxD] = netwBridg_->ReadRenderDrift();
                 std::cout << "Steps/frame: 0/1/2+: " << stepsHist[0] << "/" << stepsHist[1] << "/" << stepsHist[2] << "/" << ", mean drift: " << meanD << ", max drift: " << maxD;
@@ -459,11 +446,6 @@ void Engine::AddNewPlayer(uint32_t id)
     }
 }
 
-void Engine::ChangeSetting(std::string key, bool value)
-{
-    settings_[key] = value;
-}
-
 void Engine::CollectInputs(float deltaTime)
 {
     if (playerId_ == 0 || std::ranges::find(killedPlayers_, playerId_) != killedPlayers_.end()) return;
@@ -488,15 +470,7 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, 
 
     if (engine) 
     {
-        if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
-            engine->settings_["predictive_client"] = !engine->settings_["predictive_client"];
-        if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
-            engine->settings_["terrain"] = !engine->settings_["terrain"];
-        if (key == GLFW_KEY_F3 && action == GLFW_PRESS)
-            engine->settings_["grass"] = !engine->settings_["grass"];
-        // debug_view
-        if (key == GLFW_KEY_F4 && action == GLFW_PRESS)
-            engine->settings_["debug_view"] = !engine->settings_["debug_view"];
+        // Respawn self
         if (key == GLFW_KEY_F5 && action == GLFW_PRESS)
         {
             auto it = engine->currentInputStates_.find(engine->playerId_);
@@ -514,46 +488,19 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, 
                 engine->previousInputStates_.try_emplace(engine->playerId_, state);
             }
         }
+        // Respawn clients
         if (key == GLFW_KEY_F6 && action == GLFW_PRESS && engine->m_bNetworking && engine->m_bServer)
         {
             engine->netwBridg_->RespawnPlayers(engine->gameWorld_, *engine->assMan_);
         }
-        // Simple Flight
-        if (key == GLFW_KEY_F7 && action == GLFW_PRESS)
-            engine->settings_["simple_flight"] = !engine->settings_["simple_flight"];
-        // hitboxes
-        if (key == GLFW_KEY_F8 && action == GLFW_PRESS)
-            engine->settings_["hitboxes"] = !engine->settings_["hitboxes"];
-        // Skybox
-        if (key == GLFW_KEY_F9 && action == GLFW_PRESS)
-            engine->settings_["sky_box"] = !engine->settings_["sky_box"];
-            //engine->renderer_->ToggleSkyBox();
-        // Camera
-        if (key == GLFW_KEY_F10 && action == GLFW_PRESS)
-            engine->settings_["adjust_camera"] = !engine->settings_["adjust_camera"];
         // Camara
         if (key == GLFW_KEY_F11 && action == GLFW_PRESS) 
         {
-            engine->settings_["third_person"] = !engine->settings_["third_person"];
-
-            if (engine->settings_["third_person"]) {
-                engine->settings_["adjust_camera"] = true;
-                auto& cam = engine->window_->GetCamera();
-                cam.Up = cam.WorldUp;
-                cam.Pitch = 0.0f;
-                cam.UpdateCameraVectors();
-            } else {
-                auto& cam = engine->window_->GetCamera();
-                cam.Up = glm::vec3(0.0f, 0.0f, 1.0f);
-                cam.Front = glm::vec3(0.0f, 0.0f, -1.0f);
-                cam.Pitch = -90.0f;
-                cam.UpdateCameraVectors();
-                cam.Position = glm::vec3(0.0f, 60.0f, 0.0f);
-            }
+            engine->settings_.thirdPerson = !engine->settings_.thirdPerson;
         }
-        // Bloom
+        // ImGui
         if (key == GLFW_KEY_F12 && action == GLFW_PRESS)
-            engine->settings_["bloom"] = !engine->settings_["bloom"];
+            engine->settings_.imGui = !engine->settings_.imGui;
         // Quit
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
@@ -572,6 +519,9 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 	fg.projection = projection;
 	fg.cameraPos  = window_->GetCamera().Position;
 	fg.time 	  = static_cast<float>(glfwGetTime());
+
+    fg.skyBox = settings_.skyBox;
+    fg.grass = settings_.grass;
 
 	for (auto& [id, model] : models)
 	{
@@ -600,7 +550,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			dc.material = GetMaterial(mesh->GetMaterialId());
 			dc.transform = modelProjection;
 			dc.tint = {1,1,1,1};
-			dc.renderPass = settings_["debug_view"] ? RenderPass::Debug : RenderPass::Opaque;
+			dc.renderPass = settings_.debugView ? RenderPass::Debug : RenderPass::Opaque;
             
 			rl.commands.push_back(dc);
 
@@ -608,7 +558,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
             hbm = mesh->GetHitboxMaterialId();
 		}
 
-		if (settings_["hitboxes"])
+		if (settings_.hitboxes)
 		{
 			DrawCommand dc;
 
@@ -671,11 +621,86 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 		}
     }
 
-    if (settings_["terrain"])
+    if (settings_.terrain)
     {
-        std::vector<DrawCommand> dcs = terrainHandler_->BuildDrawCommands(settings_["debug_view"] ? RenderPass::Debug : RenderPass::Opaque);
+        std::vector<DrawCommand> dcs = terrainHandler_->BuildDrawCommands(settings_.debugView ? RenderPass::Debug : RenderPass::Opaque);
         rl.commands.append_range(dcs);
     }
 
     return std::tuple(rl, fg);
 };
+
+void Engine::HandleImGui(int step)
+{
+    if (step != 0 && !settings_.imGui) return;
+
+    switch (step)
+    {
+        case 0:
+        {
+            // Setup Dear ImGui context
+            IMGUI_CHECKVERSION();
+            ImGui::CreateContext();
+            ImGuiIO& io = ImGui::GetIO();
+            io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+            io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+            //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // IF using Docking Branch
+            // Setup Platform/Renderer backends
+            ImGui_ImplGlfw_InitForOpenGL(window_->Get(), true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+            ImGui_ImplOpenGL3_Init();
+            break;
+        }
+        case 1:
+        {
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+
+            ImGui::Begin("Settings");
+            ImGui::Checkbox("Grass", &settings_.grass);
+            ImGui::Checkbox("Terrain", &settings_.terrain);
+            ImGui::Checkbox("Skybox", &settings_.skyBox);
+            ImGui::Checkbox("Third person", &settings_.thirdPerson);
+            ImGui::Checkbox("Predictive client", &settings_.predictiveClient);
+            ImGui::Checkbox("Adjust camera", &settings_.adjustCamera);
+            ImGui::Checkbox("Mouse looking", &settings_.mouseLooking);
+            ImGui::Checkbox("Debug view", &settings_.debugView);
+            ImGui::Checkbox("Hitboxes", &settings_.hitboxes);
+            ImGui::Checkbox("Bloom", &settings_.bloom);
+            ImGui::Checkbox("Simple flight", &settings_.simpleFlight);
+            ImGui::Checkbox("Log network", &settings_.logNetwork);
+            ImGui::NewLine();
+
+            bool changed = false;
+            changed |= ImGui::SliderInt("Fake lag (ms)", &settings_.fakeLag, 0, 300);
+            changed |= ImGui::SliderFloat("Fake package loss (%)", &settings_.pkgLossPct, 0.0f, 20.0f);
+            
+            if (changed)
+            {
+                if (netwBridg_->GetRole() == NetworkBridge::Role::Client)
+                    ClientTransport::SetFakeNetwork(settings_.fakeLag, settings_.pkgLossPct);
+                else if (netwBridg_->GetRole() == NetworkBridge::Role::Server)
+                    ServerTransport::SetFakeNetwork(settings_.fakeLag, settings_.pkgLossPct);
+            }
+
+            ImGui::End();
+            //ImGui::ShowDemoWindow();
+            break;
+        }
+        case 2:
+        {
+            ImGui::Render();
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            break;
+        }
+        case 3:
+        {
+            ImGui_ImplOpenGL3_Shutdown();
+            ImGui_ImplGlfw_Shutdown();
+            ImGui::DestroyContext();
+            break;
+        }
+        default:
+            break;
+    }
+}

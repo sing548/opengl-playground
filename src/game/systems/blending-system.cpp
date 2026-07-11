@@ -6,7 +6,7 @@
 
 void BlendingSystem::Update(SystemsContext& ctx)
 {
-    bool predictive = ctx.settings.at("predictive_client");
+    bool predictive = ctx.settings.predictiveClient;
     bool networking = ctx.bridge.GetRole() != NetworkBridge::Role::Offline;
 
     auto& scene = ctx.world.GetScene();
@@ -39,7 +39,7 @@ void BlendingSystem::Update(SystemsContext& ctx)
         model.SetInterpolatedInfo(curInfo);
     }
 
-    if (ctx.bridge.GetRole() == NetworkBridge::Role::Client && ctx.settings.at("predictive_client") && scene.ModelExists(ctx.localPlayerId))
+    if (ctx.bridge.GetRole() == NetworkBridge::Role::Client && ctx.settings.predictiveClient && scene.ModelExists(ctx.localPlayerId))
     {
         auto& model = scene.GetModelByReference(ctx.localPlayerId);
 

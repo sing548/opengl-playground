@@ -1,3 +1,6 @@
 [submodule "include/GameNetworkingSockets"]
 	path = include/GameNetworkingSockets
 	url = https://github.com/ValveSoftware/GameNetworkingSockets.git
+[submodule "include/ImGui"]
+	path = include/ImGui
+	url = https://github.com/ocornut/imgui.git

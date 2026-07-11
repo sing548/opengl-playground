@@ -17,6 +17,8 @@ public:
     ClientTransport& operator=(const ClientTransport&) = delete;
 
     void Send(std::span<const std::byte> bytes, bool reliable);
+    
+    static void SetFakeNetwork(int lagMs, float pkgLossPct);
 
     struct Event
     {

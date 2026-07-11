@@ -39,7 +39,7 @@ public:
    ConTrail(GameWorld& world);
    ~ConTrail();
 
-   void Render(const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings) override;
+   void Render(const FrameGlobals& globals) override;
     RenderPass GetRenderPass() override { return RenderPass::Transparent; };
     int GetOrder() override { return 30; };
 private:

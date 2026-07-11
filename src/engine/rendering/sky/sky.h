@@ -19,7 +19,7 @@ public:
     Sky(std::vector<std::string> facePaths);
     ~Sky();
 
-    void Render(const FrameGlobals& globals, const std::unordered_map<std::string, bool>& settings) override;
+    void Render(const FrameGlobals& globals) override;
     RenderPass GetRenderPass() { return RenderPass::Skybox; };
     int GetOrder() override { return 10; };
 private:

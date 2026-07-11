@@ -5,6 +5,7 @@
 
 #include <string>
 
+#include "settings.h"
 #include "window/window.h"
 #include "camera/camera.h"
 #include "rendering/renderer.h" 
@@ -60,12 +61,9 @@ private:
     std::vector<std::unique_ptr<ISceneRenderable>> sceneRenderables_;
     std::unordered_map<uint16_t, std::unique_ptr<Material>> materials_;
     
-
-    void ChangeSetting(std::string key, bool value);
     glm::vec2 maxScreenSize_;
     glm::vec3 currentFurthestPosition;
 
-    std::unordered_map<std::string, bool> settings_;
     std::unordered_map<uint32_t, InputState> previousInputStates_;
     std::unordered_map<uint32_t, InputState> currentInputStates_;
 
@@ -90,6 +88,9 @@ private:
 
     void SortSystems();
     void SortRenderables();
+
+    void HandleImGui(int step);
+    Settings settings_;
     
     //------------------- TEMP, will be moved to more appropriate class ---------------------
     std::tuple<RenderList, FrameGlobals> BuildRenderList();

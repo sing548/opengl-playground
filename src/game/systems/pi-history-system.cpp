@@ -6,7 +6,7 @@
 
 void PiHistorySystem::Update(SystemsContext& ctx)
 {
-    bool predictive = ctx.settings.at("predictive_client");
+    bool predictive = ctx.settings.predictiveClient;
     bool networking = ctx.bridge.GetRole() != NetworkBridge::Role::Offline;
 
     auto& scene = ctx.world.GetScene();
