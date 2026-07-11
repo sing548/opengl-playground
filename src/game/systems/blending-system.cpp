@@ -25,6 +25,14 @@ void BlendingSystem::Update(SystemsContext& ctx)
 
         auto& oldInfo = model.GetPreviousInfo();
         auto curInfo = model.GetPhysicalInfo();
+
+        if (networking && ctx.bridge.GetRole() == NetworkBridge::Role::Client && ctx.world.IsShot(id))
+        {
+            auto pi = model.GetPhysicalInfo();
+            pi.position_ += model.GetVelocity() * ctx.alpha;   // same units logic as the local-player block
+            model.SetInterpolatedInfo(pi);
+            continue;
+        }
         
         curInfo.position_ = glm::mix(oldInfo.position_, curInfo.position_, ctx.alpha);
         curInfo.rotation_ = glm::slerp(oldInfo.rotation_, curInfo.rotation_, ctx.alpha);

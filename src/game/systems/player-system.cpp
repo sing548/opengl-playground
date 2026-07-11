@@ -11,7 +11,10 @@ void PlayerSystem::Update(SystemsContext& ctx)
     if (ctx.replay || ctx.authoritative)
         ExecuteInput(ctx.dT, ctx.world, ctx.assMan, ctx.current, ctx.previous, ctx.localPlayerId, ctx.authoritative, ctx.settings.at("simple_flight"), ctx.bridge);
     else if (!ctx.replay && ctx.settings.at("predictive_client"))
+    {
+        ExecuteInput(ctx.dT, ctx.world, ctx.assMan, ctx.current, ctx.previous, ctx.localPlayerId, ctx.authoritative, ctx.settings.at("simple_flight"), ctx.bridge);
         Shoot(ctx.world, ctx.assMan, ctx.localPlayerId, ctx.dT, ctx.current, ctx.previous, true, ctx.bridge);
+    }
     if (!ctx.replay)
     {
         UpdatePlayerData(ctx.dT, ctx.world);

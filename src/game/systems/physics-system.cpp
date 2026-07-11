@@ -10,6 +10,13 @@ void PhysicsSystem::Update(SystemsContext& ctx)
     if (!ctx.replay)
     {
         MoveModels(ctx.dT, ctx.world, ctx.authoritative);
+
+        if (!ctx.authoritative && ctx.settings.at("predictive_client") && ctx.world.GetScene().ModelExists(ctx.localPlayerId))
+        {
+            auto& model = ctx.world.GetScene().GetModelByReference(ctx.localPlayerId);
+            MoveModel(ctx.dT, ctx.world.GetScene(), ctx.localPlayerId, model.GetVelocity());
+        }
+
         CheckHits(ctx.world, ctx.terrainHandler, ctx.authoritative, ctx.settings.at("predictive_client"));
         CorrectZOffset(ctx.world.GetScene());
     }

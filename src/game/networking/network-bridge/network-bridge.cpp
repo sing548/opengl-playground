@@ -474,9 +474,46 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
         }
 
         if (predictiveClient)
+        {
             for (uint32_t id : gs.destroyedEntities)
-                if (gameWorld.IsShot(id) && gameWorld.GetShotData(id).ownerId == playerId_)
+                if (gameWorld.IsShot(id))
                     gameWorld.MarkEntityForDelete(id);
+
+            for (auto& entity : gs.createdEntities)
+            {
+                if (entity.type != 1) continue;
+
+                PhysicalInfo pi;
+	    	    pi.position_			= entity.position;
+	    	    pi.rotation_			= entity.rotation;
+	    	    pi.angularVelocity_		= entity.angularVelocity;
+	    	    pi.scale_				= entity.scale;
+	    	    pi.velocity_			= entity.velocity;
+
+                if (entity.ownerId == playerId_)
+                    {
+                        auto match = pendingShotCreations.find(entity.sourceTick);
+
+                        if (match != pendingShotCreations.end())
+                        {
+                            gameWorld.GetScene().ReassignId(match->second, entity.id);
+                            gameWorld.ReassignShotId(match->second, entity.id);
+                            pendingShotCreations.erase(match);
+                        }
+                        else
+                        {
+                            // ToDo: Maybe revisit, a bit "hacky" right now
+                            if (pendingShotCreations.size() > 0 && pendingShotCreations.begin()->first > entity.sourceTick + 50)
+                                pendingShotCreations.erase(pendingShotCreations.begin());
+                        }
+                    }
+                    else
+                    {
+                        float shotAge = std::max(0.0f, (serverClock_ + renderDelay_) - gs.tick * tickRate_);
+                        spawner::SpawnShotFromNetwork(gameWorld, assMan, pi, entity.ownerId, entity.id, shotAge);
+                    }
+            }
+        }
     }
 
     while (!pendingStates_.empty())
@@ -513,25 +550,6 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
 	    			spawner::SpawnPlayer(gameWorld, assMan, pi, entity.id);
 	    			break;
 	    		case 1:
-                    if ((entity.ownerId == playerId_ && predictiveClient))
-                    {
-                        auto match = pendingShotCreations.find(entity.sourceTick);
-
-                        if (match != pendingShotCreations.end())
-                        {
-                            gameWorld.GetScene().ReassignId(match->second, entity.id);
-                            gameWorld.ReassignShotId(match->second, entity.id);
-                            pendingShotCreations.erase(match);
-                        }
-                        else
-                        {
-                            // ToDo: Maybe revisit, a bit "hacky" right now
-                            if (pendingShotCreations.size() > 0 && pendingShotCreations.begin()->first > entity.sourceTick + 50)
-                                pendingShotCreations.erase(pendingShotCreations.begin());
-                        }
-                    }
-                    else
-                        spawner::SpawnShotFromNetwork(gameWorld, assMan, pi, entity.ownerId, entity.id);
 	    			break;
 	    		case 2: 
 	    			spawner::SpawnNpc(gameWorld, assMan, pi, entity.id);
@@ -566,6 +584,9 @@ std::map<uint32_t, InputState>& NetworkBridge::ResetPlayerToLastInputState(GameW
 
 float NetworkBridge::CalculateRenderTime()
 {
+    float k = 0.75;
+    float maxAdj = 0.05;
+
     auto now = std::chrono::steady_clock::now();
     float timeSinceLastTick = std::chrono::duration<float>(
         now - timeAtLastTick_
@@ -591,7 +612,7 @@ float NetworkBridge::CalculateRenderTime()
             renderTimeDriftMax_ = drift;
         
         if (std::abs(drift) > 0.2f) serverClock_ = target;
-        else                        serverClock_ += drift * 0.05f;
+        else                        serverClock_ += dT * (std::clamp(drift * k, -maxAdj, +maxAdj));
         //std::cout << "Updated servertime. Drift: " << drift << std::endl;
     }
 

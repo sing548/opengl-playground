@@ -20,14 +20,13 @@ void TerrainHandler::HandleChunksForArea(const glm::ivec2& area)
             bool lowLod = dist > TerrainConfig::LowLoDArea;
             bool deleted = false;
 
-            /*if (it != chunks_.end() && (
-                lowLod && it->second.lod != TerrainConfig::LowLodRegionResolution ||
+            if (it != chunks_.end() && (
                     !lowLod && it->second.lod != TerrainConfig::RegionResolution
                 ))
             {
                 chunks_.erase({ i, j });
                 deleted = true;
-            }*/
+            }
 
             if (deleted || it == chunks_.end())
             {

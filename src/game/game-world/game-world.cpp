@@ -18,7 +18,7 @@ RemovedEntities GameWorld::RemoveMarkedEntities()
         npcData_.erase(id);
         shotData_.erase(id);
         playerData_.erase(id);
-        std::cout << "Removed entity: " << id << std::endl;
+        //std::cout << "Removed entity: " << id << std::endl;
     }
 
     HandleDeaths(removed);

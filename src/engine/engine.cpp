@@ -4,7 +4,7 @@
 #include <algorithm>
 
 #include "systems/system-structs.h"
-
+#include "logging/ext-std-log.h"
 #include "../game/spawner/spawner.h"
 #include "../game/networking/network-bridge/network-bridge.h"
 

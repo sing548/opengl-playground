@@ -23,9 +23,11 @@ namespace spawner
         return id;
     }
 
-    uint32_t SpawnShotFromNetwork(GameWorld& gameWorld, AssetManager& assMan, PhysicalInfo pi, uint32_t shooterId, uint32_t id)
+    uint32_t SpawnShotFromNetwork(GameWorld& gameWorld, AssetManager& assMan, PhysicalInfo pi, uint32_t shooterId, uint32_t id, float age)
     {
         glm::vec3 shotBaseOrientation = glm::vec3(1.0f, 0.0f, 0.0f);
+        pi.position_ += age * pi.velocity_ * 60.0f;
+        std::cout << "Shot moved along for: " << age << " age" << std::endl;
         Model shot(Model::GetModelPath(ModelType::SHOT), pi, assMan, ModelType::SHOT, shotBaseOrientation, true, 0.05f);
         id = gameWorld.GetScene().AddModel(shot, id);
         gameWorld.AddShot(id, shooterId);
