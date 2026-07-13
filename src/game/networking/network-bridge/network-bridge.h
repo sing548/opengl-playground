@@ -48,7 +48,51 @@ public:
 
 #pragma region Server
     void ManageGameStateDistribution(GameWorld& gameWorld, float dT);
-    std::unordered_map<uint32_t, InputState> GetInputStates() { return inputStates_; };
+
+    // ToDo: return void, add std::vector<std::pair<int, State>>& for perfomance
+    // Think about adding bool if guessed (empty queue)
+    std::unordered_map<uint32_t, InputState> ConsumeOldestInputStates() {
+        constexpr size_t maxDepth = 3;
+        std::unordered_map<uint32_t, InputState> states;
+        states.reserve(inputQueues_.size());
+        
+        for (auto& [id, queue] : inputQueues_)
+        {
+            if (queue.empty())
+                continue;
+
+            auto& last = latestInputTickPerPlayer_[id];
+            auto it = queue.begin();
+
+            while (queue.size() > 1 && it->second.tick <= last)
+                it = queue.erase(it);
+
+            bool shotSink = false;
+            while (queue.size() > maxDepth)
+            {
+                shotSink |= it->second.shoot;
+                it = queue.erase(it);
+            }
+
+            InputState consumed = it->second;
+            consumed.shoot |= shotSink;
+            states.emplace(id, consumed);
+            last = consumed.tick;
+            
+            if (queue.size() > 1)
+                queue.erase(it);
+        }
+
+        return states;
+    };
+    const std::vector<std::pair<uint32_t, int>> GetQueueSizePerPlayer() { 
+        std::vector<std::pair<uint32_t, int>> sizes;
+
+        for (auto& [id, queue] : inputQueues_)
+            sizes.push_back(std::pair<uint32_t, int>(id, queue.size()));
+        
+        return sizes;
+    };
     const uint32_t GetCurrentTick() const { return currentTick_; };
     void RespawnPlayers(GameWorld& world, AssetManager& assMan);
 #pragma endregion    
@@ -70,21 +114,26 @@ private:
 
     float tickTimer_ = 0.0f;
 
-    uint32_t currentTick_ = 0;
+    // ticks start at 1 in order for queue logic to work.
+    uint32_t currentTick_ = 1;
 
     // Map holding modelId <-> connectionId
     std::unordered_map<uint32_t, uint32_t> playersToConnections_;
     std::unordered_map<uint32_t, uint32_t> connectionsToPlayers_;
 
-    std::unordered_map<uint32_t, InputState> inputStates_;
+    // Map holding connectionId <-> currentInputState
+    //std::unordered_map<uint32_t, InputState> inputStates_;
 
 #pragma region Server
     std::vector<uint32_t> pendingAdded_;
     std::vector<uint32_t> pendingRemoved_;
     std::map<uint32_t, GameState> pastStates_;
     std::unordered_map<uint32_t, uint32_t> latestInputTickPerPlayer_;
+
+    // Input Queue per player. u_map<playerid, map<tick, state>>std::map<uint32_t, InputStat
+    std::unordered_map<uint32_t, std::map<uint32_t, InputState>> inputQueues_;
+
     void PollInternalServer(GameWorld& world, AssetManager& assMan);
-    void ReplayInputState(uint32_t playerId);
     std::tuple<msgpack::sbuffer, msgpack::sbuffer> BuildAndPackGameState(const GameWorld& gameWorld, bool fullState = false);
     std::tuple<GameState, GameState> BuildGameState(const GameWorld& gameWorld, bool fullState = false);
     float CalculateRenderTime();

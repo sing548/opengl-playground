@@ -295,10 +295,16 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
 		        		payload.convert(is);
 
                         auto id = connectionsToPlayers_.at(ev.conn);
-                        inputStates_[id] = is;
-                        latestInputTickPerPlayer_[id] = is.tick;
+                        is.id = id;
 
-                        //ReplayInputState(id);
+                        if (!inputQueues_.contains(id))
+                        {
+                            std::map<uint32_t, InputState> map;
+                            map[is.tick] = is;
+                            inputQueues_.emplace(id, map);
+                        }
+                        else
+                            inputQueues_[id].emplace(is.tick, is);
 
 		        		break;
 		        	}
@@ -320,19 +326,6 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
                 break;
         }
     }
-}
-
-void NetworkBridge::ReplayInputState(uint32_t playerId)
-{
-    auto& inputState = inputStates_[playerId];
-
-    
-    if (!pastStates_.contains(inputState.tick))
-    return;
-    
-    auto& oldGameState = pastStates_[inputState.tick];
-    
-    // ToDo: Re-Calculate actions for player
 }
 
 void NetworkBridge::SendInputState(InputState& state)
@@ -571,7 +564,7 @@ std::map<uint32_t, InputState>& NetworkBridge::ResetPlayerToLastInputState(GameW
 
     auto& playerModel = world.GetScene().GetModelByReference(playerId_);
 
-        playerModel.SetPosition(latestPlayerState_.position);
+    playerModel.SetPosition(latestPlayerState_.position);
     playerModel.SetScale(latestPlayerState_.scale);
     playerModel.SetRotation(latestPlayerState_.rotation);
     playerModel.SetVelocity(latestPlayerState_.velocity);

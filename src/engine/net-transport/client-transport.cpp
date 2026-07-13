@@ -189,7 +189,7 @@ std::vector<ClientTransport::Event> ClientTransport::PollEvents()
     return impl_->PollEvents();
 }
 
-void ClientTransport::SetFakeNetwork(int lagMs, float pkgLossPct)
+void ClientTransport::SetFakeNetwork(int lagMs, float pkgLossPct, float pkgJitterPct)
 {
     auto* utils = SteamNetworkingUtils();
 
@@ -198,4 +198,7 @@ void ClientTransport::SetFakeNetwork(int lagMs, float pkgLossPct)
     
     utils->SetGlobalConfigValueFloat(k_ESteamNetworkingConfig_FakePacketLoss_Send, pkgLossPct);
     utils->SetGlobalConfigValueFloat(k_ESteamNetworkingConfig_FakePacketLoss_Recv, pkgLossPct);
+
+    utils->SetGlobalConfigValueFloat(k_ESteamNetworkingConfig_FakePacketJitter_Recv_Pct, pkgLossPct);
+    utils->SetGlobalConfigValueFloat(k_ESteamNetworkingConfig_FakePacketJitter_Send_Pct, pkgLossPct);
 }

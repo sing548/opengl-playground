@@ -324,7 +324,7 @@ void Engine::ReconcileNetwork()
 void Engine::UpdateServerNetworking()
 {
     netwBridg_->PollEvents(gameWorld_, *assMan_);
-    auto inputStates = netwBridg_->GetInputStates();
+    auto inputStates = netwBridg_->ConsumeOldestInputStates();
 
     for (const auto [id, state] : inputStates)
     {
@@ -333,15 +333,7 @@ void Engine::UpdateServerNetworking()
 
         auto it = currentInputStates_.find(state.id);
         
-        if (it == currentInputStates_.end())
-        {
-            previousInputStates_[state.id] = state;
-        }
-        else if (previousInputStates_.at(state.id).tick - 1 < netwBridg_->GetCurrentTick())
-        {
-            previousInputStates_.at(state.id) = currentInputStates_.at(state.id);
-        }
-
+        previousInputStates_[state.id] = (it != currentInputStates_.end()) ? it->second : state;
         currentInputStates_[state.id] = state;
     }
 }
@@ -674,13 +666,20 @@ void Engine::HandleImGui(int step)
             bool changed = false;
             changed |= ImGui::SliderInt("Fake lag (ms)", &settings_.fakeLag, 0, 300);
             changed |= ImGui::SliderFloat("Fake package loss (%)", &settings_.pkgLossPct, 0.0f, 20.0f);
+            changed |= ImGui::SliderFloat("Fake jitter (%)", &settings_.pkgJitter, 0, 20.0f);
             
             if (changed)
             {
                 if (netwBridg_->GetRole() == NetworkBridge::Role::Client)
-                    ClientTransport::SetFakeNetwork(settings_.fakeLag, settings_.pkgLossPct);
+                    ClientTransport::SetFakeNetwork(settings_.fakeLag, settings_.pkgLossPct, settings_.pkgJitter);
                 else if (netwBridg_->GetRole() == NetworkBridge::Role::Server)
-                    ServerTransport::SetFakeNetwork(settings_.fakeLag, settings_.pkgLossPct);
+                    ServerTransport::SetFakeNetwork(settings_.fakeLag, settings_.pkgLossPct, settings_.pkgJitter);
+            }
+
+            ImGui::NewLine();
+            for (auto [id, size] : netwBridg_->GetQueueSizePerPlayer())
+            {
+                ImGui::Text("Player: %u, queue size: %zu", id, size);
             }
 
             ImGui::End();

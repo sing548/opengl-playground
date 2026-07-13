@@ -21,7 +21,7 @@ public:
     void Send(ConnectionId to, std::span<const std::byte> bytes, bool reliable);
     void Broadcast(std::span<const std::byte> bytes, bool reliable);
 
-    static void SetFakeNetwork(int lagMs, float pkgLossPct);
+    static void SetFakeNetwork(int lagMs, float pkgLossPct, float pkgJitterPct);
 
     struct Event
     {
