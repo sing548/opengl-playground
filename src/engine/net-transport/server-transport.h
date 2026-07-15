@@ -18,8 +18,8 @@ public:
     ServerTransport(const ServerTransport&) = delete;
     ServerTransport& operator=(const ServerTransport&) = delete;
 
-    void Send(ConnectionId to, std::span<const std::byte> bytes, bool reliable);
-    void Broadcast(std::span<const std::byte> bytes, bool reliable);
+    void Send(ConnectionId to, std::span<const std::byte> bytes, bool reliable, bool noNagle = false);
+    void Broadcast(std::span<const std::byte> bytes, bool reliable, bool noNagle = false);
 
     static void SetFakeNetwork(int lagMs, float pkgLossPct, float pkgJitterPct);
 

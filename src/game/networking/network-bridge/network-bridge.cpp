@@ -12,7 +12,8 @@
 #include <glm/glm.hpp>
 
 
-NetworkBridge::NetworkBridge(Role role, const std::string& serverAddr, int port) : role_ (role)
+NetworkBridge::NetworkBridge(Role role, const std::string& serverAddr, int port, DebugStats& debugStats) 
+                            : role_(role), debugStats_(debugStats), inter_(tickRate_, debugStats_)
 {
     if (role == NetworkBridge::Role::Client)
     {
@@ -67,7 +68,7 @@ void NetworkBridge::ManageGameStateDistribution(GameWorld& gameWorld, float dT)
             reinterpret_cast<const std::byte*>(tranBuffer.data()),
             tranBuffer.size()
         };
-        server_->Broadcast(tranBytes, false);
+        server_->Broadcast(tranBytes, false, true);
 
         pendingAdded_.clear();
         pendingRemoved_.clear();
@@ -93,8 +94,8 @@ void NetworkBridge::RespawnPlayers(GameWorld& world, AssetManager& assMan)
 		pk.pack_uint8(0);
 		pk.pack(playerId);
 
-        playersToConnections_.emplace(playerId, connId);
         connectionsToPlayers_[connId] = playerId;
+        inputQueues_.erase(connId);
 
         std::span<const std::byte> bytes {
             reinterpret_cast<const std::byte*>(buffer.data()),
@@ -144,8 +145,14 @@ std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const GameWorld& 
     transientState.tick = currentTick_;
     definitiveState.tick = currentTick_;
 
-    definitiveState.playerToLastProcessedInput = latestInputTickPerPlayer_;
-    transientState.playerToLastProcessedInput  = latestInputTickPerPlayer_;
+    auto& out = definitiveState.playerToLastProcessedInput;
+    out.clear();
+    out.reserve(latestInputTickPerConn_.size());
+    for (const auto& [connId, tick] : latestInputTickPerConn_)
+        if (auto it = connectionsToPlayers_.find(connId); it != connectionsToPlayers_.end())
+            out.emplace(it->second, tick);
+    
+    transientState.playerToLastProcessedInput  = definitiveState.playerToLastProcessedInput;
 
     // Destroyed entities
     for (unsigned int id : pendingRemoved_)
@@ -211,6 +218,56 @@ std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const GameWorld& 
     return std::tuple(definitiveState, transientState);
 }
 
+std::unordered_map<uint32_t, InputState> NetworkBridge::ConsumeOldestInputStates()
+ {
+
+    constexpr size_t maxDepth = 3;
+    std::unordered_map<uint32_t, InputState> states;
+    states.reserve(inputQueues_.size());
+        
+    for (auto& [connId, queue] : inputQueues_)
+    {
+        debugStats_.Parsed("connection_{}.depth", connId).Add((float)queue.size());
+
+        if (queue.empty())
+        {
+            debugStats_.Parsed("connection_{}.starve", connId).Hit();
+            continue;
+        }
+        if (!connectionsToPlayers_.contains(connId)) continue;
+
+        auto id = connectionsToPlayers_[connId];
+
+        auto& last = latestInputTickPerConn_[connId];
+        auto it = queue.begin();
+
+        while (queue.size() > 1 && it->second.tick <= last)
+            it = queue.erase(it);
+
+        bool shotSink = false;
+        while (queue.size() > maxDepth)
+        {
+            shotSink |= it->second.shoot;
+            it = queue.erase(it);
+            debugStats_.Parsed("connection_{}.overrun", connId).Hit();
+        }
+
+        if (it->second.tick <= last)
+            debugStats_.Parsed("connection_{}.starve", connId).Hit();
+
+        InputState consumed = it->second;
+        consumed.shoot |= shotSink;
+        consumed.id = id;
+        states.emplace(id, consumed);
+        last = consumed.tick;
+            
+        if (queue.size() > 1)
+            queue.erase(it);
+    }
+
+    return states;
+}
+
 void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
 {
     auto events = server_->PollEvents();
@@ -239,7 +296,6 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
 			    // ToDo: Re-evaluate if sending playerID like this is correct (or just good enough for now)
 			    pk.pack(playerId);
 
-                playersToConnections_.emplace(playerId, ev.conn);
                 connectionsToPlayers_.emplace(ev.conn, playerId);
 
                 std::span<const std::byte> bytes {
@@ -265,8 +321,14 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
                 // Just accept and remove that player for now. Maybe think about reconnect logic, or just destroying playermodel
                 
                 auto playerId = connectionsToPlayers_[ev.conn];
-                playersToConnections_.erase(playerId);
+                inputQueues_.erase(ev.conn);
                 connectionsToPlayers_.erase(ev.conn);
+                latestInputTickPerConn_.erase(ev.conn);
+
+                debugStats_.Erase("connection_{}.starve", ev.conn);
+                debugStats_.Erase("connection_{}.overrun", ev.conn);
+                debugStats_.Erase("connection_{}.depth", ev.conn);
+
                 world.MarkEntityForDelete(playerId);
 
                 std::cout << "Disconnected event: " << ev.conn << std::endl;
@@ -291,20 +353,19 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
 		        {
 		        	case 0:
 		        	{
-		        		InputState is;
-		        		payload.convert(is);
+		        		std::vector<InputState> states;
+		        		payload.convert(states);
 
-                        auto id = connectionsToPlayers_.at(ev.conn);
-                        is.id = id;
-
-                        if (!inputQueues_.contains(id))
+                        if (!inputQueues_.contains(ev.conn))
                         {
-                            std::map<uint32_t, InputState> map;
-                            map[is.tick] = is;
-                            inputQueues_.emplace(id, map);
+                            auto& q = inputQueues_[ev.conn];
+
+                            for (auto& state : states)
+                                q.emplace(state.tick, state);
                         }
                         else
-                            inputQueues_[id].emplace(is.tick, is);
+                            for (auto& state: states)
+                                inputQueues_[ev.conn].emplace(state.tick, state);
 
 		        		break;
 		        	}
@@ -331,21 +392,30 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
 void NetworkBridge::SendInputState(InputState& state)
 {
     state.tick = currentTick_++;
+    
+    sentInputStates_.emplace(state.tick, state);
+
+    constexpr std::size_t stateCount = 3;
+    const std::size_t n = std::min(stateCount, sentInputStates_.size());
+    auto first = std::prev(sentInputStates_.end(), n);
 
     msgpack::sbuffer buffer;
 	msgpack::packer<msgpack::sbuffer> pk(buffer);
 	pk.pack_array(2);
 	pk.pack_uint8(0);
-	pk.pack(state);
+
+    pk.pack_array(static_cast<uint32_t>(n));
+    for (auto it = first; it != sentInputStates_.end(); ++it)
+    {
+        pk.pack(it->second);
+    }
 
     std::span<const std::byte> bytes {
         reinterpret_cast<const std::byte*>(buffer.data()),
         buffer.size()
     };
 
-    client_->Send(bytes , true);
-
-    sentInputStates_.emplace(state.tick, state);
+    client_->Send(bytes ,false , true);
 }
 
 void NetworkBridge::PollInternalClient()
@@ -396,19 +466,31 @@ void NetworkBridge::PollInternalClient()
 		        	{
 		        		GameState gs;
 		        		payload.convert(gs);
-		        		int newTick = gs.tick;
-		        		if (previousTick_ != 0 && newTick - previousTick_ != 1 && newTick != previousTick_)
+		        		uint32_t newTick = gs.tick;
+
+                        const bool fresh = newTick > previousTick_;
+                        const bool stale = previousTick_ != 0 && newTick < previousTick_;
+
+		        		if (previousTick_ != 0 && fresh && newTick - previousTick_ != 1)
                 			std::cout <<   "Skipped tick(1) between: " << previousTick_ << " and " << newTick << std::endl;
-                    
-                        if (newTick != previousTick_)
+
+                        if (stale)
+                        {
+                            debugStats_["net.late_states"].Hit();
+
+                            if (type == 2)
+                                break;
+                        }
+
+                        if (fresh)
                         {
                             previousTick_ = newTick;
                             timeAtLastTick_ = std::chrono::steady_clock::now();
                         }
                         
-                        if (type == 2 || gs.entities.size() != 0)
+                        if (!stale && gs.entities.size() != 0)
                         {
-                            inter_.FeedSnapshot(previousTick_, gs.entities);
+                            inter_.FeedSnapshot(newTick, gs.entities);
 
                             for (auto& ent : gs.entities)
                             {
@@ -554,6 +636,8 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
 
     inter_.InterpolateGameState(gameWorld.GetScene(), renderTime, playerId_, predictiveClient);
 
+    debugStats_["net.buffer_depth"].Add((float)pendingStates_.size());
+
 	return;
 }
 
@@ -599,14 +683,15 @@ float NetworkBridge::CalculateRenderTime()
 
         float drift = target - serverClock_;
 
-        ++renderTimeDriftNum_;
-        renderTimeDriftSum_ += drift;
-        if (drift > renderTimeDriftMax_)
-            renderTimeDriftMax_ = drift;
+        debugStats_["clock.drift"].Add(drift);
         
-        if (std::abs(drift) > 0.2f) serverClock_ = target;
-        else                        serverClock_ += dT * (std::clamp(drift * k, -maxAdj, +maxAdj));
-        //std::cout << "Updated servertime. Drift: " << drift << std::endl;
+        if (std::abs(drift) > 0.2f)
+        {
+            debugStats_["clock.snaps"].Hit();
+            serverClock_ = target;
+        } 
+        else
+            serverClock_ += dT * (std::clamp(drift * k, -maxAdj, +maxAdj));
     }
 
     lastUpdateTime_ = now;

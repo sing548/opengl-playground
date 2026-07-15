@@ -6,13 +6,15 @@
 #include <cstdint>
 #include <unordered_map>
 
+#include "../../../engine/metrics/debug-stats.h"
+
 class Scene;
 struct EntityState;
 
 class Interpolator
 {
 public:
-    Interpolator(float tickRate) : tickRate_(tickRate) {};
+    Interpolator(float tickRate, DebugStats& debugStats) : tickRate_(tickRate), debugStats_(debugStats) {};
     ~Interpolator();
     
     void FeedSnapshot(uint32_t tick, const std::vector<EntityState>& entities);
@@ -21,6 +23,8 @@ private:
     
     float tickRate_;
     uint32_t lastInterpretedTick_ = 0;
+
+    DebugStats& debugStats_;
 
     struct Snapshot {
         uint32_t tick;

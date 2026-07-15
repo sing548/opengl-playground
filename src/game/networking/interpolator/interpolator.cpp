@@ -29,14 +29,16 @@ void Interpolator::InterpolateGameState(Scene& scene, float renderTime, uint32_t
         auto& second = snapshots_.at(1);
         
         if (second.gameTime >= renderTime)
-        {
             break;
-        }
 
         snapshots_.pop_front();
     }
 
-    if (snapshots_.size() < 2) return;
+    if (snapshots_.size() < 2)
+    {
+        debugStats_["net.underrun"].Hit();
+        return;
+    } 
 
     auto& first = snapshots_.at(0);
     auto& second = snapshots_.at(1);

@@ -96,24 +96,26 @@ struct ServerTransport::Impl{
         }
     }
 
-    void Send(ConnectionId to, std::span<const std::byte> bytes, bool reliable)
+    void Send(ConnectionId to, std::span<const std::byte> bytes, bool reliable, bool noNagle)
     {
         for (auto& [conn, id] : mapClients_)
         {
             if (id == to)
             {
-                SendPackageToClient(conn, bytes, reliable);
+                SendPackageToClient(conn, bytes, reliable, noNagle);
                 return;
             }
         }
         std::cerr << "Send: Unknown ConnectionId " << to << std::endl;
     }
 
-    void Broadcast(std::span<const std::byte> bytes, bool reliable)
+    void Broadcast(std::span<const std::byte> bytes, bool reliable, bool noNagle)
     {
+        auto flag = (reliable ? k_nSteamNetworkingSend_Reliable : k_nSteamNetworkingSend_Unreliable)
+                    | (noNagle  ? k_nSteamNetworkingSend_NoNagle  : 0);
         for (auto& conn : mapClients_)
         {
-            SendPackageToClient(conn.first, bytes, reliable);
+            SendPackageToClient(conn.first, bytes, reliable, noNagle);
         }
     }
 
@@ -132,22 +134,27 @@ struct ServerTransport::Impl{
         {
         	ISteamNetworkingMessage *pIncomingMsg = nullptr;
         	int numMsgs = pInterface_->ReceiveMessagesOnPollGroup( hPollGroup_, &pIncomingMsg, 1 );
-        	if ( numMsgs == 0 )
+        	
+            if ( numMsgs == 0 )
         		break;
-        	if ( numMsgs < 0 )
+        	
+            if ( numMsgs < 0 )
             {
         		std::cerr << "Error checking for messages" << std::endl;
                 break;
             }
+
         	assert( numMsgs == 1 && pIncomingMsg );
         	auto itClient = mapClients_.find( pIncomingMsg->m_conn );
         	assert( itClient != mapClients_.end() );
         
             const auto* data = reinterpret_cast<const std::byte*>(pIncomingMsg->m_pData);
+            
             Event event;
             event.conn = itClient->second;
             event.kind = Event::Kind::Message;
             event.bytes.assign(data, data + pIncomingMsg->m_cbSize);
+            
             pending_.push_back(std::move(event));
         	pIncomingMsg->Release();
         }
@@ -216,11 +223,12 @@ struct ServerTransport::Impl{
     }
     
 private:
-    void SendPackageToClient(HSteamNetConnection conn, std::span<const std::byte> bytes, bool reliable)
+    void SendPackageToClient(HSteamNetConnection conn, std::span<const std::byte> bytes, bool reliable, bool noNagle)
     {
-        auto rel = reliable ? k_nSteamNetworkingSend_Reliable : k_nSteamNetworkingSend_Unreliable;
+        auto flag = (reliable ? k_nSteamNetworkingSend_Reliable : k_nSteamNetworkingSend_Unreliable)
+                    | (noNagle  ? k_nSteamNetworkingSend_NoNagle  : 0);
 
-        EResult res = pInterface_->SendMessageToConnection(conn, bytes.data(), bytes.size(), rel, nullptr);
+        EResult res = pInterface_->SendMessageToConnection(conn, bytes.data(), bytes.size(), flag, nullptr);
 
         if (res != k_EResultOK)
             std::cout << "Send failed to conn: " << conn << ". " << res << "\n";
@@ -239,14 +247,14 @@ ServerTransport::ServerTransport(uint16_t port) : impl_(std::make_unique<Impl>(p
 
 ServerTransport::~ServerTransport() = default;
 
-void ServerTransport::Send(ConnectionId to, std::span<const std::byte> bytes, bool reliable)
+void ServerTransport::Send(ConnectionId to, std::span<const std::byte> bytes, bool reliable, bool noNagle)
 {
-    impl_->Send(to, bytes, reliable);
+    impl_->Send(to, bytes, reliable, noNagle);
 }
 
-void ServerTransport::Broadcast(std::span<const std::byte> bytes, bool reliable)
+void ServerTransport::Broadcast(std::span<const std::byte> bytes, bool reliable, bool noNagle)
 {
-    impl_->Broadcast(bytes, reliable);
+    impl_->Broadcast(bytes, reliable, noNagle);
 }
 
 std::vector<ServerTransport::Event> ServerTransport::PollEvents()

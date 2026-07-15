@@ -16,7 +16,7 @@ public:
     ClientTransport(const ClientTransport&) = delete;
     ClientTransport& operator=(const ClientTransport&) = delete;
 
-    void Send(std::span<const std::byte> bytes, bool reliable);
+    void Send(std::span<const std::byte> bytes, bool reliable, bool noNagle = false);
     
     static void SetFakeNetwork(int lagMs, float pkgLossPct, float pkgJitterPct);
 

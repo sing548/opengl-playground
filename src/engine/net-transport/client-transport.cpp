@@ -73,7 +73,6 @@ struct ClientTransport::Impl
             std::cerr << "Failed to create connection" << std::endl;
             pending_.push_back(Event{ Event::Kind::Disconnected, {} });
         }
-        
     }
 
     ~Impl()
@@ -85,7 +84,7 @@ struct ClientTransport::Impl
         }
     }
 
-    void Send(std::span<const std::byte> bytes, bool reliable)
+    void Send(std::span<const std::byte> bytes, bool reliable, bool noNagle)
     {
         if (hConnection_ == k_HSteamNetConnection_Invalid)
         {
@@ -93,7 +92,8 @@ struct ClientTransport::Impl
             return;
         }
 
-        auto flag = reliable ? k_nSteamNetworkingSend_Reliable : k_nSteamNetworkingSend_Unreliable;
+        auto flag = (reliable ? k_nSteamNetworkingSend_Reliable : k_nSteamNetworkingSend_Unreliable)
+                    | (noNagle  ? k_nSteamNetworkingSend_NoNagle  : 0);
         EResult res = pInterface_->SendMessageToConnection(hConnection_, bytes.data(), bytes.size(), flag, nullptr);
 
         if (res != k_EResultOK)
@@ -179,9 +179,9 @@ ClientTransport::ClientTransport(const std::string& serverAddr) : impl_(std::mak
 
 ClientTransport::~ClientTransport() = default;
 
-void ClientTransport::Send(std::span<const std::byte> bytes, bool reliable)
+void ClientTransport::Send(std::span<const std::byte> bytes, bool reliable, bool noNagle)
 {
-    impl_->Send(bytes, reliable);
+    impl_->Send(bytes, reliable, noNagle);
 }
 
 std::vector<ClientTransport::Event> ClientTransport::PollEvents()

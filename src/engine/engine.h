@@ -9,6 +9,7 @@
 #include "window/window.h"
 #include "camera/camera.h"
 #include "rendering/renderer.h" 
+#include "metrics/debug-stats.h"
 #include "models/asset-manager.h"
 #include "input-manager/input-manager.h"
 #include "rendering/terrain/i-terrain-handler.h"
@@ -91,6 +92,8 @@ private:
 
     void HandleImGui(int step);
     Settings settings_;
+
+    DebugStats debugStats_;
     
     //------------------- TEMP, will be moved to more appropriate class ---------------------
     std::tuple<RenderList, FrameGlobals> BuildRenderList();

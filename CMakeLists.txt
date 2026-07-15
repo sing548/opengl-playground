@@ -143,7 +143,7 @@ option(ENABLE_SANITIZERS "Enable ASan + UBSan in Debug builds" OFF)
 
 if(ENABLE_SANITIZERS AND NOT MSVC
    AND CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_options(OpenGLPlayground PRIVATE
+    target_compile_options(OpenGLPlayground PRIVATE -Wall -Wextra
         -fsanitize=address,undefined
         -fno-sanitize=vptr  
         -fno-omit-frame-pointer

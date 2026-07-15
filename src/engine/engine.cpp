@@ -1,5 +1,6 @@
 #include "engine.h"
 
+#include <cfloat>
 #include <thread>
 #include <algorithm>
 
@@ -71,9 +72,9 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
         }
     
         if (m_bServer)
-            netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Server, serverAddr, port);
+            netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Server, serverAddr, port, debugStats_);
         else
-            netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Client, serverAddr, port);
+            netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Client, serverAddr, port, debugStats_);
     }
     else
     {
@@ -83,7 +84,7 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
         currentInputStates_.try_emplace(playerId_, state);
         previousInputStates_.try_emplace(playerId_, state);
 
-        netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Offline, "", 0);
+        netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Offline, "", 0, debugStats_);
     }
 
     HandleImGui(0);
@@ -277,19 +278,19 @@ void Engine::Run()
         i++;
         // FPS counter in console
         if (fpsTime >= 1) {
+            debugStats_.Flush(fpsTime);
             std::cout << "Current FPS: " << i / fpsTime << std::endl;
             i = 0;
             fpsTime = 0;
 
             if (m_bNetworking && settings_.logNetwork)
             {
-                auto [meanD, maxD] = netwBridg_->ReadRenderDrift();
-                std::cout << "Steps/frame: 0/1/2+: " << stepsHist[0] << "/" << stepsHist[1] << "/" << stepsHist[2] << "/" << ", mean drift: " << meanD << ", max drift: " << maxD;
+                std::cout << "Steps/frame: 0/1/2+: " << stepsHist[0] << "/" << stepsHist[1] << "/" << stepsHist[2];
 
                 if (!m_bServer)
                 {
                     std::cout <<  ", buffer depth: " << netwBridg_->GetPendingStateSize();
-                    std::cout << ", mean distances: " << distanceForPlayerReset / (float) numDistanceForReset << ", biggest difference: " << biggestDistanceForReset;
+                    std::cout << ", mean distances: " << (numDistanceForReset == 0 ? 0.0f : distanceForPlayerReset / (float) numDistanceForReset) << ", biggest difference: " << biggestDistanceForReset;
                     numDistanceForReset = 0;
                     distanceForPlayerReset = 0.0f;
                     biggestDistanceForReset = 0.0f;
@@ -677,9 +678,20 @@ void Engine::HandleImGui(int step)
             }
 
             ImGui::NewLine();
-            for (auto [id, size] : netwBridg_->GetQueueSizePerPlayer())
+
+            if (ImGui::CollapsingHeader("Stats"))
             {
-                ImGui::Text("Player: %u, queue size: %zu", id, size);
+                for (const auto& [name, stat] : debugStats_.AllStats())
+                {
+                    if (stat.isCounter)
+                        ImGui::Text("%s: %.1f/s (total %llu)", name.c_str(), stat.last.rate, (unsigned long long) stat.total);
+                    else
+                        ImGui::Text("%s: mean %.4f, min %.4f, max %.4f", name.c_str(), stat.last.mean, stat.last.min, stat.last.max);
+                    
+                    int offset = stat.histCount < Stat::HISTORY_DURATION ? 0 : stat.histHead;
+                    ImGui::PlotLines(("##" + name).c_str(), stat.hist.data(), stat.histCount, offset,
+                                     nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 40));
+                }
             }
 
             ImGui::End();
