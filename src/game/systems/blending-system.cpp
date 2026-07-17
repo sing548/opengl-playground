@@ -6,6 +6,8 @@
 
 void BlendingSystem::Update(SystemsContext& ctx)
 {
+    static constexpr float CATCHUP_RETARDATION = 1.2f;
+
     bool predictive = ctx.settings.predictiveClient;
     bool networking = ctx.bridge.GetRole() != NetworkBridge::Role::Offline;
 
@@ -30,6 +32,18 @@ void BlendingSystem::Update(SystemsContext& ctx)
         {
             auto pi = model.GetPhysicalInfo();
             pi.position_ += model.GetVelocity() * ctx.alpha;   // same units logic as the local-player block
+
+
+            auto offset = model.GetInterpolationOffset();
+            if (offset.w > 0.0f)
+            {
+                pi.position_ -= glm::vec3(offset) * offset.w;
+                offset.w *= std::exp(-ctx.dT * CATCHUP_RETARDATION);
+                if (offset.w < 0.01) offset.w = 0.0f;
+
+                model.SetInterpolationOffset(offset);
+            }
+
             model.SetInterpolatedInfo(pi);
             continue;
         }

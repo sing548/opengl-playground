@@ -12,6 +12,11 @@
 #include "engine/rendering/renderer.h"
 #include "engine/helpers/file-helper.h"
 
+#include "game/systems/networking/network-input-consume-system.h"
+#include "game/systems/networking/network-input-distribution-system.h"
+#include "game/systems/networking/network-merge-system.h"
+#include "game/systems/networking/network-poll-system.h"
+#include "game/systems/networking/network-state-distribution-system.h"
 #include "game/systems/blending-system.h"
 #include "game/systems/camera-system.h"
 #include "game/systems/npc-system.h"
@@ -152,6 +157,21 @@ int main(int argc, const char *argv[]) {
 
     auto blend = std::make_unique<BlendingSystem>();
     engine->AddGameplaySystem(std::move(blend));
+
+    auto nDistr = std::make_unique<NetworkStateDistributionSystem>();
+    engine->AddGameplaySystem(std::move(nDistr));
+
+    auto nInpDist = std::make_unique<NetworkInputDistributionSystem>();
+    engine->AddGameplaySystem(std::move(nInpDist));
+
+    auto nPoll = std::make_unique<NetworkPollSystem>();
+    engine->AddGameplaySystem(std::move(nPoll));
+
+    auto nCons = std::make_unique<NetworkInputConsumeSystem>();
+    engine->AddGameplaySystem(std::move(nCons));
+
+    auto nMerge = std::make_unique<NetworkMergeSystem>();
+    engine->AddGameplaySystem(std::move(nMerge));
 
     std::string modelVert  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.vert").string();
     std::string modelFrag  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.frag").string();

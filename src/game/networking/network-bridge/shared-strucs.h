@@ -81,7 +81,7 @@ struct NpcDataState {
 
 struct GameState {
     uint32_t tick = 0;
-    std::unordered_map<uint32_t, uint32_t> playerToLastProcessedInput;
+    std::unordered_map<uint32_t, std::pair<uint32_t, uint8_t>> playerToLastProcessedInputAndQueueDepth;
     std::vector<EntityState> entities;
     std::vector<uint32_t> destroyedEntities;
     std::vector<EntityCreationState> createdEntities;
@@ -90,5 +90,5 @@ struct GameState {
 
     bool eventsApplied = false;
 
-    MSGPACK_DEFINE(tick, playerToLastProcessedInput, entities, destroyedEntities, createdEntities, playerData, npcData);
+    MSGPACK_DEFINE(tick, playerToLastProcessedInputAndQueueDepth, entities, destroyedEntities, createdEntities, playerData, npcData);
 };

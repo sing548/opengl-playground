@@ -69,6 +69,11 @@ add_executable(OpenGLPlayground
     src/game/rendering/terrain/terrain-handler.cpp
     src/game/rendering/vfx/death-explosion.cpp
     src/game/spawner/spawner.cpp
+    src/game/systems/networking/network-input-consume-system.cpp
+    src/game/systems/networking/network-input-distribution-system.cpp
+    src/game/systems/networking/network-merge-system.cpp
+    src/game/systems/networking/network-poll-system.cpp
+    src/game/systems/networking/network-state-distribution-system.cpp
     src/game/systems/blending-system.cpp
     src/game/systems/camera-system.cpp
     src/game/systems/npc-system.cpp

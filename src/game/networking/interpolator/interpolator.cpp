@@ -37,6 +37,7 @@ void Interpolator::InterpolateGameState(Scene& scene, float renderTime, uint32_t
     if (snapshots_.size() < 2)
     {
         debugStats_["net.underrun"].Hit();
+        ExtrapolateGameState(scene, renderTime, playerId, predictiveClient);
         return;
     } 
 
@@ -82,5 +83,26 @@ void Interpolator::InterpolateGameState(Scene& scene, float renderTime, uint32_t
         realEnt.SetRotation(glm::slerp(oldEnt.rotation, newEnt.rotation, intFactor));
         realEnt.SetVelocity(glm::mix(oldEnt.velocity, newEnt.velocity, intFactor));
         realEnt.SetRotationSpeed(glm::mix(oldEnt.angularVelocity, newEnt.angularVelocity, intFactor));
+    }
+}
+
+void Interpolator::ExtrapolateGameState(Scene& scene, float renderTime, uint32_t playerId, bool predictiveClient)
+{
+    if (snapshots_.size() != 1)
+        return;
+  
+    float overrun = std::clamp(renderTime - snapshots_[0].gameTime, 0.0f, UNDERRUN_EXTRAPOL_BOUND);
+        
+    for (auto& [id, ent] : snapshots_[0].entities)
+    {
+        if (!scene.ModelExists(id)) continue;
+        if (id == playerId && predictiveClient) continue;
+
+        auto& realEnt = scene.GetModelByReference(id);
+
+        glm::vec3 position = ent.position + ent.velocity * 60.0f * overrun;
+        //glm::quat rotation = pi.rotation_ ??
+
+        realEnt.SetPosition(position);
     }
 }

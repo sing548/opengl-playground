@@ -16,11 +16,12 @@ class Interpolator
 public:
     Interpolator(float tickRate, DebugStats& debugStats) : tickRate_(tickRate), debugStats_(debugStats) {};
     ~Interpolator();
-    
     void FeedSnapshot(uint32_t tick, const std::vector<EntityState>& entities);
     void InterpolateGameState(Scene& scene, float renderTime, uint32_t playerId, bool predictiveClient);
 private:
     
+    static constexpr float UNDERRUN_EXTRAPOL_BOUND = 0.066f;
+
     float tickRate_;
     uint32_t lastInterpretedTick_ = 0;
 
@@ -33,6 +34,8 @@ private:
     };
 
     std::deque<Snapshot> snapshots_;
+
+    void ExtrapolateGameState(Scene& scene, float renderTime, uint32_t playerId, bool predictiveClient);
 };
 
 #endif

@@ -23,7 +23,7 @@ struct SystemsContext
     ITerrainHandler& terrainHandler;
     std::unordered_map<uint32_t, InputState>& current;
     std::unordered_map<uint32_t, InputState>& previous;
-    uint32_t localPlayerId;
+    uint32_t& localPlayerId;
     bool authoritative;
     bool replay;
     float alpha;
@@ -32,5 +32,5 @@ struct SystemsContext
 
 enum class GameplayPhase
 {
-    Input, PreSimulation, Simulation, PostSimulation, PreRender, PostRender, UNDEFINED
+    FrameStart, Input, PreSimulation, Simulation, PostSimulation, PostTick, PreRender, PostRender, UNDEFINED
 };

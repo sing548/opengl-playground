@@ -71,16 +71,12 @@ private:
     // only used in client mode for replayy
     std::unordered_map<uint32_t, InputState> currentStateAsMap_;
     std::unordered_map<uint32_t, InputState> previousStateAsMap_;
-    std::vector<uint32_t> killedPlayers_;
 
     bool m_bNetworking = false;
     bool m_bServer = false;
 
     void ExecuteSystems(GameplayPhase phase, float dT, float alpha = 0.0f);
     void HandleLogic(float deltaTime);
-    void ReconcileNetwork();
-    void UpdateServerNetworking();
-    void UpdateClientNetworking();
     void CollectInputs(float deltaTime);
     static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 

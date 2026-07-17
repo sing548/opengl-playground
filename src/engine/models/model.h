@@ -71,8 +71,10 @@ public:
     void SetPreviousInfo(PhysicalInfo pi) { previousInfo_ = pi; };
     const PhysicalInfo& GetPreviousInfo() const { return previousInfo_; };
     void SetInterpolatedInfo(PhysicalInfo pi) { interpolatedInfo_ = pi; };
+    void SetInterpolationOffset(glm::vec4 offset) { interpolationOffset_ = offset; };
     const PhysicalInfo& GetInterpolatedInfo() const { return interpolatedInfo_; };
     glm::vec3 GetInterpolatedPosition() const { return interpolatedInfo_.position_; };
+    glm::vec4 GetInterpolationOffset() const { return interpolationOffset_; };
     glm::quat GetInterpolatedRotation() const { return interpolatedInfo_.rotation_; };
     
     void CreateHitboxSphere();
@@ -91,6 +93,9 @@ private:
     PhysicalInfo physicalInfo_;
     PhysicalInfo previousInfo_;
     PhysicalInfo interpolatedInfo_;
+    // Vec3 + remaining blend (time-)factor 1->0
+    glm::vec4 interpolationOffset_ = glm::vec4(0.0f);
+
     std::vector<std::shared_ptr<Mesh>> meshes_;
 };
 

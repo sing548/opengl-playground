@@ -146,6 +146,8 @@ void Engine::Run()
 
     while (!glfwWindowShouldClose(window_->Get())) {
 
+        const float step = fixedDelta / (1.0f + netwBridg_->GetTimeDilation());
+
         double currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         deltaTime = std::min(deltaTime, 0.25f);
@@ -166,29 +168,17 @@ void Engine::Run()
 
         int stepsThisFrame = 0;
 
-        if (netwBridg_->GetRole() == NetworkBridge::Role::Client)
-            ReconcileNetwork();
+        ExecuteSystems(GameplayPhase::FrameStart, fixedDelta);
 
-        while (accTime >= fixedDelta)
+        while (accTime >= step)
         {
-            if (netwBridg_->GetRole() == NetworkBridge::Role::Server)
-                ReconcileNetwork();
-                
+            ExecuteSystems(GameplayPhase::Input, fixedDelta);
             CollectInputs(fixedDelta);
             ExecuteSystems(GameplayPhase::PreSimulation, fixedDelta);
             HandleLogic(fixedDelta);
             ExecuteSystems(GameplayPhase::Simulation, fixedDelta);
-
-            accTime -= fixedDelta;
-
-            if (m_bNetworking && m_bServer)
-            {
-               netwBridg_->ManageGameStateDistribution(gameWorld_, fixedDelta);
-            }
-            else if (m_bNetworking && playerId_ > 0)
-            {
-                netwBridg_->SendInputState(currentInputStates_.at(playerId_));
-            }
+            accTime -= step;
+            ExecuteSystems(GameplayPhase::PostSimulation, fixedDelta);
 
             j++;
             // Logic/s counter in console
@@ -206,16 +196,14 @@ void Engine::Run()
         }
         ++stepsHist[std::min(stepsThisFrame, 2)];
 
+        ExecuteSystems(GameplayPhase::PostTick, deltaTime);
+
         if (m_bNetworking && !m_bServer)
         {
             bool predictive = settings_.predictiveClient;
-            netwBridg_->MergeClientWithNetwork(gameWorld_, *assMan_, predictive);
 
             if (predictive)
             {
-                if (settings_.logNetwork && gameWorld_.GetScene().ModelExists(playerId_))
-                    oldPlayerPos = gameWorld_.GetScene().GetModelByReference(playerId_).GetPosition();
-
                 auto& statesToReplay = netwBridg_->ResetPlayerToLastInputState(gameWorld_);
 
                 uint32_t maxTick = statesToReplay.empty() ? lastReplayedMaxTick_
@@ -252,20 +240,10 @@ void Engine::Run()
                         system->Update(context);
                     }
                 }
-
-                if (!newInputThisFrame && settings_.logNetwork && gameWorld_.GetScene().ModelExists(playerId_))
-                {
-                    auto diff = glm::length(oldPlayerPos - gameWorld_.GetScene().GetModelByReference(playerId_).GetPosition());
-                    distanceForPlayerReset += diff;
-                    ++numDistanceForReset;
-                    
-                    if (diff > biggestDistanceForReset)
-                        biggestDistanceForReset = diff;
-                }
             }
         }
 
-        ExecuteSystems(GameplayPhase::PreRender, deltaTime, accTime / fixedDelta);
+        ExecuteSystems(GameplayPhase::PreRender, deltaTime, accTime / step);
 
         auto [rL, fG] = BuildRenderList();
         
@@ -282,75 +260,10 @@ void Engine::Run()
             std::cout << "Current FPS: " << i / fpsTime << std::endl;
             i = 0;
             fpsTime = 0;
-
-            if (m_bNetworking && settings_.logNetwork)
-            {
-                std::cout << "Steps/frame: 0/1/2+: " << stepsHist[0] << "/" << stepsHist[1] << "/" << stepsHist[2];
-
-                if (!m_bServer)
-                {
-                    std::cout <<  ", buffer depth: " << netwBridg_->GetPendingStateSize();
-                    std::cout << ", mean distances: " << (numDistanceForReset == 0 ? 0.0f : distanceForPlayerReset / (float) numDistanceForReset) << ", biggest difference: " << biggestDistanceForReset;
-                    numDistanceForReset = 0;
-                    distanceForPlayerReset = 0.0f;
-                    biggestDistanceForReset = 0.0f;
-                }
-
-                std::cout << std::endl;
-
-                stepsHist[0] = 0;
-                stepsHist[1] = 0;
-                stepsHist[2] = 0;
-            }
         }
     }
     
     std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-}
-
-void Engine::ReconcileNetwork()
-{
-    if (m_bNetworking) killedPlayers_.clear();
-    
-    if (m_bNetworking && !m_bServer)
-    {
-        UpdateClientNetworking();
-    }
-    else if (m_bNetworking)
-    {
-        UpdateServerNetworking();
-    }
-}
-
-void Engine::UpdateServerNetworking()
-{
-    netwBridg_->PollEvents(gameWorld_, *assMan_);
-    auto inputStates = netwBridg_->ConsumeOldestInputStates();
-
-    for (const auto [id, state] : inputStates)
-    {
-        if (std::ranges::find(killedPlayers_, id) != killedPlayers_.end()) 
-            continue;
-
-        auto it = currentInputStates_.find(state.id);
-        
-        previousInputStates_[state.id] = (it != currentInputStates_.end()) ? it->second : state;
-        currentInputStates_[state.id] = state;
-    }
-}
-
-void Engine::UpdateClientNetworking()
-{
-    netwBridg_->PollEvents(gameWorld_, *assMan_);
-    auto playerId = netwBridg_->GetPlayerId();
-
-    if (playerId != 0)
-    {
-        playerId_ = playerId;
-        auto state = InputState { playerId_, false, false, false, false, false, false  };
-        currentInputStates_.try_emplace(playerId_, state);
-        previousInputStates_.try_emplace(playerId_, state);
-    }
 }
 
 void Engine::HandleLogic(float deltaTime)
@@ -366,7 +279,7 @@ void Engine::HandleLogic(float deltaTime)
 
     for (uint32_t id : removed.players)
     {
-        killedPlayers_.push_back(id);
+        gameWorld_.GetKilledPlayers().push_back(id);
     }
 }
 
@@ -441,7 +354,7 @@ void Engine::AddNewPlayer(uint32_t id)
 
 void Engine::CollectInputs(float deltaTime)
 {
-    if (playerId_ == 0 || std::ranges::find(killedPlayers_, playerId_) != killedPlayers_.end()) return;
+    if (playerId_ == 0 || std::ranges::find(gameWorld_.GetKilledPlayers(), playerId_) != gameWorld_.GetKilledPlayers().end()) return;
     if (!currentInputStates_.contains(playerId_)) return;
 
     previousInputStates_.at(playerId_) = currentInputStates_.at(playerId_);
@@ -661,9 +574,14 @@ void Engine::HandleImGui(int step)
             ImGui::Checkbox("Hitboxes", &settings_.hitboxes);
             ImGui::Checkbox("Bloom", &settings_.bloom);
             ImGui::Checkbox("Simple flight", &settings_.simpleFlight);
-            ImGui::Checkbox("Log network", &settings_.logNetwork);
             ImGui::NewLine();
 
+            if (netwBridg_->GetRole() == NetworkBridge::Role::Client)
+            {
+                float delayMs = netwBridg_->GetRenderDelay() * 1000.0f;
+                if (ImGui::SliderFloat("RenderDelay (ms)", &delayMs, 0.0f, 300.0f))
+                    netwBridg_->SetRenderDelay(delayMs / 1000.0f);
+            }
             bool changed = false;
             changed |= ImGui::SliderInt("Fake lag (ms)", &settings_.fakeLag, 0, 300);
             changed |= ImGui::SliderFloat("Fake package loss (%)", &settings_.pkgLossPct, 0.0f, 20.0f);

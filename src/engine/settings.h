@@ -13,7 +13,6 @@ struct Settings {
     bool terrain = false;
     bool grass = true;
     bool imGui = false;
-    bool logNetwork = true;
     int fakeLag = 0;
     float pkgLossPct = 0.0f;
     float pkgJitter = 0.0f;

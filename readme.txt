@@ -2,18 +2,23 @@ This is a small passion/learning project for graphics programming using C++ and 
 Currently mostly the architecture containing a basic pipeline handling rendering, shaders and gameplay systems and networking using Valve's GameNetworkingSockets.
 
 What's implemented so far:
-- Rendering pipeline with shader handling
+- Rendering pipeline with shader handling, sRGB-correct color, bloom
 - Model loading (assimp)
 - Client/server networking (Valve's GameNetworkingSockets)
-- Message serialization (protobuf / msgpack)
-- Basic gameplay systems
+- Client-side prediction with reconciliation
+- Snapshot interpolation (cubic Hermite) behind a rate-corrected clock
+- Server-side input de-jitter queue
+- Message serialization (msgpack)
+- Gameplay systems on a phase-based scheduler
+- Procedural terrain
 - CMake build with optional vcpkg, Linux & Windows
-- Procedural generation of terrain
+- Debug tooling: Dear ImGui panel with live metrics and runtime fake lag/loss/jitter injection
+- CMake build with optional vcpkg, Linux & Windows
 
 Build:
 
   Linux (system packages — fast):
-    pacman -S glfw assimp glm openssl boost msgpack-cxx protobuf   # or apt equivalents
+    pacman -S glfw assimp glm openssl boost msgpack-cxx   # or apt equivalents
     cmake -S . -B build && cmake --build build
 
   Linux (vcpkg — reproducible, slower first build):

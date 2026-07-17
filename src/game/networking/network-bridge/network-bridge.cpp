@@ -145,14 +145,27 @@ std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const GameWorld& 
     transientState.tick = currentTick_;
     definitiveState.tick = currentTick_;
 
-    auto& out = definitiveState.playerToLastProcessedInput;
+    auto& out = definitiveState.playerToLastProcessedInputAndQueueDepth;
+
     out.clear();
     out.reserve(latestInputTickPerConn_.size());
     for (const auto& [connId, tick] : latestInputTickPerConn_)
         if (auto it = connectionsToPlayers_.find(connId); it != connectionsToPlayers_.end())
-            out.emplace(it->second, tick);
+        {
+            uint8_t depth = 0;
+            if (auto q = inputQueues_.find(connId); q != inputQueues_.end())
+                depth = static_cast<uint8_t>(std::min<std::size_t>(q->second.size(), 255));
+            if (auto minDepth = minQueueDepthSinceSend_.find(connId); minDepth != minQueueDepthSinceSend_.end()
+                && minDepth->second != 255)
+            {
+                depth = minDepth->second;
+                minDepth->second = 255;
+            }
+
+            out.emplace(it->second, std::make_pair(tick, depth));
+        }
     
-    transientState.playerToLastProcessedInput  = definitiveState.playerToLastProcessedInput;
+    transientState.playerToLastProcessedInputAndQueueDepth  = definitiveState.playerToLastProcessedInputAndQueueDepth;
 
     // Destroyed entities
     for (unsigned int id : pendingRemoved_)
@@ -219,9 +232,8 @@ std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const GameWorld& 
 }
 
 std::unordered_map<uint32_t, InputState> NetworkBridge::ConsumeOldestInputStates()
- {
-
-    constexpr size_t maxDepth = 3;
+{
+    constexpr size_t maxDepth = 6;
     std::unordered_map<uint32_t, InputState> states;
     states.reserve(inputQueues_.size());
         
@@ -231,6 +243,8 @@ std::unordered_map<uint32_t, InputState> NetworkBridge::ConsumeOldestInputStates
 
         if (queue.empty())
         {
+            auto& minDepth = minQueueDepthSinceSend_.try_emplace(connId, uint8_t{255}).first->second;
+            minDepth = 0;
             debugStats_.Parsed("connection_{}.starve", connId).Hit();
             continue;
         }
@@ -249,6 +263,7 @@ std::unordered_map<uint32_t, InputState> NetworkBridge::ConsumeOldestInputStates
         {
             shotSink |= it->second.shoot;
             it = queue.erase(it);
+
             debugStats_.Parsed("connection_{}.overrun", connId).Hit();
         }
 
@@ -261,6 +276,9 @@ std::unordered_map<uint32_t, InputState> NetworkBridge::ConsumeOldestInputStates
         states.emplace(id, consumed);
         last = consumed.tick;
             
+        auto& minDepth = minQueueDepthSinceSend_.try_emplace(connId, uint8_t{255}).first->second;
+        minDepth = std::min<uint8_t>(minDepth, static_cast<uint8_t>(queue.size() - 1));
+        
         if (queue.size() > 1)
             queue.erase(it);
     }
@@ -324,6 +342,7 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
                 inputQueues_.erase(ev.conn);
                 connectionsToPlayers_.erase(ev.conn);
                 latestInputTickPerConn_.erase(ev.conn);
+                minQueueDepthSinceSend_.erase(ev.conn);
 
                 debugStats_.Erase("connection_{}.starve", ev.conn);
                 debugStats_.Erase("connection_{}.overrun", ev.conn);
@@ -471,8 +490,8 @@ void NetworkBridge::PollInternalClient()
                         const bool fresh = newTick > previousTick_;
                         const bool stale = previousTick_ != 0 && newTick < previousTick_;
 
-		        		if (previousTick_ != 0 && fresh && newTick - previousTick_ != 1)
-                			std::cout <<   "Skipped tick(1) between: " << previousTick_ << " and " << newTick << std::endl;
+                        if (previousTick_ != 0 && fresh && newTick - previousTick_ != 1)
+                            debugStats_["net.tick_gaps"].Add(static_cast<float>(newTick - previousTick_ - 1));
 
                         if (stale)
                         {
@@ -496,14 +515,17 @@ void NetworkBridge::PollInternalClient()
                             {
                                 if (ent.id != playerId_) continue;
 
-                                auto ack = gs.playerToLastProcessedInput.find(playerId_);
+                                auto ack = gs.playerToLastProcessedInputAndQueueDepth.find(playerId_);
 
-                                if (ack != gs.playerToLastProcessedInput.end() && gs.tick >= latestStateTick_)
+                                if (ack != gs.playerToLastProcessedInputAndQueueDepth.end() && gs.tick >= latestStateTick_)
                                 {
-                                    latestAckTick_      = ack->second;
+                                    latestAckTick_      = ack->second.first;
                                     latestStateTick_    = gs.tick;
                                     latestPlayerState_  = ent;
                                     latestStateValid_   = true;
+
+                                    if (gs.playerToLastProcessedInputAndQueueDepth.contains(playerId_))
+                                        UpdateTimeDilateion(gs.playerToLastProcessedInputAndQueueDepth.at(playerId_).second);
                                 }
 
                                 break;
@@ -696,4 +718,22 @@ float NetworkBridge::CalculateRenderTime()
 
     lastUpdateTime_ = now;
     return serverClock_ - renderDelay_;
+}
+
+void NetworkBridge::UpdateTimeDilateion(uint8_t queueDepth)
+{
+    float discrepancy = TARGET_DEPTH - static_cast<float>(queueDepth);
+
+    if (std::abs(discrepancy) <= DEPTH_DEVIATION)
+    {
+        timeDilation_ -= timeDilation_ * NUDGE_RATE * (1.0f / 30.0f);
+        
+        if (std::abs(timeDilation_) < 0.0001f)
+            timeDilation_ = 0.0f;
+    }
+    else
+        timeDilation_ += discrepancy * DILATION_GAIN * (1.0f / 30.0f); 
+
+    timeDilation_ = std::clamp(timeDilation_, -MAX_DILATION, MAX_DILATION);
+    debugStats_["net.dilation"].Add(timeDilation_);
 }

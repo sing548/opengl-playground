@@ -51,6 +51,10 @@ public:
     void MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan, bool predictiveClient);
     std::map<uint32_t, InputState>& ResetPlayerToLastInputState(GameWorld& world);
     void AddPredictedShot(uint32_t id) { pendingShotCreations.emplace(currentTick_, id); };
+    float GetRenderDelay() { return renderDelay_; }
+    void SetRenderDelay(float renderDelay) { renderDelay_ = renderDelay; }
+    float GetTimeDilation() const { return role_ == Role::Client ? timeDilation_ : 0.0f; } 
+    void UpdateTimeDilateion(uint8_t queueDepth);
 #pragma endregion
 
 private:
@@ -65,9 +69,6 @@ private:
     // ticks start at 1 in order for queue logic to work.
     uint32_t currentTick_ = 1;
 
-    // Map holding modelId <-> connectionId
-    std::unordered_map<uint32_t, uint32_t> connectionsToPlayers_;
-
     DebugStats& debugStats_;
 
 #pragma region Server
@@ -75,9 +76,13 @@ private:
     std::vector<uint32_t> pendingRemoved_;
     std::unordered_map<uint32_t, uint32_t> latestInputTickPerConn_;
 
-    // Idea "stolen" from: https://www.youtube.com/watch?v=8QHHVpBiG-I - Overwatch GDC
     // Input Queue per player. u_map<playerid, map<tick, state>>std::map<uint32_t, InputStat
     std::unordered_map<uint32_t, std::map<uint32_t, InputState>> inputQueues_;
+    // Map holding connectionId <-> modelId
+    std::unordered_map<uint32_t, uint32_t> connectionsToPlayers_;
+    // Depth since last sending of inputqueues
+    std::unordered_map<uint32_t, uint8_t> minQueueDepthSinceSend_;
+
 
     void PollInternalServer(GameWorld& world, AssetManager& assMan);
     std::tuple<msgpack::sbuffer, msgpack::sbuffer> BuildAndPackGameState(const GameWorld& gameWorld, bool fullState = false);
@@ -89,7 +94,16 @@ private:
     uint32_t playerId_ = 0;
     uint32_t previousTick_ = 0;
 
-    const float renderDelay_ = 0.1f;
+    float renderDelay_ = 0.1f;
+
+    // Time Dilation for keeping input queue depth steady.
+    // Idea "stolen" from: https://www.youtube.com/watch?v=8QHHVpBiG-I - Overwatch GDC
+    float timeDilation_ = 0.0f;
+    static constexpr float TARGET_DEPTH     = 2.0f;
+    static constexpr float DEPTH_DEVIATION  = 1.0f;
+    static constexpr float DILATION_GAIN    = 0.005f;
+    static constexpr float MAX_DILATION     = 0.04f;
+    static constexpr float NUDGE_RATE       = 0.5f;
     
     std::chrono::steady_clock::time_point timeAtLastTick_;
     std::chrono::steady_clock::time_point lastUpdateTime_;

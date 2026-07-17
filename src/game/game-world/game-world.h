@@ -65,6 +65,8 @@ public:
     auto& GetShotData() { return shotData_; };
     const auto& GetShotData() const { return shotData_; };
 
+    std::vector<uint32_t>& GetKilledPlayers() { return killedPlayers_; };
+    void ClearKilledPlayers() { killedPlayers_.clear(); };
     std::vector<DeathEvent> DrainDeaths() { return std::exchange(pendingDeaths_, {}); };
 
     uint32_t AddPlayer(uint32_t id, PlayerData playerData);
@@ -84,6 +86,7 @@ private:
     std::unordered_map<uint32_t, ShotData> shotData_;
     std::unordered_map<uint32_t, PlayerData> playerData_;
 
+    std::vector<uint32_t> killedPlayers_;
     std::vector<DeathEvent> pendingDeaths_;
 };
 
