@@ -10,6 +10,7 @@
 
 #include "logging/ext-std-log.h"
 #include "systems/system-structs.h"
+#include "systems/replay/replay-driver.h"
 #include "net-transport/client-transport.h"
 #include "net-transport/server-transport.h"
 
@@ -34,6 +35,7 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     window_ = std::make_unique<Window>(WIDTH, HEIGHT, std::move(camera_), inputManager_.get());
     renderer_ = std::make_unique<Renderer>(WIDTH, HEIGHT);
     assMan_ = std::make_unique<AssetManager>();
+    replayDriver_ = std::make_unique<ReplayDriver>(systems_, FIXED_DELTA);
 
     glfwSetWindowUserPointer(window_->Get(), this);
     glfwSetKeyCallback(window_->Get(), Engine::KeyCallback);
@@ -74,19 +76,22 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
         if (m_bServer)
             netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Server, serverAddr, port, debugStats_);
         else
+        {
             netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Client, serverAddr, port, debugStats_);
+        }
+
     }
     else
     {
         BasicLevel();
-
+        
         auto state = InputState { playerId_, false, false, false, false, false, false  };
         currentInputStates_.try_emplace(playerId_, state);
         previousInputStates_.try_emplace(playerId_, state);
-
+        
         netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Offline, "", 0, debugStats_);
     }
-
+    
     HandleImGui(0);
 }
 
@@ -123,19 +128,13 @@ void Engine::BasicLevel()
 
 void Engine::Run()
 {
-    // FixedDelta = Logic / s
-    const float fixedDelta = 1.0f / 60.0f;
 
     int i = 0, j = 0;
     float accTime = 0.0f;
     float fpsTime = 0.0f;
-    float logicTime = 0.0f;
     float deltaTime = 0.0f;
     double lastFrame = 0.0f;
 
-    int stepsHist[3] = {0, 0, 0};
-
-    uint32_t lastReplayedMaxTick_ = 0;
     int numDistanceForReset = 0;
     float distanceForPlayerReset = 0.0f;
     float biggestDistanceForReset = 0.0f;
@@ -146,7 +145,7 @@ void Engine::Run()
 
     while (!glfwWindowShouldClose(window_->Get())) {
 
-        const float step = fixedDelta / (1.0f + netwBridg_->GetTimeDilation());
+        const float step = FIXED_DELTA / (1.0f + netwBridg_->GetTimeDilation());
 
         double currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -154,7 +153,6 @@ void Engine::Run()
 	    lastFrame = currentFrame;
         accTime += deltaTime;
         fpsTime += deltaTime;
-        logicTime += deltaTime;
         
         glfwPollEvents();
 
@@ -166,83 +164,26 @@ void Engine::Run()
             window_->ClearResizedFlag();
         }
 
-        int stepsThisFrame = 0;
+        ExecuteSystems(GameplayPhase::FrameStart, FIXED_DELTA);
 
-        ExecuteSystems(GameplayPhase::FrameStart, fixedDelta);
+        int stepsThisFrame = 0;
 
         while (accTime >= step)
         {
-            ExecuteSystems(GameplayPhase::Input, fixedDelta);
-            CollectInputs(fixedDelta);
-            ExecuteSystems(GameplayPhase::PreSimulation, fixedDelta);
-            HandleLogic(fixedDelta);
-            ExecuteSystems(GameplayPhase::Simulation, fixedDelta);
+            ExecuteSystems(GameplayPhase::Input, FIXED_DELTA);
+            CollectInputs(FIXED_DELTA);
+            ExecuteSystems(GameplayPhase::PreSimulation, FIXED_DELTA);
+            HandleLogic(FIXED_DELTA);
+            ExecuteSystems(GameplayPhase::Simulation, FIXED_DELTA);
             accTime -= step;
-            ExecuteSystems(GameplayPhase::PostSimulation, fixedDelta);
-
-            j++;
-            // Logic/s counter in console
-            if (logicTime >= 1) 
-            {
-                std::cout << "Current Logic/s: " << j / logicTime << std::endl;
-
-                j = 0;
-                logicTime = 0;
-            }
-
+            ExecuteSystems(GameplayPhase::PostSimulation, FIXED_DELTA);
             gameWorld_.GetScene().ClearAddedModels();
-
             ++stepsThisFrame;
         }
-        ++stepsHist[std::min(stepsThisFrame, 2)];
+
+        debugStats_["frame.steps"].Add((float)stepsThisFrame);
 
         ExecuteSystems(GameplayPhase::PostTick, deltaTime);
-
-        if (m_bNetworking && !m_bServer)
-        {
-            bool predictive = settings_.predictiveClient;
-
-            if (predictive)
-            {
-                auto& statesToReplay = netwBridg_->ResetPlayerToLastInputState(gameWorld_);
-
-                uint32_t maxTick = statesToReplay.empty() ? lastReplayedMaxTick_
-                                          : statesToReplay.rbegin()->first;
-                bool newInputThisFrame = (maxTick != lastReplayedMaxTick_);
-                lastReplayedMaxTick_ = maxTick;
-    
-                SystemsContext context = SystemsContext
-                {
-                    fixedDelta,
-                    *window_,
-                    gameWorld_,
-                    *assMan_,
-                    *netwBridg_,
-                    *terrainHandler_,
-                    currentStateAsMap_,
-                    previousStateAsMap_,
-                    playerId_,
-                    !(m_bNetworking && !m_bServer),
-                    true,
-                    0.0f,
-                    settings_
-                };
-    
-                for (auto& [tick, state] : statesToReplay)
-                {
-                    previousStateAsMap_[playerId_] = currentStateAsMap_[playerId_];
-                    currentStateAsMap_[playerId_] = state;
-
-                    for (auto& system : systems_)
-                    {
-                        if (!system->CanReplay()) continue;
-
-                        system->Update(context);
-                    }
-                }
-            }
-        }
-
         ExecuteSystems(GameplayPhase::PreRender, deltaTime, accTime / step);
 
         auto [rL, fG] = BuildRenderList();
@@ -254,11 +195,14 @@ void Engine::Run()
         window_->SwapBuffers();
 
         i++;
+        j++;
         // FPS counter in console
         if (fpsTime >= 1) {
             debugStats_.Flush(fpsTime);
             std::cout << "Current FPS: " << i / fpsTime << std::endl;
+            std::cout << "Current Logic/s: " << j / fpsTime << std::endl;
             i = 0;
+            j = 0;
             fpsTime = 0;
         }
     }
@@ -299,7 +243,8 @@ void Engine::ExecuteSystems(GameplayPhase phase, float dT, float alpha)
         !(m_bNetworking && !m_bServer),
         false,
         alpha,
-        settings_
+        settings_,
+        debugStats_
     };
 
     for (auto& system : systems_)

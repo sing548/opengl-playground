@@ -8,6 +8,7 @@
 
 class Window;
 class GameWorld;
+class DebugStats;
 class InputState;
 class AssetManager;
 class NetworkBridge;
@@ -28,6 +29,7 @@ struct SystemsContext
     bool replay;
     float alpha;
     Settings&  settings;
+    DebugStats& debugStats;
 };
 
 enum class GameplayPhase

@@ -29,6 +29,8 @@ public:
 
     NetworkBridge(Role role, const std::string& serverAddr, int port, DebugStats& debugStats);
     ~NetworkBridge();
+    // ToDo: Before anything more than closed testing, some thought should be put in to "input"-sanitization
+    // so that this is not an open attack surface
     void PollEvents(GameWorld& world, AssetManager& assMan);
     const Role GetRole() { return role_; };
 

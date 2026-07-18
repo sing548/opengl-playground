@@ -4,7 +4,6 @@
 #include "../../../engine/window/window.h"
 #include "../../networking/network-bridge/network-bridge.h"
 
-
 void NetworkPollSystem::Update(SystemsContext& ctx)
 {
     if (ctx.bridge.GetRole() != NetworkBridge::Role::Client)

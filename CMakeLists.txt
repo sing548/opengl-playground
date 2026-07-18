@@ -54,6 +54,7 @@ add_executable(OpenGLPlayground
     src/engine/rendering/sky/sky.cpp
     src/engine/rendering/renderer.cpp
     src/engine/rendering/terrain/chunk-handler.cpp
+    src/engine/systems/replay/replay-driver.cpp
     src/engine/engine.cpp
     src/game/game-world/game-world.cpp
     src/game/networking/interpolator/interpolator.cpp
@@ -73,6 +74,7 @@ add_executable(OpenGLPlayground
     src/game/systems/networking/network-input-distribution-system.cpp
     src/game/systems/networking/network-merge-system.cpp
     src/game/systems/networking/network-poll-system.cpp
+    src/game/systems/networking/network-reconcile-system.cpp
     src/game/systems/networking/network-state-distribution-system.cpp
     src/game/systems/blending-system.cpp
     src/game/systems/camera-system.cpp

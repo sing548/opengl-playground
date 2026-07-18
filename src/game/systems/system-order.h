@@ -23,10 +23,11 @@ enum class SystemOrder : int {
 
 // ----- region PostTick -----
     NetworkMergeSystem = 110,
+    NetworkReconcileSystem = 120,
 
 // ----- region PreRender -----
-    BlendingSystem = 120,
-    CameraSystem = 130,
+    BlendingSystem = 130,
+    CameraSystem = 140,
 
 // ----- region PostRender -----
 };

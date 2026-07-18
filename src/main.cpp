@@ -16,6 +16,7 @@
 #include "game/systems/networking/network-input-distribution-system.h"
 #include "game/systems/networking/network-merge-system.h"
 #include "game/systems/networking/network-poll-system.h"
+#include "game/systems/networking/network-reconcile-system.h"
 #include "game/systems/networking/network-state-distribution-system.h"
 #include "game/systems/blending-system.h"
 #include "game/systems/camera-system.h"
@@ -172,6 +173,9 @@ int main(int argc, const char *argv[]) {
 
     auto nMerge = std::make_unique<NetworkMergeSystem>();
     engine->AddGameplaySystem(std::move(nMerge));
+
+    auto nRec = std::make_unique<NetworkReconcileSystem>(engine->GetReplayDriver());
+    engine->AddGameplaySystem(std::move(nRec));
 
     std::string modelVert  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.vert").string();
     std::string modelFrag  = (std::filesystem::path(FileHelper::GetShaderDir()) / "model.frag").string();

@@ -15,6 +15,8 @@ What's implemented so far:
 - Debug tooling: Dear ImGui panel with live metrics and runtime fake lag/loss/jitter injection
 - CMake build with optional vcpkg, Linux & Windows
 
+I deferred building a test-suite for now as this is still just a playground, tests will come if/when this grows into something else.
+
 Build:
 
   Linux (system packages — fast):

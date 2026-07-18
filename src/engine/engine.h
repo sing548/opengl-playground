@@ -20,6 +20,7 @@
 
 enum class EngineMode { Standalone, Server, Client };
 
+class ReplayDriver;
 class NetworkBridge;
 class ITerrainHandler;
 
@@ -39,7 +40,11 @@ public:
     void AddMaterial(uint16_t id, std::unique_ptr<Material> m) { materials_.emplace(id, std::move(m)); }
     void AddTerrainHandler(std::unique_ptr<ITerrainHandler> tH) { terrainHandler_ = std::move(tH); }
     Material* GetMaterial(uint16_t id) { return materials_.at(id).get(); }
+    ReplayDriver& GetReplayDriver() { return *replayDriver_; }
 private:
+    // FixedDelta = Logic / s
+    static constexpr float FIXED_DELTA = 1.0f / 60.0f;
+
     const unsigned int WIDTH = 1920;
     const unsigned int HEIGHT = 1080;
 
@@ -53,7 +58,8 @@ private:
 
     
     std::unique_ptr<NetworkBridge> netwBridg_;
-    
+    std::unique_ptr<ReplayDriver> replayDriver_;
+
     GameWorld gameWorld_;
     
     std::unique_ptr<ITerrainHandler> terrainHandler_;
@@ -67,10 +73,6 @@ private:
 
     std::unordered_map<uint32_t, InputState> previousInputStates_;
     std::unordered_map<uint32_t, InputState> currentInputStates_;
-
-    // only used in client mode for replayy
-    std::unordered_map<uint32_t, InputState> currentStateAsMap_;
-    std::unordered_map<uint32_t, InputState> previousStateAsMap_;
 
     bool m_bNetworking = false;
     bool m_bServer = false;
