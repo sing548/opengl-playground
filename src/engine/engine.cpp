@@ -22,6 +22,7 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     {
         m_bNetworking = true;
         m_bServer = true;
+        settings_.npcs = false;
     }
     else if (config == EngineMode::Client)
     {

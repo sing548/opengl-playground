@@ -101,7 +101,7 @@ void NpcSystem::Update(SystemsContext& context)
         npcData.lastShot -= context.dT;
     }
 
-    if (n == 0)
+    if (n == 0 && context.settings.npcs && context.authoritative)
     {
         PhysicalInfo pi = PhysicalInfo();
         pi.position_ = glm::vec3(-20.0f, 0.0f, 0.0f);
