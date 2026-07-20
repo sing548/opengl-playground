@@ -1,6 +1,7 @@
 #include "player-system.h"
 
 #include "../../engine/systems/system-structs.h"
+#include <algorithm>
 #include <cmath>
 
 #include "../networking/network-bridge/network-bridge.h"
@@ -54,6 +55,10 @@ void PlayerSystem::ExecuteInput(float dT,
             float dot   = current.x * desired.x + current.z * desired.z;
             float angle = std::atan2(cross, dot);
 
+            const float maxTurnRate = 8.0f;
+            float maxStep = maxTurnRate * dT;
+            angle = std::clamp(angle, -maxStep, maxStep);
+
             if (std::abs(angle) > 1e-4f)
                 RotateModel(id, gameWorld.GetScene(), glm::angleAxis(angle, glm::vec3(0, 1, 0)), false);
         }
@@ -73,6 +78,15 @@ void PlayerSystem::ExecuteInput(float dT,
                 if (state.right) speed += acc * right;
                 if (state.left)  speed -= acc * right;
             }
+        }
+
+        if (state.backward)
+        {
+            float speedLen = glm::length(speed);
+            if (speedLen <= acc)
+                speed = glm::vec3(0.0f);
+            else
+                speed -= (speed / speedLen) * acc;
         }
 
         model.SetVelocity(speed);
