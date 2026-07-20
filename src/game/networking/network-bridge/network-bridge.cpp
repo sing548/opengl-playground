@@ -191,6 +191,7 @@ std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const GameWorld& 
             e.velocity           = model.GetVelocity();
             e.angularVelocity    = model.GetRotationSpeed();
             e.sourceTick         = model.type_ == ModelType::SHOT ? gameWorld.GetShotData(id).creationTick : 0;
+            e.isHoming           = model.type_ == ModelType::SHOT ? gameWorld.GetShotData(id).isHoming    : false;
 
             definitiveState.createdEntities.push_back(e);
         }
@@ -607,7 +608,7 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
                     else
                     {
                         float shotAge = std::max(0.0f, (serverClock_ + renderDelay_) - gs.tick * tickRate_);
-                        spawner::SpawnShotFromNetwork(gameWorld, assMan, pi, entity.ownerId, entity.id, shotAge);
+                        spawner::SpawnShotFromNetwork(gameWorld, assMan, pi, entity.ownerId, entity.id, shotAge, entity.isHoming);
                     }
             }
         }

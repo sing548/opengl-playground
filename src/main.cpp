@@ -24,6 +24,7 @@
 #include "game/systems/pi-history-system.h"
 #include "game/systems/player-system.h"
 #include "game/systems/shot-system.h"
+#include "game/systems/homing-system.h"
 #include "game/systems/terrain-system.h"
 
 #include "engine/rendering/sky/sky.h"
@@ -145,6 +146,9 @@ int main(int argc, const char *argv[]) {
 
     auto shot = std::make_unique<ShotSystem>();
     engine->AddGameplaySystem(std::move(shot));
+
+    auto homing = std::make_unique<HomingSystem>();
+    engine->AddGameplaySystem(std::move(homing));
 
     auto terr = std::make_unique<TerrainSystem>();
     engine->AddGameplaySystem(std::move(terr));

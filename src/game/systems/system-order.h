@@ -15,6 +15,7 @@ enum class SystemOrder : int {
     PlayerSystem = 50,
     NpcSystem = 60,
     ShotSystem = 70,
+    HomingSystem = 75,
     TerrainSystem = 80,
 
 // ----- region PostSimulation -----

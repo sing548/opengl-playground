@@ -7,17 +7,18 @@
 #include <glm/ext/quaternion_float.hpp>
 
 struct InputState {
-    uint32_t  id   = 0;
-    bool left      = false;
-    bool right     = false;
-    bool forward   = false;
-    bool backward  = false;
-    bool shoot     = false;
-    uint32_t tick  = 0;
-    float aim_x    = 0.0f;
-    float aim_z    = 0.0f;
+    uint32_t  id       = 0;
+    bool left          = false;
+    bool right         = false;
+    bool forward       = false;
+    bool backward      = false;
+    bool shoot         = false;
+    bool homingShoot   = false;
+    uint32_t tick      = 0;
+    float aim_x        = 0.0f;
+    float aim_z        = 0.0f;
 
-    MSGPACK_DEFINE(id, left, right, forward, backward, shoot, tick, aim_x, aim_z);
+    MSGPACK_DEFINE(id, left, right, forward, backward, shoot, homingShoot, tick, aim_x, aim_z);
 };
 
 struct EntityState {
@@ -44,6 +45,7 @@ struct EntityCreationState {
     uint32_t ownerId;
     uint32_t sourceTick;
     float radius;
+    bool isHoming = false;
 
     glm::vec3 position;
     glm::vec3 scale;
@@ -52,7 +54,7 @@ struct EntityCreationState {
     glm::vec3 angularVelocity;
 
     MSGPACK_DEFINE(
-        id, type, ownerId, sourceTick, radius, 
+        id, type, ownerId, sourceTick, radius, isHoming,
         position.x, position.y, position.z,
         scale.x, scale.y, scale.z,
         rotation.x, rotation.y, rotation.z, rotation.w,

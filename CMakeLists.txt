@@ -83,6 +83,7 @@ add_executable(OpenGLPlayground
     src/game/systems/pi-history-system.cpp
     src/game/systems/player-system.cpp
     src/game/systems/shot-system.cpp
+    src/game/systems/homing-system.cpp
     src/game/systems/terrain-system.cpp
 
     src/main.cpp

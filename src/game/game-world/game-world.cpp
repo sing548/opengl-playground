@@ -59,9 +59,9 @@ uint32_t GameWorld::AddNpc(uint32_t id)
     return id;
 }
 
-uint32_t GameWorld::AddShot(uint32_t id, uint32_t shooterId, bool predicted, uint32_t creationTick)
+uint32_t GameWorld::AddShot(uint32_t id, uint32_t shooterId, bool predicted, uint32_t creationTick, bool isHoming)
 {
-    shotData_[id] = ShotData { id, shooterId, creationTick };
+    shotData_[id] = ShotData { id, shooterId, creationTick, isHoming };
     return id;
 }
 

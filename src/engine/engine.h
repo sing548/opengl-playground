@@ -8,7 +8,7 @@
 #include "settings.h"
 #include "window/window.h"
 #include "camera/camera.h"
-#include "rendering/renderer.h" 
+#include "rendering/renderer.h"
 #include "metrics/debug-stats.h"
 #include "models/asset-manager.h"
 #include "input-manager/input-manager.h"

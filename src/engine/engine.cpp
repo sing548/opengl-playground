@@ -371,6 +371,7 @@ void Engine::CollectInputs(float deltaTime)
     state.backward  = glfwGetKey(window_->Get(), GLFW_KEY_S) == GLFW_PRESS;
     state.shoot     = glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS
                    || glfwGetMouseButton(window_->Get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    state.homingShoot = glfwGetMouseButton(window_->Get(), GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
 
     double xpos, ypos;
     glfwGetCursorPos(window_->Get(), &xpos, &ypos);

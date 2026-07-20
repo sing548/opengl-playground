@@ -122,20 +122,36 @@ void PlayerSystem::Shoot(GameWorld& gameWorld,
     if (!current.contains(playerId) || !previous.contains(playerId) || !gameWorld.IsPlayer(playerId)) return;
     auto& pd = gameWorld.GetPlayerData(playerId);
 
-    if (pd.shotCooldown > 0.0f)
-    {
-        pd.shotCooldown = std::max(0.0f, pd.shotCooldown - dT);
-        return;
-    }
-    
-    bool shootPressed = current.at(playerId).shoot && !previous.at(playerId).shoot;
+    pd.shotCooldown    = std::max(0.0f, pd.shotCooldown - dT);
+    pd.homingCooldown  = std::max(0.0f, pd.homingCooldown - dT);
 
-    if (shootPressed)
-        pd.shotCooldown = 0.1f;
-    else if (current.at(playerId).shoot)
-        pd.shotCooldown = 0.5f;
-    else 
-        return;
+    const InputState& cur  = current.at(playerId);
+    const InputState& prev = previous.at(playerId);
+
+    bool fireRegular = false;
+    if (pd.shotCooldown <= 0.0f)
+    {
+        bool shootPressed = cur.shoot && !prev.shoot;
+        if (shootPressed)
+        {
+            pd.shotCooldown = 0.1f;
+            fireRegular = true;
+        }
+        else if (cur.shoot)
+        {
+            pd.shotCooldown = 0.5f;
+            fireRegular = true;
+        }
+    }
+
+    bool fireHoming = false;
+    if (pd.homingCooldown <= 0.0f && cur.homingShoot && !prev.homingShoot)
+    {
+        pd.homingCooldown = 1.2f;
+        fireHoming = true;
+    }
+
+    if (!fireRegular && !fireHoming) return;
 
     auto shooter = gameWorld.GetScene().GetModelByReference(playerId);
     PhysicalInfo pi         = PhysicalInfo();
@@ -144,10 +160,18 @@ void PlayerSystem::Shoot(GameWorld& gameWorld,
 	pi.angularVelocity_	    = shooter.GetRotationSpeed();
 	pi.scale_			    = shooter.GetScale();
 	pi.velocity_    		= shooter.GetVelocity();
-    auto id = spawner::SpawnShot(gameWorld, assMan, pi, playerId, predicted ? localPredCounter++ : 0, predicted, current.at(playerId).tick);
 
-    if (predicted)
-        bridge.AddPredictedShot(id);
+    if (fireRegular)
+    {
+        auto id = spawner::SpawnShot(gameWorld, assMan, pi, playerId, predicted ? localPredCounter++ : 0, predicted, cur.tick);
+        if (predicted) bridge.AddPredictedShot(id);
+    }
+
+    if (fireHoming)
+    {
+        auto id = spawner::SpawnHomingShot(gameWorld, assMan, pi, playerId, predicted ? localPredCounter++ : 0, predicted, cur.tick);
+        if (predicted) bridge.AddPredictedShot(id);
+    }
 }
 
 void PlayerSystem::UpdatePlayerData(float dT, GameWorld& gameWorld)
