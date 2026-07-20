@@ -200,6 +200,18 @@ void Engine::Run()
         for (const auto& d : gameWorld_.DrainDeathSounds())
             audio_->PlayOneShot("sounds/ship_explosion.wav");
 
+        if (playerId_ != 0 && gameWorld_.GetPlayerData().contains(playerId_))
+        {
+            float curr = gameWorld_.GetPlayerData(playerId_).lastHit;
+            if (curr > lastHitPrev_ + 0.01f)
+                audio_->PlayOneShotPitched("sounds/hit_self.wav", 0.55f, 1.45f);
+            lastHitPrev_ = curr;
+        }
+        else
+        {
+            lastHitPrev_ = 0.0f;
+        }
+
         ExecuteSystems(GameplayPhase::PostTick, deltaTime);
 
         if (m_bNetworking && !m_bServer)
