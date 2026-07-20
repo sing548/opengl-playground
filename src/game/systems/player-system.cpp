@@ -1,6 +1,7 @@
 #include "player-system.h"
 
 #include "../../engine/systems/system-structs.h"
+#include <cmath>
 
 #include "../networking/network-bridge/network-bridge.h"
 #include "../spawner/spawner.h"
@@ -40,46 +41,29 @@ void PlayerSystem::ExecuteInput(float dT,
 
         auto forward = model.GetForward();
 
-        /*float rate = 2.1f;
+        glm::vec3 pos = model.GetPosition();
+        glm::vec3 toTarget(state.aim_x - pos.x, 0.0f, state.aim_z - pos.z);
+        glm::vec3 currentXZ(forward.x, 0.0f, forward.z);
 
-        glm::quat change = 
-            glm::angleAxis(state.pitch * rate * dT, model.GetRight())
-          * glm::angleAxis(state.yaw   * rate * dT, model.GetUp())
-          * glm::angleAxis(state.roll  * rate * dT, model.GetForward());  
+        if (glm::length(toTarget) > 1e-4f && glm::length(currentXZ) > 1e-4f)
+        {
+            glm::vec3 desired = glm::normalize(toTarget);
+            glm::vec3 current = glm::normalize(currentXZ);
 
-        RotateModel(id, gameWorld.GetScene(), change, lockRAndV);*/
+            float cross = current.z * desired.x - current.x * desired.z;
+            float dot   = current.x * desired.x + current.z * desired.z;
+            float angle = std::atan2(cross, dot);
 
-        if (state.left) 
-            RotateModel(id, gameWorld.GetScene(), glm::angleAxis(glm::radians(2.1f), glm::vec3(0, 1, 0)), lockRAndV);
+            if (std::abs(angle) > 1e-4f)
+                RotateModel(id, gameWorld.GetScene(), glm::angleAxis(angle, glm::vec3(0, 1, 0)), false);
+        }
 
-        if (state.right)
-            RotateModel(id, gameWorld.GetScene(), glm::angleAxis(glm::radians(-2.1f), glm::vec3(0, 1, 0)), lockRAndV);
-
-        if (state.forward) 
+        if (state.forward)
         {
             float acc = dT * 0.15f;
             glm::vec3 speed = model.GetVelocity();
             speed += acc * model.GetForward();
-
-            // Max Speed - ToDo: Think about re-implementing
-
             model.SetVelocity(speed);
-        } else 
-        {
-            float acc = dT * 0.15f;
-            if (state.backward)
-                acc = dT * .6f;
-
-            glm::vec3 speed = gameWorld.GetScene().GetModelByReference(id).GetVelocity();
-            
-            float speedLength = glm::length(speed);
-
-            if (speedLength <= acc || speedLength < 0.05)
-                speed = glm::vec3(0.0f);
-            else
-                speed -= (speed / speedLength) * acc;
-
-            gameWorld.GetScene().GetModelByReference(id).SetVelocity(speed);
         }
 
         if (!authoritative) continue;
