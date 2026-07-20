@@ -41,6 +41,8 @@ add_subdirectory(include/GameNetworkingSockets)
 
 # Define Executable
 add_executable(OpenGLPlayground
+    src/engine/audio/audio-manager.cpp
+    src/engine/audio/miniaudio-impl.cpp
     src/engine/camera/camera.cpp
     src/engine/window/window.cpp
     src/engine/helpers/file-helper.cpp
@@ -100,6 +102,7 @@ add_executable(OpenGLPlayground
 target_include_directories(OpenGLPlayground PRIVATE
     include
     include/stb
+    include/miniaudio
     include/GameNetworkingSockets/include
     include/ImGui
     include/ImGui/backends
@@ -116,6 +119,11 @@ target_link_libraries(OpenGLPlayground PRIVATE
     msgpack-cxx
     GameNetworkingSockets
 )
+
+# miniaudio's runtime backends need these on Linux
+if(UNIX AND NOT APPLE)
+    target_link_libraries(OpenGLPlayground PRIVATE dl pthread m)
+endif()
 
 # Make the binary relocatable on Linux: search for bundled .so files (e.g. the
 # GameNetworkingSockets shared lib, or libs bundled into a libs/ subfolder) next

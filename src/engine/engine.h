@@ -13,6 +13,7 @@
 #include "models/asset-manager.h"
 #include "input-manager/input-manager.h"
 #include "rendering/terrain/i-terrain-handler.h"
+#include "audio/audio-manager.h"
 
 #include "systems/i-gameplay-system.h"
 
@@ -50,6 +51,7 @@ private:
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<Renderer> renderer_;
     std::unique_ptr<AssetManager> assMan_;
+    std::unique_ptr<AudioManager> audio_;
 
     
     std::unique_ptr<NetworkBridge> netwBridg_;

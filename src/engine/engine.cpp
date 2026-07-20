@@ -34,6 +34,7 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     window_ = std::make_unique<Window>(WIDTH, HEIGHT, std::move(camera_), inputManager_.get());
     renderer_ = std::make_unique<Renderer>(WIDTH, HEIGHT);
     assMan_ = std::make_unique<AssetManager>();
+    audio_ = std::make_unique<AudioManager>();
 
     glfwSetWindowUserPointer(window_->Get(), this);
     glfwSetKeyCallback(window_->Get(), Engine::KeyCallback);
@@ -195,6 +196,9 @@ void Engine::Run()
             ++stepsThisFrame;
         }
         ++stepsHist[std::min(stepsThisFrame, 2)];
+
+        for (const auto& d : gameWorld_.DrainDeathSounds())
+            audio_->PlayOneShot("sounds/ship_explosion.wav");
 
         ExecuteSystems(GameplayPhase::PostTick, deltaTime);
 

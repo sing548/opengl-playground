@@ -68,6 +68,7 @@ public:
     std::vector<uint32_t>& GetKilledPlayers() { return killedPlayers_; };
     void ClearKilledPlayers() { killedPlayers_.clear(); };
     std::vector<DeathEvent> DrainDeaths() { return std::exchange(pendingDeaths_, {}); };
+    std::vector<DeathEvent> DrainDeathSounds() { return std::exchange(pendingDeathSounds_, {}); };
 
     uint32_t AddPlayer(uint32_t id, PlayerData playerData);
     uint32_t AddNpc(uint32_t id);
@@ -88,6 +89,7 @@ private:
 
     std::vector<uint32_t> killedPlayers_;
     std::vector<DeathEvent> pendingDeaths_;
+    std::vector<DeathEvent> pendingDeathSounds_;
 };
 
 #endif

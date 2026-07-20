@@ -31,10 +31,18 @@ RemovedEntities GameWorld::RemoveMarkedEntities()
 void GameWorld::HandleDeaths(RemovedEntities& removed)
 {
     for (uint32_t id : removed.players)
-        pendingDeaths_.push_back({ scene_.GetModelByReference(id).GetPosition() });
+    {
+        glm::vec3 pos = scene_.GetModelByReference(id).GetPosition();
+        pendingDeaths_.push_back({ pos });
+        pendingDeathSounds_.push_back({ pos });
+    }
 
     for (uint32_t id : removed.npcs)
-        pendingDeaths_.push_back({ scene_.GetModelByReference(id).GetPosition() });
+    {
+        glm::vec3 pos = scene_.GetModelByReference(id).GetPosition();
+        pendingDeaths_.push_back({ pos });
+        pendingDeathSounds_.push_back({ pos });
+    }
 }
 
 // ------------ ToDo: Implement before further implementation of systems
