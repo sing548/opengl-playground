@@ -200,6 +200,14 @@ void Engine::Run()
         for (const auto& d : gameWorld_.DrainDeathSounds())
             audio_->PlayOneShot("sounds/ship_explosion.wav");
 
+        for (WeaponSound w : gameWorld_.DrainLocalWeaponSounds())
+        {
+            if (w == WeaponSound::Laser)
+                audio_->PlayOneShotPitched("sounds/laser_shot.wav", 0.9f, 1.1f);
+            else
+                audio_->PlayOneShotPitched("sounds/missile.mp3", 0.9f, 1.1f);
+        }
+
         if (playerId_ != 0 && gameWorld_.GetPlayerData().contains(playerId_))
         {
             float curr = gameWorld_.GetPlayerData(playerId_).lastHit;

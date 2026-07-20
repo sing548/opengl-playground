@@ -42,6 +42,8 @@ struct DeathEvent {
     glm::vec3 position;
 };
 
+enum class WeaponSound : uint8_t { Laser, Missile };
+
 class GameWorld {
 public:
     auto& GetScene() { return scene_;};
@@ -71,6 +73,8 @@ public:
     void ClearKilledPlayers() { killedPlayers_.clear(); };
     std::vector<DeathEvent> DrainDeaths() { return std::exchange(pendingDeaths_, {}); };
     std::vector<DeathEvent> DrainDeathSounds() { return std::exchange(pendingDeathSounds_, {}); };
+    std::vector<WeaponSound> DrainLocalWeaponSounds() { return std::exchange(pendingLocalWeaponSounds_, {}); };
+    void PushLocalWeaponSound(WeaponSound s) { pendingLocalWeaponSounds_.push_back(s); };
 
     uint32_t AddPlayer(uint32_t id, PlayerData playerData);
     uint32_t AddNpc(uint32_t id);
@@ -92,6 +96,7 @@ private:
     std::vector<uint32_t> killedPlayers_;
     std::vector<DeathEvent> pendingDeaths_;
     std::vector<DeathEvent> pendingDeathSounds_;
+    std::vector<WeaponSound> pendingLocalWeaponSounds_;
 };
 
 #endif

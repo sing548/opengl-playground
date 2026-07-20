@@ -1,38 +1,73 @@
-# Prerequisites
+# ---- C/C++ build artifacts ----
 *.d
-
-# Compiled Object files
 *.slo
 *.lo
 *.o
 *.obj
-
-# Precompiled Headers
 *.gch
 *.pch
-
-# Compiled Dynamic libraries
 *.so
+*.so.*
 *.dylib
 *.dll
-
-# Fortran module files
 *.mod
 *.smod
-
-# Compiled Static libraries
 *.lai
 *.la
 *.a
 *.lib
-
-# Executables
 *.exe
 *.out
 *.app
+*.pdb
+*.ilk
+*.map
+*.exp
 
+# ---- Local/project build outputs ----
 build/
-build-release/
-assets/
+build-*/
+out/
+bin/
+lib/
+
+# ---- CMake (in-tree or otherwise) ----
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+CMakeUserPresets.json
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+Testing/
+_deps/
+compile_commands.json
+
+# Rider's default build directories (cmake-build-debug, cmake-build-release, ...)
+cmake-build-*/
+
+# ---- JetBrains Rider / CLion / IntelliJ ----
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# ---- Other editors ----
 .vscode/
+.vs/
+*.swp
+*.swo
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Misc ----
 .temp
+*.log
+core
+core.*
+
+# ---- ImGui runtime layout (regenerated on every run) ----
+imgui.ini

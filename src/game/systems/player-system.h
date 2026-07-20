@@ -21,6 +21,7 @@ public:
     bool CanReplay() override { return true; }
 private:
     uint32_t localPredCounter = 0x8000000;
+    uint32_t audibleLocalId_ = 0;
     void ExecuteInput(float dT,
                       GameWorld& gameWorld,
                       AssetManager& assMan,

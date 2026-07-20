@@ -10,6 +10,8 @@
 
 void PlayerSystem::Update(SystemsContext& ctx)
 {
+    audibleLocalId_ = ctx.replay ? 0 : ctx.localPlayerId;
+
     if (ctx.replay || ctx.authoritative)
         ExecuteInput(ctx.dT, ctx.world, ctx.assMan, ctx.current, ctx.previous, ctx.localPlayerId, ctx.authoritative, ctx.settings.simpleFlight, ctx.bridge);
     else if (!ctx.replay && ctx.settings.predictiveClient)
@@ -161,16 +163,20 @@ void PlayerSystem::Shoot(GameWorld& gameWorld,
 	pi.scale_			    = shooter.GetScale();
 	pi.velocity_    		= shooter.GetVelocity();
 
+    bool audible = predicted || (audibleLocalId_ != 0 && playerId == audibleLocalId_);
+
     if (fireRegular)
     {
         auto id = spawner::SpawnShot(gameWorld, assMan, pi, playerId, predicted ? localPredCounter++ : 0, predicted, cur.tick);
         if (predicted) bridge.AddPredictedShot(id);
+        if (audible)   gameWorld.PushLocalWeaponSound(WeaponSound::Laser);
     }
 
     if (fireHoming)
     {
         auto id = spawner::SpawnHomingShot(gameWorld, assMan, pi, playerId, predicted ? localPredCounter++ : 0, predicted, cur.tick);
         if (predicted) bridge.AddPredictedShot(id);
+        if (audible)   gameWorld.PushLocalWeaponSound(WeaponSound::Missile);
     }
 }
 
