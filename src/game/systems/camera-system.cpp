@@ -39,6 +39,11 @@ void CameraSystem::Update(SystemsContext& ctx)
         // Offset from the model in its local orientation
         glm::vec3 offset = interpolatedPi.rotation_ * model.GetBaseOrientation() * glm::vec3(-8.0f, -8.0f, -8.0f);
         glm::vec3 cameraPos = modelPos + offset + glm::vec3(0.0f, 1.5f, 0.0f);
+
+        auto& cam = ctx.window.GetCamera();
+        cam.Up = model.GetUp();
+        cam.Pitch = 0.0f;
+        cam.UpdateCameraVectors();
     
         // Update camera position
         ctx.window.UpdateCameraPosition(cameraPos);

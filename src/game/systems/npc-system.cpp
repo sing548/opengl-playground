@@ -107,6 +107,6 @@ void NpcSystem::Update(SystemsContext& context)
         pi.position_ = glm::vec3(-20.0f, 0.0f, 0.0f);
         pi.rotation_ = glm::angleAxis(glm::radians(180.0f), glm::vec3(0,1,0));
         pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
-        spawner::SpawnNpc(context.world, context.assMan, pi);
+        //spawner::SpawnNpc(context.world, context.assMan, pi);
     }
 }

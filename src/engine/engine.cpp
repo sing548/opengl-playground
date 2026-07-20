@@ -306,10 +306,13 @@ void Engine::CollectInputs(float deltaTime)
     
     InputState state = currentInputStates_.at(playerId_);
 
-    state.left      = glfwGetKey(window_->Get(), GLFW_KEY_A) == GLFW_PRESS;
-    state.right     = glfwGetKey(window_->Get(), GLFW_KEY_D) == GLFW_PRESS;
-    state.forward   = glfwGetKey(window_->Get(), GLFW_KEY_W) == GLFW_PRESS;
-    state.backward  = glfwGetKey(window_->Get(), GLFW_KEY_S) == GLFW_PRESS;
+    inputManager_->BindFloat(GLFW_KEY_A, GLFW_KEY_D, state.yaw, window_->Get());
+    inputManager_->BindFloat(GLFW_KEY_Q, GLFW_KEY_E, state.roll, window_->Get());
+    inputManager_->BindFloat(GLFW_KEY_W, GLFW_KEY_S, state.thrust, window_->Get());
+
+    //state.yaw       = glfwGetKey(window_->Get(), GLFW_KEY_A) == GLFW_PRESS ? 1.0f : 0.0f;
+    //state.yaw       = glfwGetKey(window_->Get(), GLFW_KEY_D) == GLFW_PRESS ? -1.0f : 0.0f;
+    //state.pitch     = glfwGetKey(window_->Get(), GLFW_KEY_D) == GLFW_PRESS ? 1.0f : 0.0f;
     state.shoot     = glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS;
 
     currentInputStates_.at(playerId_) = state;

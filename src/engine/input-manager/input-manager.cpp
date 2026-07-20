@@ -8,3 +8,4 @@ bool InputManager::IsKeyPressed(int key) const {
     auto it = keys_.find(key);
     return it != keys_.end() && it->second;
 }
+

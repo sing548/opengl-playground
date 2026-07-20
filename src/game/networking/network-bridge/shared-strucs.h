@@ -7,15 +7,15 @@
 #include <glm/ext/quaternion_float.hpp>
 
 struct InputState {
-    uint32_t  id   = 0;
-    bool left      = false;
-    bool right     = false;
-    bool forward   = false;
-    bool backward  = false;
+    uint32_t  id    = 0;
+    float pitch     = 0.0f;
+    float yaw       = 0.0f;
+    float roll      = 0.0f;
+    float thrust    = 0.0f;
     bool shoot     = false;
     uint32_t tick  = 0;
 
-    MSGPACK_DEFINE(id, left, right, forward, backward, shoot, tick);
+    MSGPACK_DEFINE(id, pitch, yaw, roll, thrust, shoot, tick);
 };
 
 struct EntityState {
