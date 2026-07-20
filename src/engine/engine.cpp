@@ -599,6 +599,18 @@ void Engine::HandleImGui(int step)
 
             if (ImGui::CollapsingHeader("Stats"))
             {
+                if (playerId_ != 0 && gameWorld_.GetScene().ModelExists(playerId_))
+                {
+                    auto& model = gameWorld_.GetScene().GetModelByReference(playerId_);
+                    glm::vec3 pos = model.GetPosition();
+                    glm::vec3 forward = model.GetForward();
+                    
+                    float angle = atan2(forward.z, forward.x) * 180.0f / M_PI; // Convert to degrees
+                    
+                    ImGui::Text("Ship Position: (%.2f, %.2f, %.2f)", pos.x, pos.y, pos.z);
+                    ImGui::Text("Ship Angle: %.2f degrees", angle);
+                }
+
                 for (const auto& [name, stat] : debugStats_.AllStats())
                 {
                     if (stat.isCounter)
@@ -608,7 +620,7 @@ void Engine::HandleImGui(int step)
                     
                     int offset = stat.histCount < Stat::HISTORY_DURATION ? 0 : stat.histHead;
                     ImGui::PlotLines(("##" + name).c_str(), stat.hist.data(), stat.histCount, offset,
-                                     nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 40));
+                                      nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 40));
                 }
             }
 
