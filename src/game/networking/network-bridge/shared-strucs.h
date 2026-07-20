@@ -14,8 +14,10 @@ struct InputState {
     bool backward  = false;
     bool shoot     = false;
     uint32_t tick  = 0;
+    float aim_x    = 0.0f;
+    float aim_z    = 0.0f;
 
-    MSGPACK_DEFINE(id, left, right, forward, backward, shoot, tick);
+    MSGPACK_DEFINE(id, left, right, forward, backward, shoot, tick, aim_x, aim_z);
 };
 
 struct EntityState {
