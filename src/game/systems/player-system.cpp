@@ -58,13 +58,24 @@ void PlayerSystem::ExecuteInput(float dT,
                 RotateModel(id, gameWorld.GetScene(), glm::angleAxis(angle, glm::vec3(0, 1, 0)), false);
         }
 
+        const float acc = dT * 0.15f;
+        glm::vec3 speed = model.GetVelocity();
+
         if (state.forward)
-        {
-            float acc = dT * 0.15f;
-            glm::vec3 speed = model.GetVelocity();
             speed += acc * model.GetForward();
-            model.SetVelocity(speed);
+
+        if (state.left || state.right)
+        {
+            glm::vec3 right = glm::cross(model.GetForward(), glm::vec3(0.0f, 1.0f, 0.0f));
+            if (glm::length(right) > 1e-4f)
+            {
+                right = glm::normalize(right);
+                if (state.right) speed += acc * right;
+                if (state.left)  speed -= acc * right;
+            }
         }
+
+        model.SetVelocity(speed);
 
         if (!authoritative) continue;
 
