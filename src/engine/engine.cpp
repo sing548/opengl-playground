@@ -365,7 +365,43 @@ void Engine::CollectInputs(float deltaTime)
     state.right     = glfwGetKey(window_->Get(), GLFW_KEY_D) == GLFW_PRESS;
     state.forward   = glfwGetKey(window_->Get(), GLFW_KEY_W) == GLFW_PRESS;
     state.backward  = glfwGetKey(window_->Get(), GLFW_KEY_S) == GLFW_PRESS;
-    state.shoot     = glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS;
+    state.shoot     = glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS
+                   || glfwGetMouseButton(window_->Get(), GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+
+    double xpos, ypos;
+    glfwGetCursorPos(window_->Get(), &xpos, &ypos);
+
+    auto windowSize = window_->GetSize();
+    float winX = static_cast<float>(xpos);
+    float winY = static_cast<float>(windowSize.height) - static_cast<float>(ypos);
+
+    glm::mat4 projection = glm::perspective(
+        glm::radians(window_->GetCamera().Zoom),
+        static_cast<float>(windowSize.width) / static_cast<float>(windowSize.height),
+        0.1f, 500.0f);
+    glm::mat4 view = window_->GetCamera().GetViewMatrix();
+    glm::vec4 viewport(0.0f, 0.0f,
+                       static_cast<float>(windowSize.width),
+                       static_cast<float>(windowSize.height));
+
+    glm::vec3 nearPt = glm::unProject(glm::vec3(winX, winY, 0.0f), view, projection, viewport);
+    glm::vec3 farPt  = glm::unProject(glm::vec3(winX, winY, 1.0f), view, projection, viewport);
+    glm::vec3 dir = farPt - nearPt;
+
+    float planeY = 0.0f;
+    if (gameWorld_.GetScene().ModelExists(playerId_))
+        planeY = gameWorld_.GetScene().GetModelByReference(playerId_).GetPosition().y;
+
+    if (std::abs(dir.y) > 1e-6f)
+    {
+        float t = (planeY - nearPt.y) / dir.y;
+        if (t > 0.0f)
+        {
+            glm::vec3 hit = nearPt + dir * t;
+            state.aim_x = hit.x;
+            state.aim_z = hit.z;
+        }
+    }
 
     currentInputStates_.at(playerId_) = state;
 }
