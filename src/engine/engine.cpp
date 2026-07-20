@@ -179,6 +179,7 @@ void Engine::Run()
             ExecuteSystems(GameplayPhase::PostSimulation, FIXED_DELTA);
             gameWorld_.GetScene().ClearAddedModels();
             ++stepsThisFrame;
+            ++j;
         }
 
         debugStats_["frame.steps"].Add((float)stepsThisFrame);
@@ -194,8 +195,7 @@ void Engine::Run()
         
         window_->SwapBuffers();
 
-        i++;
-        j++;
+        ++i;
         // FPS counter in console
         if (fpsTime >= 1) {
             debugStats_.Flush(fpsTime);

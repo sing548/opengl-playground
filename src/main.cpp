@@ -106,7 +106,7 @@ int main(int argc, const char *argv[]) {
             engine = std::make_unique<Engine>(EngineMode::Standalone);
         }
     }
-    catch (const std::runtime_error e)
+    catch (const std::runtime_error& e)
     {
         std::cerr << "Failed to initialize GLFW" << e.what() << std::endl;
         return -1;
@@ -127,7 +127,8 @@ int main(int argc, const char *argv[]) {
     engine->AddSceneRenderable(std::move(sky));
 	std::unique_ptr<Grass> grass = std::make_unique<Grass>();
     engine->AddSceneRenderable(std::move(grass));
-    std::unique_ptr<DrivePlume> dp = std::make_unique<DrivePlume>(engine->GetGameWorld());
+    // Disable for now - ugly, need to make it look better before enabling
+    //std::unique_ptr<DrivePlume> dp = std::make_unique<DrivePlume>(engine->GetGameWorld());
     //engine->AddSceneRenderable(std::move(dp));
     std::unique_ptr<DeathExplosion> deathExplosion = std::make_unique<DeathExplosion>(engine->GetGameWorld());
     engine->AddSceneRenderable(std::move(deathExplosion));

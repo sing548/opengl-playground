@@ -113,16 +113,16 @@ void PhysicsSystem::CheckHits(GameWorld& gameWorld, ITerrainHandler& terrain, bo
             if (!Collide(shot, npc)) continue;
 
             npcData.lastHit = 0.2f;
-
-            npcData.lifes -= 1;
-    
+            
             if (authoritative)
             {
+                npcData.lifes -= 1;
                 if (npcData.lifes <= 0)
                     gameWorld.MarkEntityForDelete(npcId);
                 gameWorld.MarkEntityForDelete(shotId);
                 shotConsumed = true;
             }
+            
             break;
         }
     }
@@ -182,8 +182,8 @@ void PhysicsSystem::TryCollide(Scene& scene, uint32_t idA, uint32_t idB)
 
         if (overlap > 0)
         {
-            modelA.SetPosition(modelA.GetPosition() - n + (overlap * 0.5f));
-            modelB.SetPosition(modelB.GetPosition() - n + (overlap * 0.5f));
+            modelA.SetPosition(modelA.GetPosition() - n * (overlap * 0.5f));
+            modelB.SetPosition(modelB.GetPosition() + n * (overlap * 0.5f));
         }
 
         glm::vec3 veloA = modelA.GetVelocity();
