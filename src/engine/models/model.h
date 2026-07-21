@@ -55,6 +55,8 @@ public:
     glm::vec3 GetRight() const { return GetRotation() * baseRight_; };
     glm::vec3 GetForward() const { return GetRotation() * baseOrientation_; };
     glm::vec3 GetBaseOrientation() const { return baseOrientation_; };
+    glm::vec3 GetBaseUp() const { return baseUp_; };
+    glm::vec3 GetBaseRight() const { return baseRight_; };
     glm::vec3 GetVelocity() const { return physicalInfo_.velocity_; };
     glm::vec3 GetRotationSpeed() const { return physicalInfo_.angularVelocity_; };
     std::string GetPath() const { return path_; };

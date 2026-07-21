@@ -23,7 +23,7 @@ private:
     void CheckHits(GameWorld& gameWorld, ITerrainHandler& terrain, bool authoritative, bool predictive);
     bool Collide(const Model& a, const Model& b);
     void TryCollide(Scene& scene, uint32_t idA, uint32_t idB);
-    void CorrectZOffset(Scene& scene);
+    void ClampYOffset(Scene& scene);
     bool CollideTerrain(ITerrainHandler& terrain, Scene& scene, uint32_t id, bool fragile = false);
 };
 

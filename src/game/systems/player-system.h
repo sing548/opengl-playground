@@ -28,7 +28,7 @@ private:
                       std::unordered_map<uint32_t, InputState>& previousInputStates,
                       uint32_t playerId,
                       bool authoritative,
-                      bool simpleFlight,
+                      bool flightAssist,
                       NetworkBridge& bridge
                     );
     void UpdatePlayerData(float dT, GameWorld& gameWorld);

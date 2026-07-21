@@ -47,31 +47,8 @@ void Window::error_callback(int error, const char* description)
 	std::cout << "Error " << error << " : " << description << std::endl;
 }
 
-void Window::mouse_callback(double xpos, double ypos)
-{
-	if (firstMouse_ != 0)
-	{
-		lastX_ = xpos;
-		lastY_ = ypos;
-		firstMouse_--;
-	}
-
-	float xoffset = xpos - lastX_;
-	float yoffset = lastY_ - ypos;
-
-	lastX_ = xpos;
-	lastY_ = ypos;
-
-	camera_->ProcessMouseMovement(xoffset, yoffset);
-}
-
-Window::Window(unsigned int width, unsigned int height, InputManager* inputManager, const char* title)
-	: Window(width, height, std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 3.0f)), inputManager, title)
-{
-}
-
-Window::Window(unsigned int width, unsigned int height, std::unique_ptr<Camera> camera, InputManager* inputManager, const char* title) 
-	: camera_(std::move(camera)), inputManager_(inputManager)
+Window::Window(unsigned int width, unsigned int height, std::unique_ptr<Camera> camera, const char* title) 
+	: camera_(std::move(camera))
 {
 	size_.width = width;
 	size_.height = height;
@@ -136,26 +113,6 @@ void Window::SwapBuffers()
 	glfwSwapBuffers(window_);
 }
 
-void Window::UpdateCameraPosition(glm::vec3 position)
-{
-	camera_->Position = position;
-}
-
-void Window::UpdateCameraOrientation(glm::vec3 orientation)
-{
-	camera_->Front = orientation;
-}
-
-void Window::UpdateCameraYaw(float yaw)
-{
-	camera_->Yaw = yaw;
-}
-
-void Window::UpdateCameraPitch(float pitch)
-{
-	camera_->Pitch = pitch;
-}
-
 void Window::ResizeWindow(unsigned int width, unsigned int height)
 {
 	if (width == 0 || height == 0)
@@ -173,29 +130,6 @@ void Window::HandleInput(float deltaTime)
 	if (glfwGetKey(window_, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
             glfwSetWindowShouldClose(window_, true);
     }
-
-	if (glfwGetKey(window_, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS && glfwGetKey(window_, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-		camera_->ProcessKeyboard(SPRINT, deltaTime);
-	else if (glfwGetKey(window_, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-		camera_->ProcessKeyboard(JOG, deltaTime);
-	else if (glfwGetKey(window_, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-		camera_->ProcessKeyboard(CRAWL, deltaTime);
-	
-	if (glfwGetKey(window_, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE && glfwGetKey(window_, GLFW_KEY_LEFT_CONTROL) == GLFW_RELEASE)
-		camera_->ProcessKeyboard(WALK, deltaTime);
-
-	if (glfwGetKey(window_, GLFW_KEY_W) == GLFW_PRESS)
-		camera_->ProcessKeyboard(FORWARD, deltaTime);
-	if (glfwGetKey(window_, GLFW_KEY_S) == GLFW_PRESS)
-		camera_->ProcessKeyboard(BACKWARD, deltaTime);
-	if (glfwGetKey(window_, GLFW_KEY_A) == GLFW_PRESS)
-		camera_->ProcessKeyboard(LEFT, deltaTime);
-	if (glfwGetKey(window_, GLFW_KEY_D) == GLFW_PRESS)
-		camera_->ProcessKeyboard(RIGHT, deltaTime);
-	if (glfwGetKey(window_, GLFW_KEY_SPACE) == GLFW_PRESS)
-		camera_->ProcessKeyboard(UP, deltaTime);
-	if (glfwGetKey(window_, GLFW_KEY_C) == GLFW_PRESS)
-		camera_->ProcessKeyboard(DOWN, deltaTime);
 }
 
 Window::~Window()

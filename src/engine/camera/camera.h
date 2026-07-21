@@ -5,60 +5,33 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-enum Camera_Input {
-	FORWARD,
-	BACKWARD,
-	LEFT,
-	RIGHT,
-	UP,
-	DOWN,
-	SPRINT,
-	JOG,
-	WALK,
-	CRAWL
-};
+
 
 class Camera
 {
 public:
-
-static constexpr float DEFAULT_YAW			= -90.0f;
-static constexpr float DEFAULT_PITCH		= 0.0f;
-static constexpr float DEFAULT_SPEED		= 1.0f;
-static constexpr float DEFAULT_SENSITIVITY 	= 0.1f;
-static constexpr float DEFAULT_ZOOM			= 45.0f;
-static constexpr bool DEFAULT_SPRINTING		= false;
-static constexpr bool DEFAULT_JOGGING		= false;
-static constexpr bool DEFAULT_CRAWLING		= false;
-
-    glm::vec3 Position;
-	glm::vec3 Front;
-	glm::vec3 Up;
-	glm::vec3 Right;
-	glm::vec3 WorldUp;
-
-	float Yaw;
-	float Pitch;
-	float MovementSpeed;
-	float MouseSensitivity;
-	float Zoom;
-
-	bool Sprinting;
-	bool Jogging;
-	bool Crawling;
-
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f),
-           glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
-           float yaw = DEFAULT_YAW, float pitch = DEFAULT_PITCH);
+           glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3 front = (glm::vec3(1.0f, 0.0f, 0.0f)));
 
-    const glm::mat4 GetViewMatrix() const;
-    void ProcessKeyboard(Camera_Input input, float deltaTime);
-    void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true);
-    void ProcessMouseScroll(float yoffset);
-       
-	void UpdateCameraVectors();
+	const glm::mat4 GetViewMatrix() const;
+	void ProcessMouseScroll(float yoffset);
+
+	void SetPosition(glm::vec3 pos) { position_ = pos; };
+	void SetBasis(glm::vec3 pos, glm::vec3 front, glm::vec3 up);
+
+	float GetZoom() const { return zoom_; };
+	const glm::vec3 GetPosition() const { return position_; };
+	const glm::vec3 GetWorldUp() const { return worldUp_; };
 private:
+	static constexpr float DEFAULT_ZOOM = 45.0f;
 
+	float zoom_;
+
+    glm::vec3 position_;
+	glm::vec3 front_;
+	glm::vec3 up_;
+	glm::vec3 right_;
+	glm::vec3 worldUp_;
 };
 
 #endif

@@ -11,7 +11,7 @@
 #include "rendering/renderer.h" 
 #include "metrics/debug-stats.h"
 #include "models/asset-manager.h"
-#include "input-manager/input-manager.h"
+#include "input-manager/raw-input-manager.h"
 #include "rendering/terrain/i-terrain-handler.h"
 
 #include "systems/i-gameplay-system.h"
@@ -22,6 +22,7 @@ enum class EngineMode { Standalone, Server, Client };
 
 class ReplayDriver;
 class NetworkBridge;
+class RawInputManager;
 class ITerrainHandler;
 
 class Engine {
@@ -41,6 +42,7 @@ public:
     void AddTerrainHandler(std::unique_ptr<ITerrainHandler> tH) { terrainHandler_ = std::move(tH); }
     Material* GetMaterial(uint16_t id) { return materials_.at(id).get(); }
     ReplayDriver& GetReplayDriver() { return *replayDriver_; }
+    RawInputManager& GetRawMan() { return *rawMan_; }
 private:
     // FixedDelta = Logic / s
     static constexpr float FIXED_DELTA = 1.0f / 60.0f;
@@ -50,12 +52,11 @@ private:
 
     uint32_t playerId_;
 
-    std::unique_ptr<Window> window_;
-    std::unique_ptr<InputManager> inputManager_;
     std::unique_ptr<Camera> camera_;
+    std::unique_ptr<Window> window_;
     std::unique_ptr<Renderer> renderer_;
     std::unique_ptr<AssetManager> assMan_;
-
+    std::unique_ptr<RawInputManager> rawMan_;
     
     std::unique_ptr<NetworkBridge> netwBridg_;
     std::unique_ptr<ReplayDriver> replayDriver_;
@@ -79,7 +80,6 @@ private:
 
     void ExecuteSystems(GameplayPhase phase, float dT, float alpha = 0.0f);
     void HandleLogic(float deltaTime);
-    void CollectInputs(float deltaTime);
     static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
     void AddNewPlayer(uint32_t id);

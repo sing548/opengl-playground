@@ -9,7 +9,6 @@
 #include <memory>
 
 #include "../camera/camera.h"
-#include "../input-manager/input-manager.h"
 
 struct WindowSize
 {
@@ -21,8 +20,7 @@ class Window
 {
 
 public:
-    Window(unsigned int width, unsigned int height, InputManager* inputManager, const char* title = "Test Window");
-    Window(unsigned int width, unsigned int height, std::unique_ptr<Camera> camera, InputManager* inputManager, const char* title = "Test Window");
+    Window(unsigned int width, unsigned int height, std::unique_ptr<Camera> camera, const char* title = "Test Window");
     ~Window();
 
     GLFWwindow* Get();
@@ -32,11 +30,6 @@ public:
     WindowSize GetSize();
     void HandleInput(float deltaTime);
     void ResizeWindow(unsigned int width, unsigned int height);
-    void UpdateCameraPosition(glm::vec3 position);
-    void UpdateCameraOrientation(glm::vec3 orientation);
-    void UpdateCameraYaw(float yaw);
-    void UpdateCameraPitch(float pitch);
-    void mouse_callback(double xpos, double ypos);
     bool WasWindowResized() { return windowResized_; };
     void ClearResizedFlag() { windowResized_ = false; };
 
@@ -49,12 +42,8 @@ private:
     WindowSize size_;
     glm::vec4 backgroundRGBA_;
     std::unique_ptr<Camera> camera_;
-
-    InputManager* inputManager_;
-    
     
     static void error_callback(int error, const char* description);
-
 };
 
 #endif

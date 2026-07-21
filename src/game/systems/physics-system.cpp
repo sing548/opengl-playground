@@ -18,7 +18,9 @@ void PhysicsSystem::Update(SystemsContext& ctx)
         }
 
         CheckHits(ctx.world, ctx.terrainHandler, ctx.authoritative, ctx.settings.predictiveClient);
-        CorrectZOffset(ctx.world.GetScene());
+
+        if (!ctx.settings.flight3d)
+            ClampYOffset(ctx.world.GetScene());
     }
     else
     {
@@ -199,23 +201,35 @@ void PhysicsSystem::TryCollide(Scene& scene, uint32_t idA, uint32_t idB)
     }
 }
 
-void PhysicsSystem::CorrectZOffset(Scene& scene)
+void PhysicsSystem::ClampYOffset(Scene& scene)
 {
-    for (auto& model : scene.GetModels())
+    for (auto& [id, model] : scene.GetModels())
     {
-        auto velo = model.second.GetVelocity();
-        auto pos = model.second.GetPosition();
+        auto velo = model.GetVelocity();
+        auto pos = model.GetPosition();
+        auto rotation = model.GetRotation();
+        auto rotationSpeed = model.GetRotationSpeed();
 
-        if (velo.y > 0 || velo.y < 0) 
-        {
-            velo.y = 0.0f;
-            model.second.SetVelocity(velo);
-        }
+        velo.y = 0.0f;
+        model.SetVelocity(velo);
+        pos.y = 0.0f;
+        model.SetPosition(pos);
 
-        if (pos.y > 0 || pos.y < 0)
+        glm::vec3 forward = model.GetForward();
+        glm::vec3 flatForward = glm::vec3(forward.x, 0.0f, forward.z);
+        
+        if (!glm::length(flatForward) < 1e-4f) 
         {
-            pos.y = 0.0f;
-            model.second.SetPosition(pos);
+            flatForward = glm::normalize(flatForward);
+            // ToDo: read this from config - don't assume (0,1,0)
+            glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
+            glm::vec3 flatRight = glm::cross(flatForward, worldUp);
+    
+            glm::mat3 B(model.GetBaseRight(), model.GetBaseUp(), model.GetBaseOrientation());
+            glm::mat3 W(flatRight, worldUp, flatForward);
+            model.SetRotation(glm::quat_cast(W * glm::transpose(B)));
+            glm::vec3 rSpeed = model.GetRotationSpeed();
+            model.SetRotationSpeed(glm::vec3(rSpeed.x, rSpeed.y, 0.0f));
         }
     }
 }

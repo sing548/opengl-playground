@@ -12,6 +12,7 @@ struct InputState {
     float yaw       = 0.0f;
     float roll      = 0.0f;
     float thrust    = 0.0f;
+    // ToDo: Add lateral and vertical thrust
     bool shoot     = false;
     uint32_t tick  = 0;
 

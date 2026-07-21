@@ -2,13 +2,13 @@
 
 struct Settings {
     bool adjustCamera = true;
-    bool mouseLooking = false;
     bool thirdPerson = false;
     bool skyBox = true;
     bool debugView = false;
     bool hitboxes = false;
     bool bloom = true;
-    bool simpleFlight = true;
+    bool flightAssist = true;
+    bool flight3d = true;
     bool predictiveClient = true;
     bool terrain = false;
     bool grass = true;

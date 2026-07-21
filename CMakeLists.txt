@@ -44,7 +44,6 @@ add_executable(OpenGLPlayground
     src/engine/camera/camera.cpp
     src/engine/window/window.cpp
     src/engine/helpers/file-helper.cpp
-    src/engine/input-manager/input-manager.cpp
     src/engine/models/asset-manager.cpp
     src/engine/models/mesh.cpp
     src/engine/models/model.cpp
@@ -70,6 +69,7 @@ add_executable(OpenGLPlayground
     src/game/rendering/terrain/terrain-handler.cpp
     src/game/rendering/vfx/death-explosion.cpp
     src/game/spawner/spawner.cpp
+    src/game/systems/input/input-system.cpp
     src/game/systems/networking/network-input-consume-system.cpp
     src/game/systems/networking/network-input-distribution-system.cpp
     src/game/systems/networking/network-merge-system.cpp

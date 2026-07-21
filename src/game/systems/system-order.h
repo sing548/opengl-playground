@@ -5,29 +5,30 @@ enum class SystemOrder : int {
     NetworkPollSystem = 10,
 
 // ----- region Input -----
-    NetworkInputConsumeSystem = 20,
+    InputSystem = 20,
+    NetworkInputConsumeSystem = 30,
     
 // ----- region PreSimulation -----
-    PiHistorySystem = 30,
+    PiHistorySystem = 40,
 
 // ----- region Simulation -----
-    PhysicsSystem = 40,
-    PlayerSystem = 50,
-    NpcSystem = 60,
-    ShotSystem = 70,
-    TerrainSystem = 80,
+    PhysicsSystem = 50,
+    PlayerSystem = 60,
+    NpcSystem = 70,
+    ShotSystem = 80,
+    TerrainSystem = 90,
 
 // ----- region PostSimulation -----
-    NetworkStateDistributionSystem = 90,
-    NetworkInputDistributionSystem = 100,
+    NetworkStateDistributionSystem = 100,
+    NetworkInputDistributionSystem = 110,
 
 // ----- region PostTick -----
-    NetworkMergeSystem = 110,
-    NetworkReconcileSystem = 120,
+    NetworkMergeSystem = 120,
+    NetworkReconcileSystem = 130,
 
 // ----- region PreRender -----
-    BlendingSystem = 130,
-    CameraSystem = 140,
+    BlendingSystem = 140,
+    CameraSystem = 150,
 
 // ----- region PostRender -----
 };

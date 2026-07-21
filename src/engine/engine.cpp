@@ -29,23 +29,21 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
         m_bNetworking = true;
     }
 
-    camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 60.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0F, -90.0F);
-    
-    inputManager_ = std::make_unique<InputManager>();
-    window_ = std::make_unique<Window>(WIDTH, HEIGHT, std::move(camera_), inputManager_.get());
+    // Info: Order of initialization is importantm, will break if reorder without plan
+    camera_ = std::make_unique<Camera>(glm::vec3(0.0f, 60.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+    window_ = std::make_unique<Window>(WIDTH, HEIGHT, std::move(camera_));
     renderer_ = std::make_unique<Renderer>(WIDTH, HEIGHT);
+
     assMan_ = std::make_unique<AssetManager>();
+    rawMan_ = std::make_unique<RawInputManager>(window_->Get());
     replayDriver_ = std::make_unique<ReplayDriver>(systems_, FIXED_DELTA);
 
     glfwSetWindowUserPointer(window_->Get(), this);
     glfwSetKeyCallback(window_->Get(), Engine::KeyCallback);
 
+    // ToDo: Rethink what this should do 
     glfwSetCursorPosCallback(window_->Get(), [](GLFWwindow* window, double xPos, double yPos) {
         Engine* engine = static_cast<Engine*>(glfwGetWindowUserPointer(window));
-
-        if (engine && engine->settings_.mouseLooking) {
-            engine->window_->mouse_callback(xPos, yPos);
-        }
     });
 
 	glfwSetFramebufferSizeCallback(window_->Get(), [](GLFWwindow* w, int width, int height)
@@ -171,7 +169,6 @@ void Engine::Run()
         while (accTime >= step)
         {
             ExecuteSystems(GameplayPhase::Input, FIXED_DELTA);
-            CollectInputs(FIXED_DELTA);
             ExecuteSystems(GameplayPhase::PreSimulation, FIXED_DELTA);
             HandleLogic(FIXED_DELTA);
             ExecuteSystems(GameplayPhase::Simulation, FIXED_DELTA);
@@ -297,27 +294,6 @@ void Engine::AddNewPlayer(uint32_t id)
     }
 }
 
-void Engine::CollectInputs(float deltaTime)
-{
-    if (playerId_ == 0 || std::ranges::find(gameWorld_.GetKilledPlayers(), playerId_) != gameWorld_.GetKilledPlayers().end()) return;
-    if (!currentInputStates_.contains(playerId_)) return;
-
-    previousInputStates_.at(playerId_) = currentInputStates_.at(playerId_);
-    
-    InputState state = currentInputStates_.at(playerId_);
-
-    inputManager_->BindFloat(GLFW_KEY_A, GLFW_KEY_D, state.yaw, window_->Get());
-    inputManager_->BindFloat(GLFW_KEY_Q, GLFW_KEY_E, state.roll, window_->Get());
-    inputManager_->BindFloat(GLFW_KEY_W, GLFW_KEY_S, state.thrust, window_->Get());
-
-    //state.yaw       = glfwGetKey(window_->Get(), GLFW_KEY_A) == GLFW_PRESS ? 1.0f : 0.0f;
-    //state.yaw       = glfwGetKey(window_->Get(), GLFW_KEY_D) == GLFW_PRESS ? -1.0f : 0.0f;
-    //state.pitch     = glfwGetKey(window_->Get(), GLFW_KEY_D) == GLFW_PRESS ? 1.0f : 0.0f;
-    state.shoot     = glfwGetKey(window_->Get(), GLFW_KEY_SPACE) == GLFW_PRESS;
-
-    currentInputStates_.at(playerId_) = state;
-}
-
 void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     Engine* engine = static_cast<Engine*>(glfwGetWindowUserPointer(window));
@@ -363,7 +339,7 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, 
 
 std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 {
-    glm::mat4 projection = glm::perspective(glm::radians(window_->GetCamera().Zoom), (float)window_->GetSize().width / (float)window_->GetSize().height, 0.1f, 500.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(window_->GetCamera().GetZoom()), (float)window_->GetSize().width / (float)window_->GetSize().height, 0.1f, 500.0f);
 	glm::mat4 view = window_->GetCamera().GetViewMatrix();
 	auto& models = gameWorld_.GetScene().GetModels();
 
@@ -371,7 +347,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 	
 	fg.view 	  = view;
 	fg.projection = projection;
-	fg.cameraPos  = window_->GetCamera().Position;
+	fg.cameraPos  = window_->GetCamera().GetPosition();
 	fg.time 	  = static_cast<float>(glfwGetTime());
 
     fg.skyBox = settings_.skyBox;
@@ -517,11 +493,11 @@ void Engine::HandleImGui(int step)
             ImGui::Checkbox("Third person", &settings_.thirdPerson);
             ImGui::Checkbox("Predictive client", &settings_.predictiveClient);
             ImGui::Checkbox("Adjust camera", &settings_.adjustCamera);
-            ImGui::Checkbox("Mouse looking", &settings_.mouseLooking);
             ImGui::Checkbox("Debug view", &settings_.debugView);
             ImGui::Checkbox("Hitboxes", &settings_.hitboxes);
             ImGui::Checkbox("Bloom", &settings_.bloom);
-            ImGui::Checkbox("Simple flight", &settings_.simpleFlight);
+            ImGui::Checkbox("Flight assist", &settings_.flightAssist);
+            ImGui::Checkbox("3D flight", &settings_.flight3d);
             ImGui::NewLine();
 
             if (netwBridg_->GetRole() == NetworkBridge::Role::Client)
