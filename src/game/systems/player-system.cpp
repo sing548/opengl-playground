@@ -9,10 +9,10 @@
 void PlayerSystem::Update(SystemsContext& ctx)
 {
     if (ctx.replay || ctx.authoritative)
-        ExecuteInput(ctx.dT, ctx.world, ctx.assMan, ctx.current, ctx.previous, ctx.localPlayerId, ctx.authoritative, ctx.settings.flightAssist, ctx.bridge);
+        ExecuteInput(ctx);
     else if (!ctx.replay && ctx.settings.predictiveClient)
     {
-        ExecuteInput(ctx.dT, ctx.world, ctx.assMan, ctx.current, ctx.previous, ctx.localPlayerId, ctx.authoritative, ctx.settings.flightAssist, ctx.bridge);
+        ExecuteInput(ctx);
         Shoot(ctx.world, ctx.assMan, ctx.localPlayerId, ctx.dT, ctx.current, ctx.previous, true, ctx.bridge);
     }
     if (!ctx.replay)
@@ -21,37 +21,44 @@ void PlayerSystem::Update(SystemsContext& ctx)
     }
 }
 
-void PlayerSystem::ExecuteInput(float dT,
-                                GameWorld& gameWorld,
-                                AssetManager& assMan,
-                                std::unordered_map<uint32_t, InputState>& currentInputStates,
-                                std::unordered_map<uint32_t, InputState>& previousInputStates,
-                                uint32_t playerId,
-                                bool authoritative,
-                                bool lockRAndV,
-                                NetworkBridge& bridge
-                            )
+void PlayerSystem::ExecuteInput(SystemsContext& ctx)
 { 
     
-    for (auto& [id, state] : currentInputStates)
+    for (auto& [id, state] : ctx.current)
     {
-        if (!gameWorld.GetScene().ModelExists(id)) continue;
-        auto& model = gameWorld.GetScene().GetModelByReference(id);
+        if (!ctx.world.GetScene().ModelExists(id)) continue;
+        auto& model = ctx.world.GetScene().GetModelByReference(id);
 
         auto forward = model.GetForward();
 
         float rate = 2.1f;
 
-        glm::quat change = 
-            glm::angleAxis(state.pitch * rate * dT, model.GetRight())
-          * glm::angleAxis(state.yaw   * rate * dT, model.GetUp())
-          * glm::angleAxis(state.roll  * rate * dT, model.GetForward());  
+        auto rS = model.GetRotationSpeed();
 
-        RotateModel(id, gameWorld.GetScene(), change, lockRAndV);
+        rS = state.pitch * rate * model.GetRight() + 
+             state.yaw * rate * model.GetUp() +
+             state.roll * rate * model.GetForward();
+
+        model.SetRotationSpeed(rS);
+
+        if (state.flightAssist)
+        {
+            float speed = glm::length(model.GetVelocity());
+
+            if (speed > 1e-5f)
+            {
+                float assistStrength = 1.0f;
+                glm::vec3 dir = model.GetVelocity() / speed;
+                glm::vec3 nose = model.GetForward();
+                glm::vec3 newDir = glm::normalize(glm::mix(dir, nose, assistStrength));
+
+                model.SetVelocity(newDir * speed);
+            }
+        }
 
         if (state.thrust > 0.0f) 
         {
-            float acc = dT * 0.15f;
+            float acc = ctx.dT * 0.15f;
             glm::vec3 speed = model.GetVelocity();
             speed += acc * model.GetForward();
 
@@ -60,34 +67,34 @@ void PlayerSystem::ExecuteInput(float dT,
             model.SetVelocity(speed);
         } else 
         {
-            float acc = dT * 0.15f;
+            float acc = ctx.dT * 0.15f;
             //if (state.backward)
             //    acc = dT * .6f;
 
-            glm::vec3 speed = gameWorld.GetScene().GetModelByReference(id).GetVelocity();
+            glm::vec3 speed = ctx.world.GetScene().GetModelByReference(id).GetVelocity();
             
             float speedLength = glm::length(speed);
 
             if (speedLength <= acc || speedLength < 0.05)
                 speed = glm::vec3(0.0f);
-            else
-                speed -= (speed / speedLength) * acc;
+            else if (state.flightAssist)
+                speed -= (speed / speedLength) * (acc * 2);
 
-            gameWorld.GetScene().GetModelByReference(id).SetVelocity(speed);
+            ctx.world.GetScene().GetModelByReference(id).SetVelocity(speed);
         }
 
-        if (!authoritative) continue;
+        if (!ctx.authoritative) continue;
 
-        Shoot(gameWorld, assMan, id, dT, currentInputStates, previousInputStates, false, bridge);
+        Shoot(ctx.world, ctx.assMan, id, ctx.dT, ctx.current, ctx.previous, false, ctx.bridge);
     }
 }
 
-void PlayerSystem::RotateModel(unsigned int id, Scene& scene, const glm::quat& change, bool lockRAndV) 
+void PlayerSystem::RotateModel(unsigned int id, Scene& scene, const glm::quat& change, SystemsContext& ctx) 
 {
     Model& model = scene.GetModelByReference(id);
     model.RotateBy(change);
 
-    if (lockRAndV)
+    if (ctx.current.at(id).flightAssist)
     {
         glm::vec3 velocity = model.GetVelocity();
         velocity = change * velocity;

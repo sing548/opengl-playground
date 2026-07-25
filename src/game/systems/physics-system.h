@@ -18,8 +18,8 @@ public:
     bool CanReplay() override { return true; }
     int GetOrder() const override { return static_cast<int>(SystemOrder::PhysicsSystem); }
 private:
-    void MoveModels(float dT, GameWorld& gameWorld, bool authoritative);
-    void MoveModel(float dT, Scene& Scene, unsigned int id, const glm::vec3& change);
+    void MoveModels(SystemsContext& ctx);
+    void MoveModel(SystemsContext& ctx, uint32_t id);
     void CheckHits(GameWorld& gameWorld, ITerrainHandler& terrain, bool authoritative, bool predictive);
     bool Collide(const Model& a, const Model& b);
     void TryCollide(Scene& scene, uint32_t idA, uint32_t idB);

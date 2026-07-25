@@ -21,18 +21,9 @@ public:
     bool CanReplay() override { return true; }
 private:
     uint32_t localPredCounter = 0x8000000;
-    void ExecuteInput(float dT,
-                      GameWorld& gameWorld,
-                      AssetManager& assMan,
-                      std::unordered_map<uint32_t, InputState>& currentInputStates,
-                      std::unordered_map<uint32_t, InputState>& previousInputStates,
-                      uint32_t playerId,
-                      bool authoritative,
-                      bool flightAssist,
-                      NetworkBridge& bridge
-                    );
+    void ExecuteInput(SystemsContext& ctx);
     void UpdatePlayerData(float dT, GameWorld& gameWorld);
-    void RotateModel(uint32_t id, Scene& scene, const glm::quat& change, bool lockRotationAndVelocity);
+    void RotateModel(uint32_t id, Scene& scene, const glm::quat& change, SystemsContext& ctx);
     void Shoot(GameWorld& gameWorld,
                AssetManager& assMan,
                uint32_t playerId,

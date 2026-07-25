@@ -34,6 +34,7 @@ void InputSystem::Update(SystemsContext& ctx)
     }
 
     state.shoot = rawMan_.KeyDown(GLFW_KEY_SPACE) || rawMan_.GamepadButtonDown(GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER);
+    state.flightAssist = ctx.settings.flightAssist;
 }
 
 void InputSystem::EvaluateFloat(int keyA, int keyB, float& val)

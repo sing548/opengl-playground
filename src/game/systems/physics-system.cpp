@@ -9,12 +9,12 @@ void PhysicsSystem::Update(SystemsContext& ctx)
 {
     if (!ctx.replay)
     {
-        MoveModels(ctx.dT, ctx.world, ctx.authoritative);
+        MoveModels(ctx);
 
         if (!ctx.authoritative && ctx.settings.predictiveClient && ctx.world.GetScene().ModelExists(ctx.localPlayerId))
         {
             auto& model = ctx.world.GetScene().GetModelByReference(ctx.localPlayerId);
-            MoveModel(ctx.dT, ctx.world.GetScene(), ctx.localPlayerId, model.GetVelocity());
+            MoveModel(ctx, ctx.localPlayerId);
         }
 
         CheckHits(ctx.world, ctx.terrainHandler, ctx.authoritative, ctx.settings.predictiveClient);
@@ -26,40 +26,51 @@ void PhysicsSystem::Update(SystemsContext& ctx)
     {
         if (!ctx.world.GetScene().ModelExists(ctx.localPlayerId)) return;
         auto& model = ctx.world.GetScene().GetModelByReference(ctx.localPlayerId);
-        glm::vec3 change = model.GetVelocity();
-        MoveModel(ctx.dT, ctx.world.GetScene(), ctx.localPlayerId, change);
+        MoveModel(ctx, ctx.localPlayerId);
     }
 }
 
-void PhysicsSystem::MoveModels(float dT, GameWorld& gameWorld, bool authoritative)
+void PhysicsSystem::MoveModels(SystemsContext& ctx)
 {
-    gameWorld.GetScene().currentFurthestPosition = glm::vec3(0.0f, 0.0f, 0.0f);
+    ctx.world.GetScene().currentFurthestPosition = glm::vec3(0.0f, 0.0f, 0.0f);
 
-    if (authoritative)
-    for (auto& [id, model] : gameWorld.GetScene().GetModels())
+    if (ctx.authoritative)
+    for (auto& [id, model] : ctx.world.GetScene().GetModels())
     {
-        glm::vec3 change = model.GetVelocity();
-        MoveModel(dT, gameWorld.GetScene(), id, change);
+        MoveModel(ctx, id);
 
         auto position = model.GetPosition();
-        if ((abs(position.x) > 80 || abs(position.z) > 80) && !gameWorld.IsPlayer(id))
-            gameWorld.MarkEntityForDelete(id);
+        if ((abs(position.x) > 80 || abs(position.z) > 80) && !ctx.world.IsPlayer(id))
+            ctx.world.MarkEntityForDelete(id);
     }
 
     else
-    for (auto& [id, _] : gameWorld.GetShotData())
+    for (auto& [id, _] : ctx.world.GetShotData())
     {
-        auto& model = gameWorld.GetScene().GetModelByReference(id);
-        MoveModel(dT, gameWorld.GetScene(), id, model.GetVelocity());
+        auto& model = ctx.world.GetScene().GetModelByReference(id);
+        MoveModel(ctx, id);
     }
 }
 
-void PhysicsSystem::MoveModel(float dT, Scene& scene, unsigned int id, const glm::vec3& change)
+void PhysicsSystem::MoveModel(SystemsContext& ctx, uint32_t id)
 {
-    Model& model = scene.GetModelByReference(id);
+    auto& scene = ctx.world.GetScene();
+    Model& model = ctx.world.GetScene().GetModelByReference(id);
     glm::vec3 position = model.GetPosition();
-    position += change * dT * 60.0f;
+    position += model.GetVelocity() * ctx.dT * 60.0f;
     model.SetPosition(position);
+
+
+    glm::quat rotation = model.GetRotation();
+    glm::vec3 rS = model.GetRotationSpeed();
+    float w = glm::length(rotation);
+
+    if (w > 1e-6f) {
+        glm::vec3 axis = rS / w;
+        glm::quat dR   = glm::angleAxis(w * ctx.dT, axis);
+        rotation = glm::normalize(dR * rotation);
+        model.SetRotation(rotation);
+    }
 
     if (abs(position.x) > scene.currentFurthestPosition.x) scene.currentFurthestPosition.x = abs(position.x);
     if (abs(position.z) > scene.currentFurthestPosition.z) scene.currentFurthestPosition.z = abs(position.z);

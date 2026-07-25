@@ -7,16 +7,17 @@
 #include <glm/ext/quaternion_float.hpp>
 
 struct InputState {
-    uint32_t  id    = 0;
-    float pitch     = 0.0f;
-    float yaw       = 0.0f;
-    float roll      = 0.0f;
-    float thrust    = 0.0f;
+    uint32_t  id        = 0;
+    float pitch         = 0.0f;
+    float yaw           = 0.0f;
+    float roll          = 0.0f;
+    float thrust        = 0.0f;
     // ToDo: Add lateral and vertical thrust
-    bool shoot     = false;
-    uint32_t tick  = 0;
+    bool shoot          = false;
+    bool flightAssist   = true;
+    uint32_t tick       = 0;
 
-    MSGPACK_DEFINE(id, pitch, yaw, roll, thrust, shoot, tick);
+    MSGPACK_DEFINE(id, pitch, yaw, roll, thrust, shoot, flightAssist, tick);
 };
 
 struct EntityState {
