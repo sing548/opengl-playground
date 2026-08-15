@@ -1,0 +1,24 @@
+{
+  "res": 1024,
+  "worldSize": 3200.0,
+  "minHeight": 94.58333333333334,
+  "maxHeight": 503.64583333333337,
+  "baseHeight": 0.0,
+  "verticalExaggeration": 1.0,
+  "metresPerUnit": 9.6,
+  "minHeightMetres": 908.0,
+  "maxHeightMetres": 4835.0,
+  "seed": 234626787,
+  "model": "xandergos/terrain-diffusion-30m",
+  "nativeResolution": 30.0,
+  "coarseCell": [
+    8,
+    -33
+  ],
+  "bbox": [
+    1536,
+    -8960,
+    2560,
+    -7936
+  ]
+}

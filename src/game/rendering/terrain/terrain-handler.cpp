@@ -1,10 +1,12 @@
 #include "terrain-handler.h"
 
+#include "baked-map-generator.h"
 #include "flat-chunk-generator.h"
 
 TerrainHandler::TerrainHandler(std::unique_ptr<Material> material) : material_(std::move(material)) 
 {
-    chunkGenerator_ = std::make_unique<FlatChunkGenerator>();
+    //chunkGenerator_ = std::make_unique<FlatChunkGenerator>();
+    chunkGenerator_ = std::make_unique<BakedMapGenerator>();
 }
 
 TerrainHandler::~TerrainHandler() = default;

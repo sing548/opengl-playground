@@ -64,6 +64,7 @@ add_executable(OpenGLPlayground
     src/game/rendering/materials/hitbox-material.cpp
     src/game/rendering/materials/model-material.cpp
     src/game/rendering/materials/terrain-material.cpp
+    src/game/rendering/terrain/baked-map-generator.cpp
     src/game/rendering/terrain/fbm-noise.cpp
     src/game/rendering/terrain/flat-chunk-generator.cpp
     src/game/rendering/terrain/terrain-handler.cpp

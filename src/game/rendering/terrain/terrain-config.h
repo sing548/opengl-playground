@@ -1,14 +1,14 @@
 class TerrainConfig
 {
 public:
-    static constexpr float HeightScale = 18.0f;
-    static constexpr float HeightOffset = -19.0f;
+    static constexpr float HeightScale = 400.0f;
+    static constexpr float HeightOffset = -250.0f;
 
     static constexpr float MinHeight = HeightOffset;
     static constexpr float MaxHeight = HeightOffset + HeightScale;
 
-    static constexpr int RenderArea = 10;
-    static constexpr int LowLoDArea = 7;
+    static constexpr int RenderArea = 20;
+    static constexpr int LowLoDArea = 8;
     static constexpr float RegionSize = 30.0f;
     static constexpr int RegionResolution = 64;
     static constexpr int LowLodRegionResolution = 16;
@@ -22,8 +22,8 @@ public:
     static constexpr float SnowEnd = MinHeight + 0.8 * HeightScale;
     static constexpr float RockStart = 0.2f;
     static constexpr float RockEnd = 0.4f;
-    static constexpr float FogStart = 100.0f;
-    static constexpr float FogEnd = 400.0f;
+    static constexpr float FogStart = 300.0f;
+    static constexpr float FogEnd = 600.0f;
     static constexpr float FogColor = 0.01f;
     static constexpr float TexScale = 0.2f;
 };

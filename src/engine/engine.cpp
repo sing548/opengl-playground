@@ -196,8 +196,10 @@ void Engine::Run()
         // FPS counter in console
         if (fpsTime >= 1) {
             debugStats_.Flush(fpsTime);
-            std::cout << "Current FPS: " << i / fpsTime << std::endl;
-            std::cout << "Current Logic/s: " << j / fpsTime << std::endl;
+            debugStats_["frame.logicps"].Add((float)(i/fpsTime));
+            debugStats_["frame.fps"].Add((float)(j/fpsTime));
+            //std::cout << "Current FPS: " << i / fpsTime << std::endl;
+            //std::cout << "Current Logic/s: " << j / fpsTime << std::endl;
             i = 0;
             j = 0;
             fpsTime = 0;
@@ -339,7 +341,7 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, 
 
 std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 {
-    glm::mat4 projection = glm::perspective(glm::radians(window_->GetCamera().GetZoom()), (float)window_->GetSize().width / (float)window_->GetSize().height, 0.1f, 500.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(window_->GetCamera().GetZoom()), (float)window_->GetSize().width / (float)window_->GetSize().height, 1.0f, 600.0f);
 	glm::mat4 view = window_->GetCamera().GetViewMatrix();
 	auto& models = gameWorld_.GetScene().GetModels();
 
