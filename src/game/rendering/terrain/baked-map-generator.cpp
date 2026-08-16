@@ -14,19 +14,29 @@
 
 #include "terrain-config.h"
 
-BakedMapGenerator::BakedMapGenerator()
+BakedMapGenerator::BakedMapGenerator(float verticalOffset) : verticalOffset_(verticalOffset)
 {
-    auto path = std::filesystem::path(FileHelper::GetAssetsDir()) / "worlds" / "234626787" / "ci8_cj-33";
-    unsigned short* data = stbi_load_16((path / "heightmap.png").string().c_str(), &width_, &height_, &channels_, 0);
-    vData_ = std::vector<uint16_t>(data, data + (width_ * height_));
     ReadMapConfig();
+
+    auto path = std::filesystem::path(FileHelper::GetAssetsDir()) / "worlds" / "234626787" / "ci8_cj-33";
+    unsigned short* data = stbi_load_16((path / "heightmap.png").string().c_str(), &width_, &height_, nullptr, 1);
+    
+    if (data == nullptr)
+    {
+        std::string s = stbi_failure_reason();
+        throw std::runtime_error("heightmap.png file read failed" + s);
+    }
+
+    const float scale = (maxHeight_ - minHeight_) / 65535.0f;
+    const size_t count = (size_t)width_ * height_;
+    vData_.resize(count);
+    std::transform(data, data + count, vData_.begin(), [&](uint16_t d) { return (float) d * scale + minHeight_; });
+
     stbi_image_free(data);
 }
 
 ChunkData BakedMapGenerator::Generate(const ChunkRegion& region) const
-{
-    int width, height, channels;
-    
+{   
     ChunkData chunk;
     std::vector<Vertex> vertices;
 
@@ -136,14 +146,14 @@ float BakedMapGenerator::HeightAt(float x, float z) const
     const float fz = cv - z0;
 
     auto texel = [&](int px, int pz) {
-        return (float)vData_[pz * width_ + px] / 65535.0f;
+        return vData_[pz * width_ + px];
     };
 
     const float h = std::lerp(std::lerp(texel(x0, z0), texel(x1, z0), fx),
                               std::lerp(texel(x0, z1), texel(x1, z1), fx),
                               fz);
 
-    return h * TerrainConfig::HeightScale + TerrainConfig::HeightOffset;
+    return h + verticalOffset_;
 }
 
 glm::vec3 BakedMapGenerator::NormalAt(glm::vec3 pos) const 
@@ -174,8 +184,6 @@ void BakedMapGenerator::ReadMapConfig()
         heightmapFile.close();
 
         heightmapCode = ss.str();
-
-        std::cout << heightmapCode << std::endl;
     }
     catch (std::ifstream::failure e)
     {
@@ -200,6 +208,24 @@ void BakedMapGenerator::ReadMapConfig()
     {
         std::cerr << "Loading heightmap: " << path << std::endl;
         std::cerr << "ERROR::TERRAIN::KEY_NOT_CONTAINED: worldSize" << std::endl;
+        throw std::runtime_error("Heightmap file parse failed");
+    }
+
+    if (v.contains("minHeight") && v.get("minHeight").is<double>())
+        minHeight_ = static_cast<float>(v.get("minHeight").get<double>());
+    else
+    {
+        std::cerr << "Loading heightmap: " << path << std::endl;
+        std::cerr << "ERROR::TERRAIN::KEY_NOT_CONTAINED: minHeight" << std::endl;
+        throw std::runtime_error("Heightmap file parse failed");
+    }
+
+    if (v.contains("maxHeight") && v.get("maxHeight").is<double>())
+        maxHeight_ = static_cast<float>(v.get("maxHeight").get<double>());
+    else
+    {
+        std::cerr << "Loading heightmap: " << path << std::endl;
+        std::cerr << "ERROR::TERRAIN::KEY_NOT_CONTAINED: maxHeight" << std::endl;
         throw std::runtime_error("Heightmap file parse failed");
     }
 }

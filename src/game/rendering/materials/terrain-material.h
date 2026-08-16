@@ -9,14 +9,14 @@
 class TerrainMaterial : public Material
 {
 public:
-    explicit TerrainMaterial(std::unique_ptr<Shader> s, AssetManager& assMan);
+    explicit TerrainMaterial(std::unique_ptr<Shader> s, AssetManager& assMan, float bandMin, float bandMax);
 
     void ApplyFrame(const FrameGlobals& g) override;
     void ApplyInstance(const glm::mat4& model, const glm::vec4& tint) override;
 private:
-    AssetManager assMan_;
     GLuint grass_, rock_, snow_;
     GLuint gNorm_, rNorm_, sNorm_;
+    float bandMin_, bandMax_;
 };
 
 #endif

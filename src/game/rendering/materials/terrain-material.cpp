@@ -3,20 +3,20 @@
 #include "../terrain/terrain-config.h"
 #include "../../../engine/helpers/file-helper.h"
 
-TerrainMaterial::TerrainMaterial(std::unique_ptr<Shader> shader, AssetManager& assMan) 
-                : Material(std::move(shader)), assMan_(assMan)
+TerrainMaterial::TerrainMaterial(std::unique_ptr<Shader> shader, AssetManager& assMan, float bandMin, float bandMax) 
+                : Material(std::move(shader)), bandMin_(bandMin), bandMax_(bandMax)
 {
-    grass_ = assMan_.LoadTexture(std::filesystem::path(
+    grass_ = assMan.LoadTexture(std::filesystem::path(
                     FileHelper::GetAssetsDir()) / "textures" / "rocky_terrain_02_1k" / "rocky_terrain_02_diff_1k.jpg", true);
-    gNorm_ = assMan_.LoadTexture(std::filesystem::path(
+    gNorm_ = assMan.LoadTexture(std::filesystem::path(
                     FileHelper::GetAssetsDir()) / "textures" / "rocky_terrain_02_1k" / "rocky_terrain_02_nor_gl_1k.jpg");
-    rock_ = assMan_.LoadTexture(std::filesystem::path(
+    rock_ = assMan.LoadTexture(std::filesystem::path(
                     FileHelper::GetAssetsDir()) / "textures" / "seaside_rock_1k" / "seaside_rock_diff_1k.jpg", true);
-    rNorm_ = assMan_.LoadTexture(std::filesystem::path(
+    rNorm_ = assMan.LoadTexture(std::filesystem::path(
                     FileHelper::GetAssetsDir()) / "textures" / "seaside_rock_1k" / "seaside_rock_nor_gl_1k.jpg");
-    snow_ = assMan_.LoadTexture(std::filesystem::path(
+    snow_ = assMan.LoadTexture(std::filesystem::path(
                     FileHelper::GetAssetsDir()) / "textures" / "snow_02_1k"/ "snow_02_diff_1k.jpg", true);
-    sNorm_ = assMan_.LoadTexture(std::filesystem::path(
+    sNorm_ = assMan.LoadTexture(std::filesystem::path(
                     FileHelper::GetAssetsDir()) / "textures" / "snow_02_1k" / "snow_02_nor_gl_1k.jpg");
 
     
@@ -76,10 +76,12 @@ void TerrainMaterial::ApplyFrame(const FrameGlobals& globals)
     glBindTexture(GL_TEXTURE_2D, sNorm_);
     shader_->SetInt("snowNormal", 5);
 
-    shader_->SetFloat("snowStart", TerrainConfig::SnowStart);
-    shader_->SetFloat("snowEnd", TerrainConfig::SnowEnd);
+    shader_->SetFloat("snowStartFrac", TerrainConfig::SnowStartFrac);
+    shader_->SetFloat("snowEndFrac", TerrainConfig::SnowEndFrac);
     shader_->SetFloat("rockStart", TerrainConfig::RockStart);
     shader_->SetFloat("rockEnd", TerrainConfig::RockEnd);
+    shader_->SetFloat("bandMin", bandMin_);
+    shader_->SetFloat("bandMax", bandMax_);
 
     shader_->SetFloat("fogStart", TerrainConfig::FogStart);
     shader_->SetFloat("fogEnd", TerrainConfig::FogEnd);

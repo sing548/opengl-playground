@@ -3,11 +3,10 @@
 #include "baked-map-generator.h"
 #include "flat-chunk-generator.h"
 
-TerrainHandler::TerrainHandler(std::unique_ptr<Material> material) : material_(std::move(material)) 
-{
-    //chunkGenerator_ = std::make_unique<FlatChunkGenerator>();
-    chunkGenerator_ = std::make_unique<BakedMapGenerator>();
-}
+//TerrainHandler::TerrainHandler(std::vector<World> worlds) : worlds_(worlds) {}
+
+TerrainHandler::TerrainHandler(std::unique_ptr<Material> material, std::unique_ptr<IChunkGenerator> chunkGenerator)
+        : material_(std::move(material)), chunkGenerator_(std::move(chunkGenerator)) {}
 
 TerrainHandler::~TerrainHandler() = default;
 
@@ -70,7 +69,7 @@ TerrainHandler::TerrainCollision TerrainHandler::CheckCollision(glm::vec3 pos, f
     };
 
     float bottom = pos.y - radius;
-    if (bottom > TerrainConfig::MaxHeight)
+    if (bottom > chunkGenerator_->MaxHeight())
     {
         return col;
     }

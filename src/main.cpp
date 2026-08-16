@@ -39,6 +39,8 @@
 #include "game/rendering/materials/hitbox-material.h"
 #include "game/rendering/materials/terrain-material.h"
 
+#include "game/rendering/terrain/baked-map-generator.h"
+
 
 int main(int argc, const char *argv[]) {
 
@@ -199,8 +201,10 @@ int main(int argc, const char *argv[]) {
     auto hitboxMat = std::make_unique<HitboxMaterial>(std::move(hitboxShader));
     engine->AddMaterial(static_cast<uint16_t>(GameMaterial::Hitbox), std::move(hitboxMat));
 
-    auto terrainMat = std::make_unique<TerrainMaterial>(std::move(terrainShader), engine->GetAssMan());
-    auto tH = std::make_unique<TerrainHandler>(std::move(terrainMat));
+    auto gen = std::make_unique<BakedMapGenerator>(-345.0f);
+    auto terrainMat = std::make_unique<TerrainMaterial>(std::move(terrainShader), engine->GetAssMan(),
+                                                        gen->MinHeight(), gen->MaxHeight());
+    auto tH = std::make_unique<TerrainHandler>(std::move(terrainMat), std::move(gen));
     engine->AddTerrainHandler(std::move(tH));
 
     engine->Run();

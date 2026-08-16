@@ -26,13 +26,16 @@ struct PointLight {
 
 in vec3 FragPos;
 in vec3 Normal;
+in vec3 LocalPos;
 
 uniform vec3 viewPos;
 uniform DirLight dirLight;
 uniform PointLight pointLights[MAX_POINT_LIGHTS];
 uniform int numPointLights;
-uniform float snowStart;
-uniform float snowEnd;
+uniform float snowStartFrac;
+uniform float snowEndFrac;
+uniform float bandMin;
+uniform float bandMax;
 uniform float rockStart;
 uniform float rockEnd;
 uniform float fogStart;
@@ -66,7 +69,8 @@ void main()
 
 	float slope = 1.0 - N.y;
 
-	float snowyness = smoothstep(snowStart, snowEnd, FragPos.y);
+	float t = (LocalPos.y - bandMin) / (bandMax - bandMin);
+	float snowyness = smoothstep(snowStartFrac, snowEndFrac, t);
 	vec3 ground = mix(grass, snow, snowyness);
 
 	float rockyness = smoothstep(rockStart, rockEnd, slope);

@@ -15,6 +15,14 @@
 
 class AssetManager {
 public:
+    AssetManager() = default;
+    ~AssetManager() {};
+
+    AssetManager(const AssetManager&)            = delete;
+    AssetManager& operator=(const AssetManager&) = delete;
+    AssetManager(AssetManager&&)                 = delete;
+    AssetManager& operator=(AssetManager&&)      = delete;
+
     unsigned int LoadTexture(const std::string& fullPath, bool srgb = false);
     std::vector<std::shared_ptr<Mesh>> LoadModel(const std::string& path);
 private:
