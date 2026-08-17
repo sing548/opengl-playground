@@ -1,59 +1,86 @@
 #include "terrain-handler.h"
 
-#include "baked-map-generator.h"
-#include "flat-chunk-generator.h"
-
-//TerrainHandler::TerrainHandler(std::vector<World> worlds) : worlds_(worlds) {}
-
-TerrainHandler::TerrainHandler(std::unique_ptr<Material> material, std::unique_ptr<IChunkGenerator> chunkGenerator)
-        : material_(std::move(material)), chunkGenerator_(std::move(chunkGenerator)) {}
+TerrainHandler::TerrainHandler(std::vector<World> worlds) : worlds_(std::move(worlds)) {}
 
 TerrainHandler::~TerrainHandler() = default;
 
-void TerrainHandler::HandleChunksForArea(const glm::ivec2& area)
+void TerrainHandler::UpdateStreaming(const glm::vec3& observerPos)
+{
+    for (auto& world : worlds_)
+    {
+        const glm::vec3 local = glm::conjugate(world.info.Orientation) * (observerPos - world.info.Origin);
+
+        const glm::ivec2 area {
+            (int)std::floor(local.x / TerrainConfig::RegionSize),
+            (int)std::floor(local.z / TerrainConfig::RegionSize)
+        };
+
+        constexpr float renderRange = TerrainConfig::RenderArea * TerrainConfig::RegionSize;
+        constexpr float exitMargin = TerrainConfig::Hysteresis * TerrainConfig::RegionSize;
+
+        const float enter = world.info.Radius + renderRange;
+        const float exit = enter + exitMargin;
+        const float d2 = local.x * local.x + local.z * local.z;
+
+        const float threshold = world.lastCheckInRange ? exit : enter;
+        const bool inRange = d2 <= threshold * threshold;
+
+        const bool changed = (area != world.lastArea) || (inRange != world.lastCheckInRange);
+        world.lastArea = area;
+        world.lastCheckInRange = inRange;
+
+        if (!changed) continue;
+        
+        if (inRange) RefreshChunks(world, area);
+        CullChunks(world, area);
+    }
+}
+
+void TerrainHandler::RefreshChunks(World& world, const glm::ivec2 area)
 {
     for (int i =  area.x - TerrainConfig::RenderArea; i <= area.x + TerrainConfig::RenderArea; i++)
     {
         for (int j = area.y - TerrainConfig::RenderArea; j <= area.y + TerrainConfig::RenderArea; j++)
         {
-            auto it = chunks_.find({ i, j });
-            int dist = std::max(std::abs(i - area.x), std::abs(j - area.y));
-            bool lowLod = dist > TerrainConfig::LowLoDArea;
-            bool deleted = false;
+            const int dist    = std::max(std::abs(i - area.x), std::abs(j - area.y));
+            const bool lowLod = dist > TerrainConfig::LowLoDArea;
+            const int lod     = lowLod ? TerrainConfig::LowLodRegionResolution : TerrainConfig::RegionResolution;
 
-            if (it != chunks_.end() && (
-                    !lowLod && it->second.lod != TerrainConfig::RegionResolution
-                ))
+            auto it = world.chunks.find({ i, j});
+
+            if (it != world.chunks.end())
             {
-                chunks_.erase({ i, j });
-                deleted = true;
+                // Only re-generate higher quality. Don't regenerate lower quality - causes stuttering in frametimws 
+                // rather than just a little higher draw count
+                if (lowLod || it->second.lod == TerrainConfig::RegionResolution) continue;
+
+                world.chunks.erase(it);
             }
 
-            if (deleted || it == chunks_.end())
-            {
-                ChunkRegion region {
-                    { i, j },
-                    TerrainConfig::RegionSize,
-                    lowLod ?  TerrainConfig::LowLodRegionResolution : TerrainConfig::RegionResolution
-                };
-                ChunkData data = chunkGenerator_->Generate(region);
-                Chunk chunk;
-                chunk.mesh = chunkHandler_.UploadChunk(data);
-                chunk.lod = lowLod ?  TerrainConfig::LowLodRegionResolution : TerrainConfig::RegionResolution;
-                chunks_.emplace(glm::ivec2(i, j), chunk);
-            }
+            ChunkRegion region {
+                { i, j },
+                TerrainConfig::RegionSize,
+                lod
+            };
+
+            Chunk chunk;
+            chunk.mesh = chunkHandler_.UploadChunk(world.generator->Generate(region));
+            chunk.lod = lod;
+            world.chunks.emplace(glm::ivec2(i, j), chunk);
         }
     }
+}
 
-    for (auto it = chunks_.begin(); it != chunks_.end();)
+void TerrainHandler::CullChunks(World& world, const glm::ivec2& area)
+{
+    constexpr int limit = TerrainConfig::RenderArea + TerrainConfig::Hysteresis;
+
+    for (auto it = world.chunks.begin(); it != world.chunks.end();)
     {
-        glm::ivec2 chunk = it->first;
+        const glm::ivec2 chunk = it->first;
 
-        if (chunk.x < area.x - TerrainConfig::RenderArea - TerrainConfig::Hysteresis ||
-            chunk.x > area.x + TerrainConfig::RenderArea + TerrainConfig::Hysteresis ||
-            chunk.y < area.y - TerrainConfig::RenderArea - TerrainConfig::Hysteresis ||
-            chunk.y > area.y + TerrainConfig::RenderArea + TerrainConfig::Hysteresis )
-            it = chunks_.erase(it);
+        if (std::abs(chunk.x - area.x) > limit || std::abs(chunk.y - area.y) > limit)
+            it = world.chunks.erase(it);
         else
             ++it;
     }
@@ -68,36 +95,54 @@ TerrainHandler::TerrainCollision TerrainHandler::CheckCollision(glm::vec3 pos, f
         { 0.0f, 0.0f, 0.0f}
     };
 
-    float bottom = pos.y - radius;
-    if (bottom > chunkGenerator_->MaxHeight())
+    for (auto& world : worlds_)
     {
-        return col;
+        const glm::vec3 local = glm::conjugate(world.info.Orientation) * (pos - world.info.Origin);
+
+        if (local.x * local.x + local.z * local.z >  world.info.Radius * world.info.Radius)
+            continue;
+
+        const float bottom = local.y - radius;
+        if (bottom > world.generator->MaxHeight())
+            continue;
+
+        const float height = world.generator->HeightAt(local.x, local.z);
+        if (bottom >= height)
+            continue;
+
+        col.collided = true;
+        col.penetration = height - bottom;
+        col.normal = world.info.Orientation * world.generator->NormalAt(local);
+        break;
     }
 
-    float height = chunkGenerator_->HeightAt(pos.x, pos.z);
-
-    col.collided = bottom < height;
-    col.penetration = height - bottom;
-    
-    if (col.collided)
-        col.normal = chunkGenerator_->NormalAt(pos);
-    
     return col;
 }
 
 std::vector<DrawCommand> TerrainHandler::BuildDrawCommands(RenderPass rp)
 {
     std::vector<DrawCommand> dcs;
-    dcs.reserve(chunks_.size());
 
-    for (auto& [iv, mp] : chunks_)
+    size_t reserveSpace = 0;
+    for (auto& world : worlds_) reserveSpace += world.chunks.size();
+
+    dcs.reserve(reserveSpace);
+
+    for (auto& world : worlds_)
     {
-        DrawCommand dc;
-        dc.mesh = mp.mesh.get();
-        dc.material = material_.get();
-        dc.transform = glm::mat4(1.0f);
-        dc.renderPass = rp;
-        dcs.push_back(dc);
+
+        const glm::mat4 transform = glm::translate(glm::mat4(1.0f), world.info.Origin)
+                                    * glm::mat4_cast(world.info.Orientation);
+    
+        for (auto& [iv, mp] : world.chunks)
+        {
+            DrawCommand dc;
+            dc.mesh = mp.mesh.get();
+            dc.material = world.material.get();
+            dc.transform = transform;
+            dc.renderPass = rp;
+            dcs.push_back(dc);
+        }
     }
 
     return dcs;

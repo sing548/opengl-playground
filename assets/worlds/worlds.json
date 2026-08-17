@@ -1,9 +1,13 @@
 [{
-    "origin": {
-        "x": 0.0,
-        "y": -345.0,
-        "z": 0.0
-    },
+    "origin": [0.0, -550.0, 0.0],
+    "orientation": [1.0, 0.0, 0.0, 0.0],
+    "radius": 1400.0,
+    "type": "BAKED",
+    "tilePath": "234626787",
+    "originTile": "ci8_cj-33"
+}, {
+    "origin": [300.0, 550.0, 0.0],
+    "orientation": [0.0, 1.0, 0.0, 0.0],
     "radius": 1400.0,
     "type": "BAKED",
     "tilePath": "234626787",

@@ -27,6 +27,7 @@ struct PointLight {
 in vec3 FragPos;
 in vec3 Normal;
 in vec3 LocalPos;
+in vec3 LocalNormal;
 
 uniform vec3 viewPos;
 uniform DirLight dirLight;
@@ -67,7 +68,7 @@ void main()
 	vec3 rock = TriplanarTexture(rockTex, FragPos, N, blend);//vec3(0.3, 0.3, 0.3);
 	vec3 snow = TriplanarTexture(snowTex, FragPos, N, blend);//vec3(0.8, 0.8, 0.8);
 
-	float slope = 1.0 - N.y;
+	float slope = 1.0 - normalize(LocalNormal).y;
 
 	float t = (LocalPos.y - bandMin) / (bandMax - bandMin);
 	float snowyness = smoothstep(snowStartFrac, snowEndFrac, t);

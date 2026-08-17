@@ -1,5 +1,5 @@
 #ifndef TERRAIN_SYSTEM_H
-#define TERRAIN_SYSYTEM_H
+#define TERRAIN_SYSTEM_H
 
 #include "../rendering/terrain/terrain-handler.h"
 #include "../../engine/systems/i-gameplay-system.h"
@@ -15,7 +15,6 @@ public:
     GameplayPhase GetPhase() const override { return GameplayPhase::Simulation; }
     int GetOrder() const override { return static_cast<int>(SystemOrder::TerrainSystem); }
 private:
-    glm::ivec2 lastArea_ { INT_MAX, INT_MAX };
 };
 
 #endif

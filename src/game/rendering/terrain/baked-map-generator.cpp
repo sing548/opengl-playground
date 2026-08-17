@@ -14,7 +14,7 @@
 
 #include "terrain-config.h"
 
-BakedMapGenerator::BakedMapGenerator(float verticalOffset) : verticalOffset_(verticalOffset)
+BakedMapGenerator::BakedMapGenerator()
 {
     ReadMapConfig();
 
@@ -153,7 +153,7 @@ float BakedMapGenerator::HeightAt(float x, float z) const
                               std::lerp(texel(x0, z1), texel(x1, z1), fx),
                               fz);
 
-    return h + verticalOffset_;
+    return h;
 }
 
 glm::vec3 BakedMapGenerator::NormalAt(glm::vec3 pos) const 

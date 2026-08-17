@@ -6,13 +6,13 @@
 
 #include <glm/glm.hpp>
 
+#include "world-info.h"
 #include "terrain-config.h"
 #include "../../../engine/rendering/materials/material.h"
 #include "../../../engine/rendering/terrain/chunk-handler.h"
 #include "../../../engine/rendering/terrain/chunk-structs.h"
 #include "../../../engine/rendering/terrain/i-terrain-handler.h"
 
-struct World;
 struct DrawCommand;
 struct FrameGlobals;
 
@@ -21,21 +21,17 @@ class IChunkGenerator;
 class TerrainHandler : public ITerrainHandler
 {
 public:
-    //TerrainHandler(std::vector<World> worlds);
-    TerrainHandler(std::unique_ptr<Material> material, std::unique_ptr<IChunkGenerator> chunkGenerator);
+    TerrainHandler(std::vector<World> worlds);
     ~TerrainHandler() override;
-    void HandleChunksForArea(const glm::ivec2& area) override;
+    void UpdateStreaming(const glm::vec3& observerPos) override;
     TerrainCollision CheckCollision(glm::vec3 pos, float radius) override;
-    float GetRegionSize() const override { return TerrainConfig::RegionSize; }; 
     std::vector<DrawCommand> BuildDrawCommands(RenderPass rp) override;
 private:
     ChunkHandler chunkHandler_;
-    //std::vector<World> worlds_;
-    
-    std::unique_ptr<Material> material_;
-    std::unique_ptr<IChunkGenerator> chunkGenerator_;
-    std::unordered_map<glm::ivec2, Chunk, IVec2Hash> chunks_;
-    
+    std::vector<World> worlds_;
+
+    void RefreshChunks(World& world, const glm::ivec2 area);
+    void CullChunks(World& world, const glm::ivec2& area);
 };
 
 #endif

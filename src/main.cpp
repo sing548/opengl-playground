@@ -126,6 +126,7 @@ int main(int argc, const char *argv[]) {
 	    (std::filesystem::path(base) / "negz.png").string()
 	};
 
+    
     std::unique_ptr<Sky> sky = std::make_unique<Sky>(faces);
     engine->AddSceneRenderable(std::move(sky));
 	std::unique_ptr<Grass> grass = std::make_unique<Grass>();
@@ -137,7 +138,6 @@ int main(int argc, const char *argv[]) {
     engine->AddSceneRenderable(std::move(deathExplosion));
     std::unique_ptr<ConTrail> ct = std::make_unique<ConTrail>(engine->GetGameWorld());
     engine->AddSceneRenderable(std::move(ct));
-
 
     auto phys = std::make_unique<PhysicsSystem>();
     engine->AddGameplaySystem(std::move(phys));
@@ -193,7 +193,6 @@ int main(int argc, const char *argv[]) {
     
     auto modelShader  = std::make_unique<Shader>(modelVert.c_str(), modelFrag.c_str());
 	auto hitboxShader = std::make_unique<Shader>(hitboxVert.c_str(), hitboxFrag.c_str());
-    auto terrainShader = std::make_unique<Shader>(terrainVert.c_str(), terrainFrag.c_str());
 
     auto modelMat = std::make_unique<ModelMaterial>(std::move(modelShader));
     engine->AddMaterial(static_cast<uint16_t>(GameMaterial::Model), std::move(modelMat));
@@ -201,11 +200,23 @@ int main(int argc, const char *argv[]) {
     auto hitboxMat = std::make_unique<HitboxMaterial>(std::move(hitboxShader));
     engine->AddMaterial(static_cast<uint16_t>(GameMaterial::Hitbox), std::move(hitboxMat));
 
-    auto gen = std::make_unique<BakedMapGenerator>(-345.0f);
-    auto terrainMat = std::make_unique<TerrainMaterial>(std::move(terrainShader), engine->GetAssMan(),
-                                                        gen->MinHeight(), gen->MaxHeight());
-    auto tH = std::make_unique<TerrainHandler>(std::move(terrainMat), std::move(gen));
-    engine->AddTerrainHandler(std::move(tH));
+    std::vector<World> worlds;
+
+    std::vector<WorldInfo> wis = LoadWorldInfos((std::filesystem::path(FileHelper::GetAssetsDir()) / "worlds" / "worlds.json"));
+
+    for (auto& wi : wis)
+    {
+        auto terrainShader = std::make_unique<Shader>(terrainVert.c_str(), terrainFrag.c_str());
+
+        World w;
+        w.info = wi;
+        w.generator         = std::make_unique<BakedMapGenerator>();
+        w.material          = std::make_unique<TerrainMaterial>(std::move(terrainShader), engine->GetAssMan(),
+                                                                w.generator->MinHeight(), w.generator->MaxHeight());
+        worlds.push_back(std::move(w));
+    }
+
+    engine->AddTerrainHandler(std::make_unique<TerrainHandler>(std::move(worlds)));
 
     engine->Run();
 
