@@ -6,5 +6,5 @@
 std::shared_ptr<Mesh> ChunkHandler::UploadChunk(const ChunkData& data)
 {
     std::vector<Texture> emptyTextures;
-    return std::make_shared<Mesh>(data.vertices, data.indices, emptyTextures);
+    return std::make_shared<Mesh>(std::move(data.vertices), std::move(data.indices), std::move(emptyTextures));
 }

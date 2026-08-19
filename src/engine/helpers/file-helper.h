@@ -12,11 +12,12 @@ public:
     
     static std::string GetShaderDir();
     static std::string GetAssetsDir();
-
+    static std::string GetConfigDir();
 private:
     static std::string baseDir_;
     static std::string assetsDir_;
     static std::string shaderDir_;
+    static std::string configDir_;
 };
 
 #endif

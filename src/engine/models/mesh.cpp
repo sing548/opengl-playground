@@ -1,10 +1,8 @@
 #include "mesh.h"
 
 Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures)
+	: vertices(std::move(vertices)), indices(std::move(indices)), textures(std::move(textures))
 {
-	this->vertices = vertices;
-	this->indices = indices;
-	this->textures = textures;
 	SetupMesh();
 }
 
@@ -17,11 +15,12 @@ Mesh::~Mesh()
 
 Mesh::Mesh(Mesh&& m) noexcept
 	: vertices(std::move(m.vertices)), indices(std::move(m.indices)),
-	  textures(std::move(m.textures)), VAO(m.VAO), VBO_(m.VBO_), EBO_(m.EBO_)
+	  textures(std::move(m.textures)), VAO(m.VAO), VBO_(m.VBO_), EBO_(m.EBO_), matId_(m.matId_), hitboxMatId_(m.hitboxMatId_), indexCount_(m.indexCount_)
 {
 	m.VAO = 0;
 	m.VBO_ = 0;
 	m.EBO_ = 0;
+	m.indexCount_ = 0;
 }
 
 Mesh& Mesh::operator=(Mesh&& other) noexcept
@@ -39,10 +38,14 @@ Mesh& Mesh::operator=(Mesh&& other) noexcept
 	VAO = other.VAO;
 	VBO_ = other.VBO_;
 	EBO_ = other.EBO_;
+	matId_ = other.matId_;
+	hitboxMatId_ = other.hitboxMatId_;
+	indexCount_ = other.indexCount_;
 
 	other.VAO = 0;
 	other.VBO_ = 0;
 	other.EBO_ = 0;
+	other.indexCount_ = 0;
 
 	return *this;
 }
@@ -77,7 +80,7 @@ void Mesh::Draw(Shader &shader) const
 		glBindTexture(GL_TEXTURE_2D, textures[i].id);
 	 }
 	glBindVertexArray(VAO);
-	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, indexCount_, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 }
 
@@ -111,4 +114,11 @@ void Mesh::SetupMesh()
 	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Bitangent));
 
 	glBindVertexArray(0);
+
+	indexCount_ = static_cast<GLsizei>(indices.size());
+	// Try clearing these after the move is done
+	vertices.clear();
+	vertices.shrink_to_fit();
+	indices.clear();
+	indices.shrink_to_fit();
 }

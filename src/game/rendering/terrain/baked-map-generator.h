@@ -1,11 +1,15 @@
 #pragma once
 
+#include <filesystem>
+
 #include "../../../engine/rendering/terrain/chunk-generator.h"
+
+#include "world-info.h"
 
 class BakedMapGenerator : public IChunkGenerator
 {
 public:
-    BakedMapGenerator();
+    BakedMapGenerator(WorldInfo wi);
     ~BakedMapGenerator() = default;
     ChunkData Generate(const ChunkRegion& region) const override;
     float HeightAt(float x, float z) const override;
@@ -17,5 +21,5 @@ private:
     int width_, height_;
     float worldSize_, minHeight_, maxHeight_;
 
-    void ReadMapConfig();
+    void ReadMapConfig(std::filesystem::path path);
 };

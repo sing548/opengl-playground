@@ -24,6 +24,8 @@ struct WorldInfo
     glm::vec3   Origin      { 0.0f };
     glm::quat   Orientation { 1.0f, 0.0f, 0.0f, 0.0f };
     float       Radius      { 0.0f };
+    float       Edge        { 0.0f };
+    float       Thickness   { 0.0f };
     WorldType   Type;
     std::string TilePath;
     std::string OriginTile;
@@ -80,6 +82,16 @@ struct WorldInfo
 
         if (it_radius != obj.end() && it_radius->second.is<double>())
             wi.Radius = static_cast<float>(it_radius->second.get<double>());
+
+        auto it_edge = obj.find("edge");
+
+        if (it_edge != obj.end() && it_edge->second.is<double>())
+            wi.Edge = static_cast<float>(it_edge->second.get<double>());
+
+        auto it_thickness = obj.find("thickness");
+
+        if (it_thickness != obj.end() && it_thickness->second.is<double>())
+            wi.Thickness = static_cast<float>(it_thickness->second.get<double>());
 
         auto it_type = obj.find("type");
 

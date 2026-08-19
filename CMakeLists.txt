@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15) # Bumped for better vcpkg support
+cmake_minimum_required(VERSION 3.26) # Bumped for better vcpkg support
 project(OpenGLPlayground LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -65,6 +65,7 @@ add_executable(OpenGLPlayground
     src/game/rendering/materials/model-material.cpp
     src/game/rendering/materials/terrain-material.cpp
     src/game/rendering/terrain/baked-map-generator.cpp
+    src/game/rendering/terrain/disk-world-generator.cpp
     src/game/rendering/terrain/fbm-noise.cpp
     src/game/rendering/terrain/flat-chunk-generator.cpp
     src/game/rendering/terrain/terrain-handler.cpp
@@ -167,7 +168,7 @@ endif()
 # relinks). $<TARGET_FILE_DIR:...> resolves to the actual exe directory for any
 # config (Debug/Release) and any platform, so this works everywhere.
 add_custom_command(TARGET OpenGLPlayground POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/assets"
         "$<TARGET_FILE_DIR:OpenGLPlayground>/assets"
     COMMENT "Copying assets to output directory"
@@ -175,14 +176,23 @@ add_custom_command(TARGET OpenGLPlayground POST_BUILD
 
 # Shaders change constantly during development, so copy them on EVERY build:
 # custom targets are always considered out-of-date, so this command re-runs even
-# when no source changed and the exe wasn't relinked. copy_directory is instant
+# when no source changed and the exe wasn't relinked. copy_directory_if_different is instant
 # for small text files. (Assets stay on POST_BUILD above — re-copying multi-MB
 # skyboxes every build would be wasted I/O, and they rarely change.)
 add_custom_target(copy_shaders ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders"
         "$<TARGET_FILE_DIR:OpenGLPlayground>/shaders"
     COMMENT "Copying shaders to output directory"
 )
 # Build the exe first so its output directory exists before we copy into it.
 add_dependencies(copy_shaders OpenGLPlayground)
+
+# Copy Config so debugging gets easier
+add_custom_target(copy_config ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/config"
+        "$<TARGET_FILE_DIR:OpenGLPlayground>/config"
+    COMMENT "Copying config to output directory"
+)
+add_dependencies(copy_config OpenGLPlayground)

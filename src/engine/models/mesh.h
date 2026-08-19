@@ -52,6 +52,8 @@ private:
 	uint16_t matId_ = static_cast<uint16_t>(MaterialId::Default);
 	uint16_t hitboxMatId_ = static_cast<uint16_t>(MaterialId::HitboxDefault);
 
+	GLsizei indexCount_ = 0;
+	
     void SetupMesh();
 };
 

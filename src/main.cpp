@@ -40,7 +40,7 @@
 #include "game/rendering/materials/terrain-material.h"
 
 #include "game/rendering/terrain/baked-map-generator.h"
-
+#include "game/rendering/terrain/disk-world-generator.h"
 
 int main(int argc, const char *argv[]) {
 
@@ -126,7 +126,7 @@ int main(int argc, const char *argv[]) {
 	    (std::filesystem::path(base) / "negz.png").string()
 	};
 
-    
+
     std::unique_ptr<Sky> sky = std::make_unique<Sky>(faces);
     engine->AddSceneRenderable(std::move(sky));
 	std::unique_ptr<Grass> grass = std::make_unique<Grass>();
@@ -202,7 +202,7 @@ int main(int argc, const char *argv[]) {
 
     std::vector<World> worlds;
 
-    std::vector<WorldInfo> wis = LoadWorldInfos((std::filesystem::path(FileHelper::GetAssetsDir()) / "worlds" / "worlds.json"));
+    std::vector<WorldInfo> wis = LoadWorldInfos((std::filesystem::path(FileHelper::GetConfigDir()) / "worlds.json"));
 
     for (auto& wi : wis)
     {
@@ -210,7 +210,8 @@ int main(int argc, const char *argv[]) {
 
         World w;
         w.info = wi;
-        w.generator         = std::make_unique<BakedMapGenerator>();
+        //w.generator         = std::make_unique<BakedMapGenerator>(wi);
+        w.generator         = std::make_unique<DiskWorldGenerator>(wi);
         w.material          = std::make_unique<TerrainMaterial>(std::move(terrainShader), engine->GetAssMan(),
                                                                 w.generator->MinHeight(), w.generator->MaxHeight());
         worlds.push_back(std::move(w));

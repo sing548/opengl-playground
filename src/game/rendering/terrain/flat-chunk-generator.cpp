@@ -7,6 +7,7 @@ ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
 {
     ChunkData chunk;
     std::vector<Vertex> vertices;
+    vertices.reserve((region.resolution + 1) * (region.resolution + 1));
 
     for (unsigned int i = 0; i <= region.resolution; i++)
     {
@@ -68,7 +69,7 @@ ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
         }
     }
 
-    chunk.vertices = vertices;
+    chunk.vertices = std::move(vertices);
 
     chunk.indices.reserve(region.resolution * region.resolution * 6);
 

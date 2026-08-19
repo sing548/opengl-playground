@@ -8,17 +8,17 @@
 #include <sstream>
 #include <charconv>
 #include <iostream>
-#include <filesystem>
 
 #include "../../../engine/helpers/file-helper.h"
 
 #include "terrain-config.h"
 
-BakedMapGenerator::BakedMapGenerator()
+BakedMapGenerator::BakedMapGenerator(WorldInfo wi)
 {
-    ReadMapConfig();
-
     auto path = std::filesystem::path(FileHelper::GetAssetsDir()) / "worlds" / "234626787" / "ci8_cj-33";
+    
+    ReadMapConfig(path);
+
     unsigned short* data = stbi_load_16((path / "heightmap.png").string().c_str(), &width_, &height_, nullptr, 1);
     
     if (data == nullptr)
@@ -39,6 +39,7 @@ ChunkData BakedMapGenerator::Generate(const ChunkRegion& region) const
 {   
     ChunkData chunk;
     std::vector<Vertex> vertices;
+    vertices.reserve((region.resolution + 1) * (region.resolution + 1));
 
     // Calculate height for each point of resolution by interpolating height from .png
     for (unsigned int i = 0; i <= region.resolution; i++)
@@ -102,7 +103,7 @@ ChunkData BakedMapGenerator::Generate(const ChunkRegion& region) const
         }
     }
 
-    chunk.vertices = vertices;
+    chunk.vertices = std::move(vertices);
 
 
     // Calculate indices
@@ -168,11 +169,11 @@ glm::vec3 BakedMapGenerator::NormalAt(glm::vec3 pos) const
     return glm::normalize(glm::vec3(dXn - dXp, 2.0f * epsilon, dZn - dZp));
 }
 
-void BakedMapGenerator::ReadMapConfig()
+void BakedMapGenerator::ReadMapConfig(std::filesystem::path path)
 {
     std::string heightmapCode;
     std::ifstream heightmapFile;
-    auto path = std::filesystem::path(FileHelper::GetAssetsDir()) / "worlds" / "234626787" / "ci8_cj-33" / "heightmap.json";
+    path = path / "heightmap.json";
 
     try 
     {

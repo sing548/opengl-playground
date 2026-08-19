@@ -16,14 +16,25 @@ void TerrainHandler::UpdateStreaming(const glm::vec3& observerPos)
         };
 
         constexpr float renderRange = TerrainConfig::RenderArea * TerrainConfig::RegionSize;
-        constexpr float exitMargin = TerrainConfig::Hysteresis * TerrainConfig::RegionSize;
+        constexpr float exitMargin  = TerrainConfig::Hysteresis * TerrainConfig::RegionSize;
+
+        const float margin = world.lastCheckInRange ? renderRange + exitMargin : renderRange;
+
+        const float d2 = local.x * local.x + local.z * local.z;
+        const float radial = world.info.Radius + margin;
+
+        const float top     = world.generator->MaxHeight();
+        const float bottom  = world.generator->MinHeight() - world.info.Thickness;
 
         const float enter = world.info.Radius + renderRange;
         const float exit = enter + exitMargin;
-        const float d2 = local.x * local.x + local.z * local.z;
+        
+        const float normalDist = local.y > top    ? local.y - top
+                               : local.y < bottom ? bottom - local.y
+                               : 0.0f;
 
-        const float threshold = world.lastCheckInRange ? exit : enter;
-        const bool inRange = d2 <= threshold * threshold;
+        const bool inRange = d2 <= radial * radial
+                          && normalDist <= margin;
 
         const bool changed = (area != world.lastArea) || (inRange != world.lastCheckInRange);
         world.lastArea = area;
@@ -98,6 +109,9 @@ TerrainHandler::TerrainCollision TerrainHandler::CheckCollision(glm::vec3 pos, f
     for (auto& world : worlds_)
     {
         const glm::vec3 local = glm::conjugate(world.info.Orientation) * (pos - world.info.Origin);
+
+        if (local.y < world.generator->MinHeight() - world.info.Thickness)
+            continue;
 
         if (local.x * local.x + local.z * local.z >  world.info.Radius * world.info.Radius)
             continue;
