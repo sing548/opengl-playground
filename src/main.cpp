@@ -202,19 +202,21 @@ int main(int argc, const char *argv[]) {
 
     std::vector<World> worlds;
 
-    std::vector<WorldInfo> wis = LoadWorldInfos((std::filesystem::path(FileHelper::GetConfigDir()) / "worlds.json"));
+    std::vector<DiskWorldInfo> wis = LoadDiskWorldInfos((std::filesystem::path(FileHelper::GetConfigDir()) / "worlds.json"));
 
     for (auto& wi : wis)
     {
-        auto terrainShader = std::make_unique<Shader>(terrainVert.c_str(), terrainFrag.c_str());
-
-        World w;
-        w.info = wi;
-        //w.generator         = std::make_unique<BakedMapGenerator>(wi);
-        w.generator         = std::make_unique<DiskWorldGenerator>(wi);
-        w.material          = std::make_unique<TerrainMaterial>(std::move(terrainShader), engine->GetAssMan(),
-                                                                w.generator->MinHeight(), w.generator->MaxHeight());
-        worlds.push_back(std::move(w));
+        for (const auto& info : wi.ToWorlds())
+        {
+            auto terrainShader = std::make_unique<Shader>(terrainVert.c_str(), terrainFrag.c_str());
+    
+            World w;
+            w.info              = info;
+            w.generator         = std::make_unique<DiskWorldGenerator>(w.info);
+            w.material          = std::make_unique<TerrainMaterial>(std::move(terrainShader), engine->GetAssMan(),
+                                                                    w.generator->MinHeight(), w.generator->MaxHeight());
+            worlds.push_back(std::move(w));
+        }
     }
 
     engine->AddTerrainHandler(std::make_unique<TerrainHandler>(std::move(worlds)));

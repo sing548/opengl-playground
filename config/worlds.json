@@ -2,9 +2,16 @@
     "origin": [0.0, -550.0, 0.0],
     "orientation": [1.0, 0.0, 0.0, 0.0],
     "radius": 1600.0,
-    "edge": 20,
-    "thickness": 100.0,
-    "type": "BAKED",
-    "tilePath": "234626787",
-    "originTile": "ci8_cj-33"
+    "edge": 80,
+    "thickness": 200.0,
+    "faceA": {
+        "type": "BAKED",
+        "tilePath": "234626787",
+        "originTile": "ci8_cj-33"
+    },
+    "faceB": {
+        "type": "BAKED",
+        "tilePath": "234626787",
+        "originTile": "ci8_cj-33"
+    }
 }]

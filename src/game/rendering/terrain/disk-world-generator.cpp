@@ -16,10 +16,38 @@ ChunkData DiskWorldGenerator::Generate(const ChunkRegion& region) const
     const float inner = radius_ - edge_;
     constexpr float eps = 1.6f;
 
+    std::vector<unsigned int> kept;
+    kept.reserve(d.indices.size());
+
+    for (size_t i = 0; i +2 < d.indices.size(); i+= 3)
+    {
+        bool anyInsideDisk = false;
+
+        for (int j = 0; j < 3; ++j)
+        {
+            const auto& pos = d.vertices[d.indices[i + j]].Position;
+            
+            if (pos.x * pos.x + pos.z * pos.z <= radius_ * radius_)
+            {
+                anyInsideDisk = true;
+                break;
+            }
+        }
+
+        if (anyInsideDisk)
+        {
+            kept.push_back(d.indices[i]);
+            kept.push_back(d.indices[i + 1]);
+            kept.push_back(d.indices[i + 2]);
+        }
+    }
+
+    d.indices = std::move(kept);
+
     for (auto& v : d.vertices)
     {
         const float r = std::sqrt(v.Position.x * v.Position.x + v.Position.z * v.Position.z);
-        v.Position.y = InnerHeight(v.Position.x, v.Position.z, v.Position.y);
+        v.Position.y = HeightAt(v.Position.x, v.Position.z);
 
         if (r > inner - eps)
             v.Normal = NormalAt(v.Position);
@@ -30,7 +58,8 @@ ChunkData DiskWorldGenerator::Generate(const ChunkRegion& region) const
 
 float DiskWorldGenerator::HeightAt(float x, float z) const
 {
-    return InnerHeight(x, z, worldGenerator_->HeightAt(x, z));
+    const float relief = worldGenerator_->HeightAt(x,z) - worldGenerator_->MinHeight();
+    return InnerHeight(x, z, relief + thickness_);
 }
 
 glm::vec3 DiskWorldGenerator::NormalAt(glm::vec3 pos) const
@@ -48,7 +77,7 @@ glm::vec3 DiskWorldGenerator::NormalAt(glm::vec3 pos) const
 float DiskWorldGenerator::InnerHeight(float x, float z, float h) const
 {
     const float inner  = radius_ - edge_;
-    const float floory = worldGenerator_->MinHeight() - thickness_;
+    const float floory = 0.0f;
     const float r      = std::sqrt(x * x + z * z);
 
     float t = glm::clamp((r - inner) / std::max(edge_, 0.001f), 0.0f, 1.0f);

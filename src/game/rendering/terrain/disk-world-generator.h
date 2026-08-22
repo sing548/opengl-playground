@@ -12,8 +12,9 @@ public:
     ChunkData Generate(const ChunkRegion& region) const override;
     float HeightAt(float x, float z) const override;
     glm::vec3 NormalAt(glm::vec3 position) const override;
-    float MinHeight() const override { return worldGenerator_->MinHeight(); };
-    float MaxHeight() const override { return worldGenerator_->MaxHeight(); };
+    float MinHeight() const override { return thickness_; };
+    float MaxHeight() const override { return thickness_ + 
+                                        (worldGenerator_->MaxHeight() - worldGenerator_->MinHeight()); };
 private:
     float radius_, edge_, thickness_;
     std::unique_ptr<IChunkGenerator> worldGenerator_;

@@ -8,7 +8,7 @@ void TerrainHandler::UpdateStreaming(const glm::vec3& observerPos)
 {
     for (auto& world : worlds_)
     {
-        const glm::vec3 local = glm::conjugate(world.info.Orientation) * (observerPos - world.info.Origin);
+        const glm::vec3 local = world.info.ToLocalCoords(observerPos);
 
         const glm::ivec2 area {
             (int)std::floor(local.x / TerrainConfig::RegionSize),
@@ -49,10 +49,12 @@ void TerrainHandler::UpdateStreaming(const glm::vec3& observerPos)
 
 void TerrainHandler::RefreshChunks(World& world, const glm::ivec2 area)
 {
-    for (int i =  area.x - TerrainConfig::RenderArea; i <= area.x + TerrainConfig::RenderArea; i++)
+    for (int i = area.x - TerrainConfig::RenderArea; i <= area.x + TerrainConfig::RenderArea; i++)
     {
         for (int j = area.y - TerrainConfig::RenderArea; j <= area.y + TerrainConfig::RenderArea; j++)
         {
+            if (!world.info.ChunkOnDisk({ i, j }, TerrainConfig::RegionSize)) continue;
+
             const int dist    = std::max(std::abs(i - area.x), std::abs(j - area.y));
             const bool lowLod = dist > TerrainConfig::LowLoDArea;
             const int lod     = lowLod ? TerrainConfig::LowLodRegionResolution : TerrainConfig::RegionResolution;
@@ -90,7 +92,10 @@ void TerrainHandler::CullChunks(World& world, const glm::ivec2& area)
     {
         const glm::ivec2 chunk = it->first;
 
-        if (std::abs(chunk.x - area.x) > limit || std::abs(chunk.y - area.y) > limit)
+        const bool chunkOutsideDisk = !world.info.ChunkOnDisk(chunk, TerrainConfig::RegionSize);
+        const bool outOfRange       = std::abs(chunk.x - area.x) > limit || std::abs(chunk.y - area.y) > limit;
+
+        if (chunkOutsideDisk || outOfRange)
             it = world.chunks.erase(it);
         else
             ++it;
@@ -108,9 +113,9 @@ TerrainHandler::TerrainCollision TerrainHandler::CheckCollision(glm::vec3 pos, f
 
     for (auto& world : worlds_)
     {
-        const glm::vec3 local = glm::conjugate(world.info.Orientation) * (pos - world.info.Origin);
+        const glm::vec3 local = world.info.ToLocalCoords(pos);
 
-        if (local.y < world.generator->MinHeight() - world.info.Thickness)
+        if (local.y < 0.0f)
             continue;
 
         if (local.x * local.x + local.z * local.z >  world.info.Radius * world.info.Radius)
@@ -145,11 +150,12 @@ std::vector<DrawCommand> TerrainHandler::BuildDrawCommands(RenderPass rp)
     for (auto& world : worlds_)
     {
 
-        const glm::mat4 transform = glm::translate(glm::mat4(1.0f), world.info.Origin)
-                                    * glm::mat4_cast(world.info.Orientation);
+        const glm::mat4 transform = world.info.Transform();
     
         for (auto& [iv, mp] : world.chunks)
         {
+            if (!mp.mesh) continue;
+            
             DrawCommand dc;
             dc.mesh = mp.mesh.get();
             dc.material = world.material.get();

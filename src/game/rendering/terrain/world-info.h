@@ -3,11 +3,14 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <optional>
 #include <unordered_map>
 
 #include <glm/glm.hpp>
 #include "picojson/picojson.h"
+#include <glm/gtc/constants.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "../../../engine/rendering/materials/material.h"
 #include "../../../engine/rendering/terrain/chunk-structs.h"
@@ -19,6 +22,13 @@ enum class WorldType
     GENERATED
 };
 
+struct FaceInfo
+{
+    WorldType   Type       { WorldType::GENERATED };
+    std::string TilePath;
+    std::string OriginTile;
+};
+
 struct WorldInfo
 {
     glm::vec3   Origin      { 0.0f };
@@ -26,13 +36,76 @@ struct WorldInfo
     float       Radius      { 0.0f };
     float       Edge        { 0.0f };
     float       Thickness   { 0.0f };
-    WorldType   Type;
+
+    WorldType   Type       { WorldType::GENERATED };
     std::string TilePath;
     std::string OriginTile;
 
-    static struct WorldInfo FromJson(const picojson::value& v)
+    glm::vec3 ToLocalCoords(const glm::vec3& worldCoords) const
     {
-        WorldInfo wi;
+        return glm::conjugate(Orientation) * (worldCoords - Origin);
+    }
+
+    glm::mat4 Transform() const
+    {
+        return glm::translate(glm::mat4(1.0f), Origin) * glm::mat4_cast(Orientation);
+    }
+
+    bool ChunkOnDisk(const glm::ivec2& coord, float regionSize) const
+    {
+        const float minX = coord.x * regionSize;
+        const float maxX = minX + regionSize;
+        const float minZ = coord.y * regionSize;
+        const float maxZ = minZ + regionSize;
+
+        const float x = std::clamp(0.0f, minX, maxX);
+        const float z = std::clamp(0.0f, minZ, maxZ);
+
+        return x * x + z * z <= Radius * Radius;
+    }
+
+};
+
+struct DiskWorldInfo
+{
+    glm::vec3   Origin      { 0.0f };
+    glm::quat   Orientation { 1.0f, 0.0f, 0.0f, 0.0f };
+    float       Radius      { 0.0f };
+    float       Edge        { 0.0f };
+    float       Thickness   { 0.0f };
+    FaceInfo    FaceA;
+    std::optional<FaceInfo> FaceB;
+
+    std::vector<WorldInfo> ToWorlds() const
+    {
+        auto gen = [&](const FaceInfo& f, bool flipped)
+        {
+            WorldInfo wi;
+            wi.Origin      = Origin;
+            wi.Orientation = flipped ?
+                Orientation * glm::angleAxis(glm::pi<float>(), glm::vec3(1, 0, 0)) :
+                Orientation;
+            wi.Radius      = Radius;
+            wi.Edge        = Edge;
+            wi.Thickness   = Thickness;
+            wi.Type        = f.Type;
+            wi.TilePath    = f.TilePath;
+            wi.OriginTile  = f.OriginTile;
+
+            return wi;
+        };
+
+        std::vector<WorldInfo> res;
+        res.push_back(gen(FaceA, false));
+
+        if (FaceB) res.push_back(gen(*FaceB, true));
+        
+        return res;
+    }
+
+    static struct DiskWorldInfo FromJson(const picojson::value& v)
+    {
+        DiskWorldInfo wi;
 
         if (!v.is<picojson::object>())
             throw std::runtime_error("World no valid json");
@@ -93,26 +166,70 @@ struct WorldInfo
         if (it_thickness != obj.end() && it_thickness->second.is<double>())
             wi.Thickness = static_cast<float>(it_thickness->second.get<double>());
 
-        auto it_type = obj.find("type");
 
-        if (it_type != obj.end() && it_type->second.is<std::string>())
+        auto it_faceA = obj.find("faceA");
+
+        if (it_faceA != obj.end() && it_faceA->second.is<picojson::object>())
         {
-            std::string str = it_type->second.get<std::string>();
+            auto pfaceA = it_faceA->second.get<picojson::object>();
 
-            if (str == "BAKED")          wi.Type = WorldType::BAKED;
-            else if (str == "GENERATED") wi.Type = WorldType::GENERATED;
-            else throw std::runtime_error("Unknown WorldType: " + str);
+            FaceInfo face;
+
+            auto it_type = pfaceA.find("type");
+
+            if (it_type != pfaceA.end() && it_type->second.is<std::string>())
+            {
+                std::string str = it_type->second.get<std::string>();
+
+                if (str == "BAKED")          face.Type = WorldType::BAKED;
+                else if (str == "GENERATED") face.Type = WorldType::GENERATED;
+                else throw std::runtime_error("Unknown WorldType: " + str);
+            }
+
+            auto it_tilePath = pfaceA.find("tilePath");
+
+            if (it_tilePath != pfaceA.end() && it_tilePath->second.is<std::string>())
+                face.TilePath = it_tilePath->second.get<std::string>();
+
+            auto it_originTile = pfaceA.find("originTile");
+            
+            if (it_originTile != pfaceA.end() && it_originTile->second.is<std::string>())
+                face.OriginTile = it_originTile->second.get<std::string>();
+
+            wi.FaceA = face;
         }
 
-        auto it_tilePath = obj.find("tilePath");
+        auto it_faceB = obj.find("faceB");
 
-        if (it_tilePath != obj.end() && it_tilePath->second.is<std::string>())
-            wi.TilePath = it_tilePath->second.get<std::string>();
+        if (it_faceB != obj.end() && it_faceB->second.is<picojson::object>())
+        {
+            auto pfaceB = it_faceB->second.get<picojson::object>();
 
-        auto it_originTile = obj.find("originTile");
- 
-        if (it_originTile != obj.end() && it_originTile->second.is<std::string>())
-            wi.OriginTile = it_originTile->second.get<std::string>();
+            FaceInfo face;
+
+            auto it_type = pfaceB.find("type");
+
+            if (it_type != pfaceB.end() && it_type->second.is<std::string>())
+            {
+                std::string str = it_type->second.get<std::string>();
+
+                if (str == "BAKED")          face.Type = WorldType::BAKED;
+                else if (str == "GENERATED") face.Type = WorldType::GENERATED;
+                else throw std::runtime_error("Unknown WorldType: " + str);
+            }
+
+            auto it_tilePath = pfaceB.find("tilePath");
+
+            if (it_tilePath != pfaceB.end() && it_tilePath->second.is<std::string>())
+                face.TilePath = it_tilePath->second.get<std::string>();
+
+            auto it_originTile = pfaceB.find("originTile");
+            
+            if (it_originTile != pfaceB.end() && it_originTile->second.is<std::string>())
+                face.OriginTile = it_originTile->second.get<std::string>();
+
+            wi.FaceB = face;
+        }
 
         return wi;
     }
@@ -120,7 +237,7 @@ struct WorldInfo
 
 struct World
 {
-    WorldInfo                                           info;
+    WorldInfo                                       info;
     std::unique_ptr<Material>                           material;
     std::unique_ptr<IChunkGenerator>                    generator;
     std::unordered_map<glm::ivec2, Chunk, IVec2Hash>    chunks;
@@ -129,7 +246,7 @@ struct World
     bool       lastCheckInRange = false;
 };
 
-inline std::vector<WorldInfo> LoadWorldInfos(const std::filesystem::path& path)
+inline std::vector<DiskWorldInfo> LoadDiskWorldInfos(const std::filesystem::path& path)
 {
     std::string json;
     std::ifstream worldsJson;
@@ -161,7 +278,7 @@ inline std::vector<WorldInfo> LoadWorldInfos(const std::filesystem::path& path)
         throw std::runtime_error("worlds info file read parsed");
     }
 
-    std::vector<WorldInfo> worlds;
+    std::vector<DiskWorldInfo> worlds;
 
     if (v.is<picojson::array>())
     {   
@@ -169,10 +286,11 @@ inline std::vector<WorldInfo> LoadWorldInfos(const std::filesystem::path& path)
 
         for (const auto& vw : arr)
         {
-            worlds.push_back(WorldInfo::FromJson(vw));
+            worlds.push_back(DiskWorldInfo::FromJson(vw));
         }
     }
     else
         throw std::runtime_error("worlds json not expected format");
+
     return worlds;
 }

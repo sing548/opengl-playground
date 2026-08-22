@@ -15,7 +15,7 @@
 
 BakedMapGenerator::BakedMapGenerator(WorldInfo wi)
 {
-    auto path = std::filesystem::path(FileHelper::GetAssetsDir()) / "worlds" / "234626787" / "ci8_cj-33";
+    auto path = std::filesystem::path(FileHelper::GetAssetsDir()) / "worlds" / wi.TilePath / wi.OriginTile;
     
     ReadMapConfig(path);
 
