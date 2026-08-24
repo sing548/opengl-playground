@@ -3,7 +3,7 @@
 #include "chunk-structs.h"
 #include "../../models/mesh.h"
 
-std::shared_ptr<Mesh> ChunkHandler::UploadChunk(const ChunkData& data)
+std::shared_ptr<Mesh> ChunkHandler::UploadChunk(ChunkData&& data)
 {
     std::vector<Texture> emptyTextures;
     if (data.indices.empty())

@@ -30,8 +30,6 @@ NetworkBridge::~NetworkBridge() = default;
 void NetworkBridge::ManageGameStateDistribution(GameWorld& gameWorld, float dT)
 {
     auto& scene = gameWorld.GetScene();
-    uint32_t newClientId = 0;
-	const auto now = std::chrono::steady_clock::now();
 
     for (uint32_t id : scene.GetRemoveMarkedModels())
     {

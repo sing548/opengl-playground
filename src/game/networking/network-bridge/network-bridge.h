@@ -32,7 +32,7 @@ public:
     // ToDo: Before anything more than closed testing, some thought should be put in to "input"-sanitization
     // so that this is not an open attack surface
     void PollEvents(GameWorld& world, AssetManager& assMan);
-    const Role GetRole() { return role_; };
+    Role GetRole() const { return role_; };
 
 #pragma region network-debug
     int GetPendingStateSize() { return pendingStates_.size(); }
@@ -43,7 +43,7 @@ public:
 
     // ToDo: Think about adding bool if guessed (empty queue)
     std::unordered_map<uint32_t, InputState> ConsumeOldestInputStates();
-    const uint32_t GetCurrentTick() const { return currentTick_; };
+    uint32_t GetCurrentTick() const { return currentTick_; };
     void RespawnPlayers(GameWorld& world, AssetManager& assMan);
 #pragma endregion    
 

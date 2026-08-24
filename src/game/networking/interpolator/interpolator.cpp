@@ -45,8 +45,6 @@ void Interpolator::InterpolateGameState(Scene& scene, float renderTime, uint32_t
     auto& second = snapshots_.at(1);
 
     float deltaTime = second.gameTime - first.gameTime;
-
-    int count = snapshots_.size();
     
     float intFactor = std::clamp((renderTime - first.gameTime) / (second.gameTime - first.gameTime), 0.0f, 1.0f);
 

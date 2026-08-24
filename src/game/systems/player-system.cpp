@@ -29,8 +29,6 @@ void PlayerSystem::ExecuteInput(SystemsContext& ctx)
         if (!ctx.world.GetScene().ModelExists(id)) continue;
         auto& model = ctx.world.GetScene().GetModelByReference(id);
 
-        auto forward = model.GetForward();
-
         float rate = 2.1f;
 
         auto rS = model.GetRotationSpeed();

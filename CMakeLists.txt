@@ -145,6 +145,18 @@ if(WIN32)
     )
 endif()
 
+# Warnings on by default. These used to live inside the sanitizer block below,
+# so they only appeared when sanitizers were enabled -- but the slowdown there
+# was always the sanitizers, never the warnings. -Wall alone would have caught
+# several real bugs (assignment written as comparison, an unused local that
+# meant a parser read the wrong object, a missing return, a member init list
+# out of declaration order).
+if(MSVC)
+    target_compile_options(OpenGLPlayground PRIVATE /W4)
+else()
+    target_compile_options(OpenGLPlayground PRIVATE -Wall -Wextra)
+endif()
+
 # Sanitizers in explicitly created Debug builds,
 # otherwise performance degredation is too big for debugging
 # (Linux/macOS; GCC and Clang only)
@@ -152,7 +164,7 @@ option(ENABLE_SANITIZERS "Enable ASan + UBSan in Debug builds" OFF)
 
 if(ENABLE_SANITIZERS AND NOT MSVC
    AND CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_options(OpenGLPlayground PRIVATE -Wall -Wextra
+    target_compile_options(OpenGLPlayground PRIVATE
         -fsanitize=address,undefined
         -fno-sanitize=vptr  
         -fno-omit-frame-pointer

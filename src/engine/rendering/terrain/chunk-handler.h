@@ -9,7 +9,7 @@ class ChunkData;
 class ChunkHandler
 {
 public:
-std::shared_ptr<Mesh> UploadChunk(const ChunkData& data);
+std::shared_ptr<Mesh> UploadChunk(ChunkData&& data);
 private:
 };
 

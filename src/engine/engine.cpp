@@ -42,9 +42,9 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     glfwSetKeyCallback(window_->Get(), Engine::KeyCallback);
 
     // ToDo: Rethink what this should do 
-    glfwSetCursorPosCallback(window_->Get(), [](GLFWwindow* window, double xPos, double yPos) {
+    /*glfwSetCursorPosCallback(window_->Get(), [](GLFWwindow* window, double xPos, double yPos) {
         Engine* engine = static_cast<Engine*>(glfwGetWindowUserPointer(window));
-    });
+    });*/
 
 	glfwSetFramebufferSizeCallback(window_->Get(), [](GLFWwindow* w, int width, int height)
 	{
@@ -133,12 +133,6 @@ void Engine::Run()
     float deltaTime = 0.0f;
     double lastFrame = 0.0f;
 
-    int numDistanceForReset = 0;
-    float distanceForPlayerReset = 0.0f;
-    float biggestDistanceForReset = 0.0f;
-    glm::vec3 oldPlayerPos;
-    uint32_t newClient = 0;
-
     SortSystems();
 
     while (!glfwWindowShouldClose(window_->Get())) {
@@ -170,7 +164,7 @@ void Engine::Run()
         {
             ExecuteSystems(GameplayPhase::Input, FIXED_DELTA);
             ExecuteSystems(GameplayPhase::PreSimulation, FIXED_DELTA);
-            HandleLogic(FIXED_DELTA);
+            HandleLogic();
             ExecuteSystems(GameplayPhase::Simulation, FIXED_DELTA);
             accTime -= step;
             ExecuteSystems(GameplayPhase::PostSimulation, FIXED_DELTA);
@@ -192,6 +186,9 @@ void Engine::Run()
         
         window_->SwapBuffers();
 
+        debugStats_.Ring("frame.ms").Set(deltaTime * 1000.0f);
+        debugStats_.CommitFrame();
+
         ++i;
         // FPS counter in console
         if (fpsTime >= 1) {
@@ -209,7 +206,7 @@ void Engine::Run()
     std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
 }
 
-void Engine::HandleLogic(float deltaTime)
+void Engine::HandleLogic()
 {
     auto removed = gameWorld_.RemoveMarkedEntities();
     
@@ -296,7 +293,7 @@ void Engine::AddNewPlayer(uint32_t id)
     }
 }
 
-void Engine::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void Engine::KeyCallback(GLFWwindow* window, int key, int /*scancode*/, int action, int /*mods*/)
 {
     Engine* engine = static_cast<Engine*>(glfwGetWindowUserPointer(window));
 
@@ -535,6 +532,17 @@ void Engine::HandleImGui(int step)
                     int offset = stat.histCount < Stat::HISTORY_DURATION ? 0 : stat.histHead;
                     ImGui::PlotLines(("##" + name).c_str(), stat.hist.data(), stat.histCount, offset,
                                      nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 40));
+                }
+            }
+
+            if (ImGui::CollapsingHeader("Frame times"))
+            {
+                for (const auto& [name, ring] : debugStats_.AllRings())
+                {
+                    char overlay[64];
+                    std::snprintf(overlay, sizeof overlay, "%s max %.1f", name.c_str(), ring.Max());
+                    ImGui::PlotLines(("##" + name).c_str(), ring.samples.data(), ring.count, ring.Offset(),
+                                     overlay, 0.0f, ring.scaleMax, ImVec2(0, 60));
                 }
             }
 

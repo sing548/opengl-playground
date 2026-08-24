@@ -7,6 +7,7 @@
 #include <string_view>
 
 #include "stat.h"
+#include "frame-time-buffer.h"
 
 class DebugStats
 {
@@ -49,10 +50,27 @@ public:
             stat.Flush(duration);
     }
 
+    FrameTimeBuffer& Ring(std::string_view name, float scaleMax = 33.0f)
+    {
+        auto it = rings_.find(name);
+        
+        if (it == rings_.end())
+        {
+            it = rings_.try_emplace(std::string(name)).first;
+            it->second.scaleMax = scaleMax;
+        }
+
+        return it->second;
+    }
+
+    void CommitFrame () { for (auto& [_, r] : rings_) r.Commit(); }
+
     const auto& AllStats() const { return stats_; }
+    const auto& AllRings() const { return rings_; }
 private:
     // Like this lookup is stable for display and still fast enough (O(n))
     // compared to unordered_map. string has compare operator
     // no need to do hashes etc
     std::map<std::string, Stat, std::less<>> stats_;
+    std::map<std::string, FrameTimeBuffer, std::less<>> rings_;
 };

@@ -25,9 +25,6 @@ void TerrainHandler::UpdateStreaming(const glm::vec3& observerPos)
 
         const float top     = world.generator->MaxHeight();
         const float bottom  = world.generator->MinHeight() - world.info.Thickness;
-
-        const float enter = world.info.Radius + renderRange;
-        const float exit = enter + exitMargin;
         
         const float normalDist = local.y > top    ? local.y - top
                                : local.y < bottom ? bottom - local.y
@@ -35,6 +32,10 @@ void TerrainHandler::UpdateStreaming(const glm::vec3& observerPos)
 
         const bool inRange = d2 <= radial * radial
                           && normalDist <= margin;
+                    
+        // 0.85f as a margin to allow generation on other side.
+        // ToDo: Re-think whether to make this configurable.
+        const bool correctSide = local.y >= 0.0f || d2 > (world.info.Radius * 0.85f * world.info.Radius);
 
         const bool changed = (area != world.lastArea) || (inRange != world.lastCheckInRange);
         world.lastArea = area;
@@ -42,7 +43,7 @@ void TerrainHandler::UpdateStreaming(const glm::vec3& observerPos)
 
         if (!changed) continue;
         
-        if (inRange) RefreshChunks(world, area);
+        if (inRange && correctSide) RefreshChunks(world, area);
         CullChunks(world, area);
     }
 }
@@ -155,7 +156,7 @@ std::vector<DrawCommand> TerrainHandler::BuildDrawCommands(RenderPass rp)
         for (auto& [iv, mp] : world.chunks)
         {
             if (!mp.mesh) continue;
-            
+
             DrawCommand dc;
             dc.mesh = mp.mesh.get();
             dc.material = world.material.get();

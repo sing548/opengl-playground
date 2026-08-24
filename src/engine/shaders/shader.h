@@ -43,7 +43,7 @@ public:
 			vertexCode   = vShaderStream.str();
 			fragmentCode = fShaderStream.str();
 		}
-		catch (std::ifstream::failure e)
+		catch (std::ifstream::failure& e)
 		{
 			std::cout << "Loading vertex shader: " << vertexPathString << std::endl;
 			std::cout << "Loading fragment shader: " << fragmentPathString << std::endl;
@@ -55,8 +55,6 @@ public:
 		const char* fShaderCode = fragmentCode.c_str();
 
 		unsigned int vertex, fragment;
-		int success;
-		char infoLog[512];
 
 		try {
 
@@ -65,7 +63,7 @@ public:
 			glCompileShader(vertex);
 			CheckCompileErrors(vertex, "VERTEX");
 		}
-		catch (std::exception e)
+		catch (std::exception& e)
 		{
 			std::cout << "Exception" << e.what() << std::endl;
 		}

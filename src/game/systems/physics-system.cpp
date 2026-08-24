@@ -229,7 +229,7 @@ void PhysicsSystem::ClampYOffset(Scene& scene)
         glm::vec3 forward = model.GetForward();
         glm::vec3 flatForward = glm::vec3(forward.x, 0.0f, forward.z);
         
-        if (!glm::length(flatForward) < 1e-4f) 
+        if (glm::length(flatForward) > 1e-4f) 
         {
             flatForward = glm::normalize(flatForward);
             // ToDo: read this from config - don't assume (0,1,0)

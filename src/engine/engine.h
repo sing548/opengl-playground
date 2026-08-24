@@ -79,7 +79,7 @@ private:
     bool m_bServer = false;
 
     void ExecuteSystems(GameplayPhase phase, float dT, float alpha = 0.0f);
-    void HandleLogic(float deltaTime);
+    void HandleLogic();
     static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
     void AddNewPlayer(uint32_t id);

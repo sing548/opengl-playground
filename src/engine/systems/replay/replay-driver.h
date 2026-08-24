@@ -15,7 +15,7 @@ class ReplayDriver
 {
 public:
     ReplayDriver(const std::vector<std::unique_ptr<IGameplaySystem>>& systems, float fixedDelta)
-        : systems_(systems), fixedDelta_(fixedDelta) {}
+        : fixedDelta_(fixedDelta), systems_(systems) {}
     void Run(const SystemsContext& originalCtx, const std::map<uint32_t, InputState>& stateToReplay);
 private:
     float fixedDelta_;

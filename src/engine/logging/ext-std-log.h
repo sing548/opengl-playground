@@ -20,7 +20,7 @@ enum class ExtLogLevel {
 private:
     static ExtLogLevel logLvl_;
 
-    static bool Enabled(ExtLogLevel level)
+    static bool Enabled(ExtLogLevel /*level*/)
     {
         return true;
     };

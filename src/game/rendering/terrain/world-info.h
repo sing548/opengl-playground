@@ -249,24 +249,19 @@ struct World
 inline std::vector<DiskWorldInfo> LoadDiskWorldInfos(const std::filesystem::path& path)
 {
     std::string json;
-    std::ifstream worldsJson;
+    std::ifstream worldsJson(path);
 
-    try 
-    {
-        worldsJson.open(path.string());
-
-        std::stringstream ss;
-
-        ss << worldsJson.rdbuf();
-        worldsJson.close();
-        json = ss.str();
-    }
-    catch (std::ifstream::failure e)
+    if (!worldsJson)
     {
         std::cerr << "Loading worlds info: " << path << std::endl;
-        std::cerr << "ERROR::TERRAIN::FILE_NOT_SUCCESULLY_READ: " << e.what() << std::endl;
         throw std::runtime_error("worlds info file read failed");
     }
+
+    std::stringstream ss;
+
+    ss << worldsJson.rdbuf();
+    worldsJson.close();
+    json = ss.str();
 
     picojson::value v;
     std::string err = picojson::parse(v, json);

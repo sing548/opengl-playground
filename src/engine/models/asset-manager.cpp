@@ -117,7 +117,9 @@ Mesh AssetManager::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::st
 			indices.push_back(face.mIndices[j]);
 	}
 	
-    if (mesh->mMaterialIndex >= 0)
+	// This mapping is written for .obj files.
+	// In case of other models, needs updating
+    if (mesh->mMaterialIndex < scene->mNumMaterials)
 	{
 		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 		// diffuse maps
@@ -136,6 +138,8 @@ Mesh AssetManager::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::st
 		std::vector<Texture> emissiveMaps = LoadMaterialTextures(material, aiTextureType_EMISSIVE, "texture_emissive", directory);
 		textures.insert(textures.end(), emissiveMaps.begin(), emissiveMaps.end());
 	}
+	else
+		std::cerr << "Could not load material. Additional info: directory: " << directory << std::endl;
 	
     return Mesh(vertices, indices, textures);
 }

@@ -122,10 +122,12 @@ void ConTrail::BuildTrails()
     if (updatedIds.size() != trails_.size())
         // ToDo: Add check if updatedIds or trails_ grow in size to instead use unordered_set for performance
         for (auto it = trails_.begin(); it != trails_.end();)
+        {
             if (!std::binary_search(updatedIds.begin(), updatedIds.end(), it->first))
                 it = trails_.erase(it);
             else
                 ++it;
+        }
 }
 
 void ConTrail::ExtendDeque(uint32_t id)
