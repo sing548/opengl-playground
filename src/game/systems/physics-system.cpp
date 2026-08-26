@@ -12,10 +12,7 @@ void PhysicsSystem::Update(SystemsContext& ctx)
         MoveModels(ctx);
 
         if (!ctx.authoritative && ctx.settings.predictiveClient && ctx.world.GetScene().ModelExists(ctx.localPlayerId))
-        {
-            auto& model = ctx.world.GetScene().GetModelByReference(ctx.localPlayerId);
             MoveModel(ctx, ctx.localPlayerId);
-        }
 
         CheckHits(ctx.world, ctx.terrainHandler, ctx.authoritative, ctx.settings.predictiveClient);
 
@@ -25,7 +22,6 @@ void PhysicsSystem::Update(SystemsContext& ctx)
     else
     {
         if (!ctx.world.GetScene().ModelExists(ctx.localPlayerId)) return;
-        auto& model = ctx.world.GetScene().GetModelByReference(ctx.localPlayerId);
         MoveModel(ctx, ctx.localPlayerId);
     }
 }
@@ -47,7 +43,6 @@ void PhysicsSystem::MoveModels(SystemsContext& ctx)
     else
     for (auto& [id, _] : ctx.world.GetShotData())
     {
-        auto& model = ctx.world.GetScene().GetModelByReference(id);
         MoveModel(ctx, id);
     }
 }
@@ -218,8 +213,6 @@ void PhysicsSystem::ClampYOffset(Scene& scene)
     {
         auto velo = model.GetVelocity();
         auto pos = model.GetPosition();
-        auto rotation = model.GetRotation();
-        auto rotationSpeed = model.GetRotationSpeed();
 
         velo.y = 0.0f;
         model.SetVelocity(velo);

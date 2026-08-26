@@ -237,7 +237,7 @@ struct DiskWorldInfo
 
 struct World
 {
-    WorldInfo                                       info;
+    WorldInfo                                           info;
     std::unique_ptr<Material>                           material;
     std::unique_ptr<IChunkGenerator>                    generator;
     std::unordered_map<glm::ivec2, Chunk, IVec2Hash>    chunks;

@@ -22,7 +22,15 @@ struct IVec2Hash {
         return (uint64_t)(uint32_t)v.x | ((uint64_t)(uint32_t)v.y << 32);
     }
 };
+
 struct Chunk {
     std::shared_ptr<Mesh> mesh;
     int lod;
+};
+
+struct PendingChunk {
+    size_t worldIndex;
+    glm::ivec2 coord;
+    int lod;
+    int dist;
 };

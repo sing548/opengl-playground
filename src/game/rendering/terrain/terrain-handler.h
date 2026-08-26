@@ -30,7 +30,11 @@ private:
     ChunkHandler chunkHandler_;
     std::vector<World> worlds_;
 
-    void RefreshChunks(World& world, const glm::ivec2 area);
+    std::vector<PendingChunk> pendingNew_;
+    std::vector<PendingChunk> pendingUpgrade_;
+
+    void EnqueueChunks(World& world, const glm::ivec2 area, int worldIdx);
+    void DrainQueue(int create, int upgrade);
     void CullChunks(World& world, const glm::ivec2& area);
 };
 

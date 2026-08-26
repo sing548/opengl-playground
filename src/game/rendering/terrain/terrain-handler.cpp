@@ -1,5 +1,7 @@
 #include "terrain-handler.h"
 
+#include <algorithm>
+
 TerrainHandler::TerrainHandler(std::vector<World> worlds) : worlds_(std::move(worlds)) {}
 
 TerrainHandler::~TerrainHandler() = default;
@@ -43,12 +45,30 @@ void TerrainHandler::UpdateStreaming(const glm::vec3& observerPos)
 
         if (!changed) continue;
         
-        if (inRange && correctSide) RefreshChunks(world, area);
+        const World* beginPtr = &worlds_[0];
+        const World* currentPtr = &world; 
+
+        size_t worldIdx = currentPtr - beginPtr;
+
+        if (worldIdx >= worlds_.size())
+            throw std::logic_error("Invalid world index in TerrainHandler::EnqueueChunks");
+
+        if (inRange && correctSide) EnqueueChunks(world, area, worldIdx);
+        else
+        {
+            std::erase_if(pendingNew_, [worldIdx](const PendingChunk& p) { return p.worldIndex == worldIdx; });
+            std::erase_if(pendingUpgrade_, [worldIdx](const PendingChunk& p) { return p.worldIndex == worldIdx; });
+        }
+
         CullChunks(world, area);
     }
+
+    std::sort(pendingNew_.begin(), pendingNew_.end(), [](const PendingChunk& a, const PendingChunk& b) { return a.dist > b.dist; });
+    std::sort(pendingUpgrade_.begin(), pendingUpgrade_.end(), [](const PendingChunk& a, const PendingChunk& b) { return a.dist > b.dist; });
+    DrainQueue(9, 3);
 }
 
-void TerrainHandler::RefreshChunks(World& world, const glm::ivec2 area)
+void TerrainHandler::EnqueueChunks(World& world, const glm::ivec2 area, int worldIdx)
 {
     for (int i = area.x - TerrainConfig::RenderArea; i <= area.x + TerrainConfig::RenderArea; i++)
     {
@@ -62,26 +82,62 @@ void TerrainHandler::RefreshChunks(World& world, const glm::ivec2 area)
 
             auto it = world.chunks.find({ i, j});
 
+            PendingChunk chunk;
+            chunk.worldIndex = worldIdx;
+            chunk.coord = { i, j };
+            chunk.lod = lod;
+            chunk.dist = dist;
+
             if (it != world.chunks.end())
             {
                 // Only re-generate higher quality. Don't regenerate lower quality - causes stuttering in frametimws 
                 // rather than just a little higher draw count
                 if (lowLod || it->second.lod == TerrainConfig::RegionResolution) continue;
 
-                world.chunks.erase(it);
+                pendingUpgrade_.push_back(chunk);
+
+                continue;
             }
 
-            ChunkRegion region {
-                { i, j },
+            pendingNew_.push_back(chunk);
+        }
+    }
+}
+
+void TerrainHandler::DrainQueue(int create, int upgrade)
+{
+    for (int i = 0; i < create && !pendingNew_.empty(); ++i)
+    {
+        const PendingChunk p = pendingNew_.back();
+        pendingNew_.pop_back();
+
+        ChunkRegion region {
+                p.coord,
                 TerrainConfig::RegionSize,
-                lod
+                p.lod
             };
 
-            Chunk chunk;
-            chunk.mesh = chunkHandler_.UploadChunk(world.generator->Generate(region));
-            chunk.lod = lod;
-            world.chunks.emplace(glm::ivec2(i, j), chunk);
-        }
+        Chunk chunk;
+        chunk.mesh = chunkHandler_.UploadChunk(worlds_.at(p.worldIndex).generator->Generate(region));
+        chunk.lod = p.lod;
+        worlds_.at(p.worldIndex).chunks.emplace(p.coord, chunk);
+    }
+
+    for (int j = 0; j < upgrade && !pendingUpgrade_.empty(); ++j)
+    {
+        const PendingChunk p = pendingUpgrade_.back();
+        pendingUpgrade_.pop_back();
+
+        ChunkRegion region {
+                p.coord,
+                TerrainConfig::RegionSize,
+                p.lod
+            };
+
+        Chunk chunk;
+        chunk.mesh = chunkHandler_.UploadChunk(worlds_.at(p.worldIndex).generator->Generate(region));
+        chunk.lod = p.lod;
+        worlds_.at(p.worldIndex).chunks.insert_or_assign(p.coord, chunk);
     }
 }
 
