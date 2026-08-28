@@ -1,17 +1,15 @@
-#include "flat-chunk-generator.h"
+#include "height-field-generator.h"
 
-#include "fbm-noise.h"
-#include "terrain-config.h"
-
-ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
-{
+ChunkData HeightFieldGenerator::Generate(const ChunkRegion& region) const
+{   
     ChunkData chunk;
     std::vector<Vertex> vertices;
     vertices.reserve((region.resolution + 1) * (region.resolution + 1));
 
-    for (unsigned int i = 0; i <= region.resolution; i++)
+    // Calculate height for each point of resolution by interpolating height from .png
+    for (auto i = 0; i <= region.resolution; i++)
     {
-        for (unsigned int j = 0; j <= region.resolution; j++)
+        for (auto j = 0; j <= region.resolution; j++)
         {
             float u = (float)i / region.resolution;
             float v = (float)j / region.resolution;
@@ -35,13 +33,14 @@ ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
             });
         }
     }
-    
+
     const unsigned int row = region.resolution + 1;
     const float d = region.regionSize / region.resolution;
 
-    for (unsigned int i = 0; i <= region.resolution; i++)
+    // Calculate Normals
+    for (auto i = 0; i <= region.resolution; i++)
     {
-        for (unsigned int j = 0; j <= region.resolution; j++)
+        for (auto j = 0; j <= region.resolution; j++)
         {
             glm::vec3 normal;
             float u = (float)i / region.resolution;
@@ -71,11 +70,13 @@ ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
 
     chunk.vertices = std::move(vertices);
 
+
+    // Calculate indices
     chunk.indices.reserve(region.resolution * region.resolution * 6);
 
-    for (unsigned int i = 0; i < region.resolution; i++)
+    for (auto i = 0; i < region.resolution; i++)
     {
-        for (unsigned int j = 0; j < region.resolution; j++)
+        for (auto j = 0; j < region.resolution; j++)
         {
             unsigned int v00 = i * row + j;
             unsigned int v01 = i * row + j + 1;
@@ -95,16 +96,7 @@ ChunkData FlatChunkGenerator::Generate(const ChunkRegion& region) const
     return chunk;
 }
 
-float FlatChunkGenerator::HeightAt(float x, float z) const
-{
-    return FBMNoise::GenNoise(
-                FlatChunkConfig::Octaves,
-                FlatChunkConfig::Lacunarity,
-                FlatChunkConfig::Gain,
-                glm::vec2(x, z) * FlatChunkConfig::BaseFreq) * FlatChunkConfig::HeightScale + FlatChunkConfig::HeightOffset;
-}
-
-glm::vec3 FlatChunkGenerator::NormalAt(glm::vec3 pos) const 
+glm::vec3 HeightFieldGenerator::NormalAt(glm::vec3 pos) const 
 {
     float epsilon = 0.1f;
     float dXp = HeightAt(pos.x + epsilon, pos.z);

@@ -1,6 +1,6 @@
 #include "terrain-material.h"
 
-#include "../terrain/terrain-config.h"
+#include "../terrain/flat-worlds/terrain-config.h"
 #include "../../../engine/helpers/file-helper.h"
 
 TerrainMaterial::TerrainMaterial(std::unique_ptr<Shader> shader, AssetManager& assMan, float bandMin, float bandMax) 
@@ -90,7 +90,7 @@ void TerrainMaterial::ApplyFrame(const FrameGlobals& globals)
     shader_->SetFloat("texScale", TerrainConfig::TexScale);
 }
 
-void TerrainMaterial::ApplyInstance(const glm::mat4& model, const glm::vec4& tint)
+void TerrainMaterial::ApplyInstance(const glm::mat4& model, const glm::vec4& /*tint*/)
 {
     shader_->SetMat4("model", model);
     glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));

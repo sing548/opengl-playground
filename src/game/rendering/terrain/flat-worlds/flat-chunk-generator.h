@@ -1,7 +1,7 @@
 #ifndef FLAT_CHUNK_GENERATOR
 #define FLAT_CHUNK_GENERATOR
 
-#include "../../../engine/rendering/terrain/chunk-generator.h"
+#include "height-field-generator.h"
 
 class FlatChunkConfig
 {
@@ -17,16 +17,13 @@ public:
     static constexpr float BaseFreq = 0.01f;
 };
 
-class FlatChunkGenerator : public IChunkGenerator
+class FlatChunkGenerator : public HeightFieldGenerator
 {
 public:
     ~FlatChunkGenerator() = default;
-    ChunkData Generate(const ChunkRegion& region) const override;
     float HeightAt(float x, float z) const override;
-    glm::vec3 NormalAt(glm::vec3 position) const override;
     float MinHeight() const override { return FlatChunkConfig::MinHeight; };
     float MaxHeight() const override { return FlatChunkConfig::MaxHeight; };
-private:
 };
 
 #endif

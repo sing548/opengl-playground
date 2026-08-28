@@ -1,17 +1,15 @@
 #pragma once
 
-#include "../../../engine/rendering/terrain/chunk-generator.h"
+#include "../world-info.h"
+#include "height-field-generator.h"
 
-#include "world-info.h"
-
-class DiskWorldGenerator : public IChunkGenerator
+class DiskWorldGenerator : public HeightFieldGenerator
 {
 public:
     DiskWorldGenerator(WorldInfo wi);
     ~DiskWorldGenerator() = default;
     ChunkData Generate(const ChunkRegion& region) const override;
     float HeightAt(float x, float z) const override;
-    glm::vec3 NormalAt(glm::vec3 position) const override;
     float MinHeight() const override { return thickness_; };
     float MaxHeight() const override { return thickness_ + 
                                         (worldGenerator_->MaxHeight() - worldGenerator_->MinHeight()); };

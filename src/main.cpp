@@ -39,8 +39,8 @@
 #include "game/rendering/materials/hitbox-material.h"
 #include "game/rendering/materials/terrain-material.h"
 
-#include "game/rendering/terrain/baked-map-generator.h"
-#include "game/rendering/terrain/disk-world-generator.h"
+#include "game/rendering/terrain/flat-worlds/baked-map-generator.h"
+#include "game/rendering/terrain/flat-worlds/disk-world-generator.h"
 
 int main(int argc, const char *argv[]) {
 

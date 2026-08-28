@@ -1,17 +1,19 @@
 #ifndef TERRAIN_HANDLER_H
 #define TERRAIN_HANDLER_H
 
+#include <chrono>
+#include <future>
 #include <memory>
 #include <unordered_map>
 
 #include <glm/glm.hpp>
 
-#include "world-info.h"
 #include "terrain-config.h"
-#include "../../../engine/rendering/materials/material.h"
-#include "../../../engine/rendering/terrain/chunk-handler.h"
-#include "../../../engine/rendering/terrain/chunk-structs.h"
-#include "../../../engine/rendering/terrain/i-terrain-handler.h"
+#include "../world-info.h"
+#include "../../../../engine/rendering/materials/material.h"
+#include "../../../../engine/rendering/terrain/chunk-handler.h"
+#include "../../../../engine/rendering/terrain/chunk-structs.h"
+#include "../../../../engine/rendering/terrain/i-terrain-handler.h"
 
 struct DrawCommand;
 struct FrameGlobals;
@@ -33,8 +35,11 @@ private:
     std::vector<PendingChunk> pendingNew_;
     std::vector<PendingChunk> pendingUpgrade_;
 
+    std::vector<std::future<PendingAsyncChunk>> asyncChunks_;
+
     void EnqueueChunks(World& world, const glm::ivec2 area, int worldIdx);
-    void DrainQueue(int create, int upgrade);
+    void DrainQueue(std::chrono::microseconds budget);
+    void DrainQueueAsync(std::chrono::microseconds budget);
     void CullChunks(World& world, const glm::ivec2& area);
 };
 

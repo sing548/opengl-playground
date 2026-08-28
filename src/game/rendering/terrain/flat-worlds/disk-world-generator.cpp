@@ -1,20 +1,22 @@
 #include "disk-world-generator.h"
 
-#include "../../../engine/helpers/file-helper.h"
+#include "../../../../engine/helpers/file-helper.h"
 
 #include "baked-map-generator.h"
+#include "flat-chunk-generator.h"
 
 DiskWorldGenerator::DiskWorldGenerator(WorldInfo wi) 
-    : radius_(wi.Radius), edge_(wi.Edge), thickness_(wi.Thickness), worldGenerator_(std::make_unique<BakedMapGenerator>(wi))
+    : radius_(wi.Radius), edge_(wi.Edge), thickness_(wi.Thickness)
 {
+    if (wi.Type == WorldType::BAKED)
+        worldGenerator_ = std::make_unique<BakedMapGenerator>(wi);
+    else
+        worldGenerator_ =  std::make_unique<FlatChunkGenerator>();
 }
 
 ChunkData DiskWorldGenerator::Generate(const ChunkRegion& region) const
 {
-    ChunkData d = worldGenerator_->Generate(region);
-
-    const float inner = radius_ - edge_;
-    constexpr float eps = 1.6f;
+    ChunkData d = HeightFieldGenerator::Generate(region);
 
     std::vector<unsigned int> kept;
     kept.reserve(d.indices.size());
@@ -44,15 +46,6 @@ ChunkData DiskWorldGenerator::Generate(const ChunkRegion& region) const
 
     d.indices = std::move(kept);
 
-    for (auto& v : d.vertices)
-    {
-        const float r = std::sqrt(v.Position.x * v.Position.x + v.Position.z * v.Position.z);
-        v.Position.y = HeightAt(v.Position.x, v.Position.z);
-
-        if (r > inner - eps)
-            v.Normal = NormalAt(v.Position);
-    }
-
     return d;
 }
 
@@ -60,18 +53,6 @@ float DiskWorldGenerator::HeightAt(float x, float z) const
 {
     const float relief = worldGenerator_->HeightAt(x,z) - worldGenerator_->MinHeight();
     return InnerHeight(x, z, relief + thickness_);
-}
-
-glm::vec3 DiskWorldGenerator::NormalAt(glm::vec3 pos) const
-{
-    constexpr float epsilon = 1.6f;
-
-    float dXp = HeightAt(pos.x + epsilon, pos.z);
-    float dXn = HeightAt(pos.x - epsilon, pos.z);
-    float dZp = HeightAt(pos.x, pos.z + epsilon);
-    float dZn = HeightAt(pos.x, pos.z - epsilon);
-
-    return glm::normalize(glm::vec3(dXn - dXp, 2.0f * epsilon, dZn - dZp));
 }
 
 float DiskWorldGenerator::InnerHeight(float x, float z, float h) const

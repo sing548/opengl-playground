@@ -73,7 +73,7 @@ void ConTrail::Render(const FrameGlobals& globals)
         {
             ranges.push_back({ (GLint)points.size(), (GLsizei)(queue.size() - 1) * 2 });
 
-            for (int j = 1; j < queue.size(); ++j)
+            for (long unsigned int j = 1; j < queue.size(); ++j)
             {
                 auto segmentDir = glm::normalize(queue[j].Positions[i] - queue[j-1].Positions[i]);
                 auto toCam = globals.cameraPos - queue[j].Positions[i];

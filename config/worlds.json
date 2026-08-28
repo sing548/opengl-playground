@@ -10,8 +10,6 @@
         "originTile": "ci8_cj-33"
     },
     "faceB": {
-        "type": "BAKED",
-        "tilePath": "234626787",
-        "originTile": "ci8_cj-33"
+        "type": "GENERATED"
     }
 }]

@@ -34,3 +34,10 @@ struct PendingChunk {
     int lod;
     int dist;
 };
+
+struct PendingAsyncChunk {
+    Chunk chunk;
+    ChunkData data;
+    int worldIndex;
+    glm::ivec2 coord;
+};

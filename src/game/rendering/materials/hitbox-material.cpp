@@ -12,7 +12,7 @@ void HitboxMaterial::ApplyFrame(const FrameGlobals& globals)
     
 };
 
-void HitboxMaterial::ApplyInstance(const glm::mat4& model, const glm::vec4& tint)
+void HitboxMaterial::ApplyInstance(const glm::mat4& model, const glm::vec4& /*tint*/)
 {
     shader_->SetMat4("model", model);
 };

@@ -53,19 +53,19 @@ void TerrainHandler::UpdateStreaming(const glm::vec3& observerPos)
         if (worldIdx >= worlds_.size())
             throw std::logic_error("Invalid world index in TerrainHandler::EnqueueChunks");
 
+        std::erase_if(pendingNew_, [worldIdx](const PendingChunk& p) { return p.worldIndex == worldIdx; });
+        std::erase_if(pendingUpgrade_, [worldIdx](const PendingChunk& p) { return p.worldIndex == worldIdx; });
+        
         if (inRange && correctSide) EnqueueChunks(world, area, worldIdx);
-        else
-        {
-            std::erase_if(pendingNew_, [worldIdx](const PendingChunk& p) { return p.worldIndex == worldIdx; });
-            std::erase_if(pendingUpgrade_, [worldIdx](const PendingChunk& p) { return p.worldIndex == worldIdx; });
-        }
 
         CullChunks(world, area);
     }
 
     std::sort(pendingNew_.begin(), pendingNew_.end(), [](const PendingChunk& a, const PendingChunk& b) { return a.dist > b.dist; });
     std::sort(pendingUpgrade_.begin(), pendingUpgrade_.end(), [](const PendingChunk& a, const PendingChunk& b) { return a.dist > b.dist; });
-    DrainQueue(9, 3);
+    
+    //DrainQueue(std::chrono::milliseconds(2));
+    DrainQueueAsync(std::chrono::milliseconds(2));
 }
 
 void TerrainHandler::EnqueueChunks(World& world, const glm::ivec2 area, int worldIdx)
@@ -104,9 +104,11 @@ void TerrainHandler::EnqueueChunks(World& world, const glm::ivec2 area, int worl
     }
 }
 
-void TerrainHandler::DrainQueue(int create, int upgrade)
+void TerrainHandler::DrainQueue(std::chrono::microseconds budget)
 {
-    for (int i = 0; i < create && !pendingNew_.empty(); ++i)
+    const auto deadline = std::chrono::steady_clock::now() + budget;
+
+    while (!pendingNew_.empty() && std::chrono::steady_clock::now() < deadline)
     {
         const PendingChunk p = pendingNew_.back();
         pendingNew_.pop_back();
@@ -123,7 +125,7 @@ void TerrainHandler::DrainQueue(int create, int upgrade)
         worlds_.at(p.worldIndex).chunks.emplace(p.coord, chunk);
     }
 
-    for (int j = 0; j < upgrade && !pendingUpgrade_.empty(); ++j)
+    while (!pendingUpgrade_.empty() && std::chrono::steady_clock::now() < deadline)
     {
         const PendingChunk p = pendingUpgrade_.back();
         pendingUpgrade_.pop_back();
@@ -138,6 +140,91 @@ void TerrainHandler::DrainQueue(int create, int upgrade)
         chunk.mesh = chunkHandler_.UploadChunk(worlds_.at(p.worldIndex).generator->Generate(region));
         chunk.lod = p.lod;
         worlds_.at(p.worldIndex).chunks.insert_or_assign(p.coord, chunk);
+    }
+}
+
+void TerrainHandler::DrainQueueAsync(std::chrono::microseconds budget)
+{
+    const auto deadline = std::chrono::steady_clock::now() + budget;
+
+    unsigned int drainSize = 12;
+    const unsigned int maxSize = 20;
+
+    while (!pendingNew_.empty() && drainSize > 0 && asyncChunks_.size() < maxSize)
+    {
+        --drainSize;
+        const PendingChunk p = pendingNew_.back();
+        pendingNew_.pop_back();
+
+
+        asyncChunks_.push_back(
+            std::async(std::launch::async,[this, p]() {
+                ChunkRegion region {
+                        p.coord,
+                        TerrainConfig::RegionSize,
+                        p.lod
+                    };
+                
+                Chunk chunk;
+                //chunk.mesh = chunkHandler_.UploadChunk(worlds_.at(p.worldIndex).generator->Generate(region));
+                chunk.lod = p.lod;
+
+                PendingAsyncChunk pac;
+                pac.chunk = chunk;
+                pac.data = worlds_.at(p.worldIndex).generator->Generate(region);
+
+                pac.coord = p.coord;
+                pac.worldIndex = p.worldIndex;
+
+                return pac;
+            })
+        );
+    } 
+
+    while (!pendingUpgrade_.empty()  && drainSize > 0 && asyncChunks_.size() < maxSize)
+    {
+        --drainSize;
+
+        const PendingChunk p = pendingUpgrade_.back();
+        pendingUpgrade_.pop_back();
+
+        asyncChunks_.push_back(
+            std::async(std::launch::async,[this, p]() {
+                ChunkRegion region {
+                    p.coord,
+                    TerrainConfig::RegionSize,
+                    p.lod
+                };
+
+                Chunk chunk;
+                //chunk.mesh = chunkHandler_.UploadChunk(worlds_.at(p.worldIndex).generator->Generate(region));
+                chunk.lod = p.lod;
+
+                PendingAsyncChunk pac;
+                pac.chunk = chunk;
+                pac.data = worlds_.at(p.worldIndex).generator->Generate(region);
+
+                pac.coord = p.coord;
+                pac.worldIndex = p.worldIndex;
+
+                return pac;
+            })
+        );
+    }
+
+    for (auto it = asyncChunks_.begin(); it != asyncChunks_.end() && std::chrono::steady_clock::now () < deadline; )
+    {
+        if (it->valid() &&
+            it->wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+        {
+            auto res = it->get();
+            res.chunk.mesh = chunkHandler_.UploadChunk(std::move(res.data));
+            worlds_.at(res.worldIndex).chunks.insert_or_assign(res.coord, res.chunk);
+
+            it = asyncChunks_.erase(it);
+        }
+        else
+            ++it;
     }
 }
 

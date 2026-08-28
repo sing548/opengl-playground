@@ -64,11 +64,12 @@ add_executable(OpenGLPlayground
     src/game/rendering/materials/hitbox-material.cpp
     src/game/rendering/materials/model-material.cpp
     src/game/rendering/materials/terrain-material.cpp
-    src/game/rendering/terrain/baked-map-generator.cpp
-    src/game/rendering/terrain/disk-world-generator.cpp
-    src/game/rendering/terrain/fbm-noise.cpp
-    src/game/rendering/terrain/flat-chunk-generator.cpp
-    src/game/rendering/terrain/terrain-handler.cpp
+    src/game/rendering/terrain/flat-worlds/baked-map-generator.cpp
+    src/game/rendering/terrain/flat-worlds/disk-world-generator.cpp
+    src/game/rendering/terrain/flat-worlds/fbm-noise.cpp
+    src/game/rendering/terrain/flat-worlds/flat-chunk-generator.cpp
+    src/game/rendering/terrain/flat-worlds/height-field-generator.cpp
+    src/game/rendering/terrain/flat-worlds/terrain-handler.cpp
     src/game/rendering/vfx/death-explosion.cpp
     src/game/spawner/spawner.cpp
     src/game/systems/input/input-system.cpp
