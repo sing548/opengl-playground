@@ -2,7 +2,11 @@
 
 #include <algorithm>
 
-TerrainHandler::TerrainHandler(std::vector<World> worlds) : worlds_(std::move(worlds)) {}
+TerrainHandler::TerrainHandler(std::vector<World> worlds) : worlds_(std::move(worlds)) 
+{
+    for (auto& w : worlds_)
+        w.proxy = chunkHandler_.UploadChunk(w.generator->GenerateProxy(64));
+}
 
 TerrainHandler::~TerrainHandler() = default;
 
@@ -304,6 +308,17 @@ std::vector<DrawCommand> TerrainHandler::BuildDrawCommands(RenderPass rp)
             dc.mesh = mp.mesh.get();
             dc.material = world.material.get();
             dc.transform = transform;
+            dc.renderPass = rp;
+            dcs.push_back(dc);
+        }
+
+        {
+            // So they don't bite: just move the proxy-"very low lod" world down a bit
+            constexpr float sink = 20.0f;
+            DrawCommand dc;
+            dc.mesh = world.proxy.get();
+            dc.material = world.material.get();
+            dc.transform = world.info.Transform() * glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -sink, 0.0f));
             dc.renderPass = rp;
             dcs.push_back(dc);
         }

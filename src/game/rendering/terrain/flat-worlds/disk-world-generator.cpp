@@ -17,7 +17,30 @@ DiskWorldGenerator::DiskWorldGenerator(WorldInfo wi)
 ChunkData DiskWorldGenerator::Generate(const ChunkRegion& region) const
 {
     ChunkData d = HeightFieldGenerator::Generate(region);
+    TrimToDisk(d);
+    return d;
+}
 
+float DiskWorldGenerator::HeightAt(float x, float z) const
+{
+    const float relief = worldGenerator_->HeightAt(x,z) - worldGenerator_->MinHeight();
+    return InnerHeight(x, z, relief + thickness_);
+}
+
+float DiskWorldGenerator::InnerHeight(float x, float z, float h) const
+{
+    const float inner  = radius_ - edge_;
+    const float floory = 0.0f;
+    const float r      = std::sqrt(x * x + z * z);
+
+    float t = glm::clamp((r - inner) / std::max(edge_, 0.001f), 0.0f, 1.0f);
+    t = t * t * (3.0f - 2.0f * t);
+
+    return glm::mix(h, floory, t);
+}
+
+void DiskWorldGenerator::TrimToDisk(ChunkData& d) const
+{
     std::vector<unsigned int> kept;
     kept.reserve(d.indices.size());
 
@@ -44,25 +67,24 @@ ChunkData DiskWorldGenerator::Generate(const ChunkRegion& region) const
         }
     }
 
+    for (auto& v : d.vertices)
+    {
+        const float r = std::sqrt(v.Position.x * v.Position.x + v.Position.z * v.Position.z);
+
+        if (r > radius_)
+        {
+            const float s = radius_ / r;
+            v.Position.x *= s;
+            v.Position.z *= s;
+        }
+    }
+
     d.indices = std::move(kept);
+}
 
+ChunkData DiskWorldGenerator::GenerateProxy(int resolution) const
+{
+    ChunkData d = GenerateArea({ -radius_, -radius_ }, 2.0f * radius_, resolution);
+    TrimToDisk(d);
     return d;
-}
-
-float DiskWorldGenerator::HeightAt(float x, float z) const
-{
-    const float relief = worldGenerator_->HeightAt(x,z) - worldGenerator_->MinHeight();
-    return InnerHeight(x, z, relief + thickness_);
-}
-
-float DiskWorldGenerator::InnerHeight(float x, float z, float h) const
-{
-    const float inner  = radius_ - edge_;
-    const float floory = 0.0f;
-    const float r      = std::sqrt(x * x + z * z);
-
-    float t = glm::clamp((r - inner) / std::max(edge_, 0.001f), 0.0f, 1.0f);
-    t = t * t * (3.0f - 2.0f * t);
-
-    return glm::mix(h, floory, t);
 }

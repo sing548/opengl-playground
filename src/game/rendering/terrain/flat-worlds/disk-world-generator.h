@@ -9,6 +9,7 @@ public:
     DiskWorldGenerator(WorldInfo wi);
     ~DiskWorldGenerator() = default;
     ChunkData Generate(const ChunkRegion& region) const override;
+    ChunkData GenerateProxy(int resolution) const override;
     float HeightAt(float x, float z) const override;
     float MinHeight() const override { return thickness_; };
     float MaxHeight() const override { return thickness_ + 
@@ -18,4 +19,5 @@ private:
     std::unique_ptr<IChunkGenerator> worldGenerator_;
 
     float InnerHeight(float x, float z, float h) const;
+    void TrimToDisk(ChunkData& d) const;
 };

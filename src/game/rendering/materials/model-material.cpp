@@ -1,5 +1,7 @@
 #include "model-material.h"
 
+#include "../terrain/flat-worlds/terrain-config.h"
+
 ModelMaterial::ModelMaterial(std::unique_ptr<Shader> shader) : Material(std::move(shader)) 
 {
 };
@@ -32,9 +34,10 @@ void ModelMaterial::ApplyFrame(const FrameGlobals& globals)
     }
     shader_->SetInt("numPointLights", static_cast<int>(n));
 
-    shader_->SetFloat("fogStart", 100.0f);
-    shader_->SetFloat("fogEnd", 500.0f);
-    shader_->SetVec3("fogColor", glm::vec3(0.1f, 0.1f, 0.1f));
+    shader_->SetFloat("fogStart", TerrainConfig::FogStart);
+    shader_->SetFloat("fogEnd", TerrainConfig::FogEnd);
+    shader_->SetFloat("fogMax", TerrainConfig::FogMax);
+    shader_->SetVec3("fogColor", glm::vec3(TerrainConfig::FogColor, TerrainConfig::FogColor, TerrainConfig::FogColor));
 };
 
 void ModelMaterial::ApplyInstance(const glm::mat4& model, const glm::vec4& /*tint*/)

@@ -1,21 +1,21 @@
 #include "height-field-generator.h"
 
-ChunkData HeightFieldGenerator::Generate(const ChunkRegion& region) const
-{   
-    ChunkData chunk;
+ChunkData HeightFieldGenerator::GenerateArea(glm::vec2 minCorner, float span, int resolution) const
+{
+        ChunkData chunk;
     std::vector<Vertex> vertices;
-    vertices.reserve((region.resolution + 1) * (region.resolution + 1));
+    vertices.reserve((resolution + 1) * (resolution + 1));
 
     // Calculate height for each point of resolution by interpolating height from .png
-    for (auto i = 0; i <= region.resolution; i++)
+    for (auto i = 0; i <= resolution; i++)
     {
-        for (auto j = 0; j <= region.resolution; j++)
+        for (auto j = 0; j <= resolution; j++)
         {
-            float u = (float)i / region.resolution;
-            float v = (float)j / region.resolution;
+            float u = (float)i / resolution;
+            float v = (float)j / resolution;
             
-            float vertX = region.coord.x * region.regionSize + u * region.regionSize;
-            float vertZ = region.coord.y * region.regionSize + v * region.regionSize;
+            float vertX = minCorner.x + u * span;
+            float vertZ = minCorner.y + v * span;
 
             float height = HeightAt(vertX, vertZ);
 
@@ -34,21 +34,21 @@ ChunkData HeightFieldGenerator::Generate(const ChunkRegion& region) const
         }
     }
 
-    const unsigned int row = region.resolution + 1;
-    const float d = region.regionSize / region.resolution;
+    const unsigned int row = resolution + 1;
+    const float d = span / resolution;
 
     // Calculate Normals
-    for (auto i = 0; i <= region.resolution; i++)
+    for (auto i = 0; i <= resolution; i++)
     {
-        for (auto j = 0; j <= region.resolution; j++)
+        for (auto j = 0; j <= resolution; j++)
         {
             glm::vec3 normal;
-            float u = (float)i / region.resolution;
-            float v = (float)j / region.resolution;
-            float vertX = region.coord.x * region.regionSize + u * region.regionSize;
-            float vertZ = region.coord.y * region.regionSize + v * region.regionSize;
+            float u = (float)i / resolution;
+            float v = (float)j / resolution;
+            float vertX = minCorner.x + u * span;
+            float vertZ = minCorner.y + v * span;
 
-            if (i == 0 || i == region.resolution || j == 0 || j == region.resolution)
+            if (i == 0 || i == resolution || j == 0 || j == resolution)
             {
                 float dXp = HeightAt(vertX + d, vertZ);
                 float dXn = HeightAt(vertX - d, vertZ);
@@ -72,11 +72,11 @@ ChunkData HeightFieldGenerator::Generate(const ChunkRegion& region) const
 
 
     // Calculate indices
-    chunk.indices.reserve(region.resolution * region.resolution * 6);
+    chunk.indices.reserve(resolution * resolution * 6);
 
-    for (auto i = 0; i < region.resolution; i++)
+    for (auto i = 0; i < resolution; i++)
     {
-        for (auto j = 0; j < region.resolution; j++)
+        for (auto j = 0; j < resolution; j++)
         {
             unsigned int v00 = i * row + j;
             unsigned int v01 = i * row + j + 1;

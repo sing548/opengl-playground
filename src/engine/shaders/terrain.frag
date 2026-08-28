@@ -41,6 +41,7 @@ uniform float rockStart;
 uniform float rockEnd;
 uniform float fogStart;
 uniform float fogEnd;
+uniform float fogMax;
 uniform vec3 fogColor;
 uniform sampler2D grassTex, rockTex, snowTex;
 uniform sampler2D grassNormal, rockNormal, snowNormal;
@@ -94,7 +95,7 @@ void main()
     vec3 color = result;
 
 	float dist = length(viewPos - FragPos);
-	float fogStrength = smoothstep(fogStart, fogEnd, dist);
+	float fogStrength = smoothstep(fogStart, fogEnd, dist) * fogMax;
 	color = mix(color, fogColor, fogStrength);
 
     FragColor = vec4(color, 1.0);

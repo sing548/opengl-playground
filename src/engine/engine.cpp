@@ -338,7 +338,7 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int /*scancode*/, int acti
 
 std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 {
-    glm::mat4 projection = glm::perspective(glm::radians(window_->GetCamera().GetZoom()), (float)window_->GetSize().width / (float)window_->GetSize().height, 1.0f, 600.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(window_->GetCamera().GetZoom()), (float)window_->GetSize().width / (float)window_->GetSize().height, 1.0f, 6000.0f);
 	glm::mat4 view = window_->GetCamera().GetViewMatrix();
 	auto& models = gameWorld_.GetScene().GetModels();
 

@@ -85,6 +85,7 @@ void TerrainMaterial::ApplyFrame(const FrameGlobals& globals)
 
     shader_->SetFloat("fogStart", TerrainConfig::FogStart);
     shader_->SetFloat("fogEnd", TerrainConfig::FogEnd);
+    shader_->SetFloat("fogMax", TerrainConfig::FogMax); 
     shader_->SetVec3("fogColor", glm::vec3(TerrainConfig::FogColor, TerrainConfig::FogColor, TerrainConfig::FogColor));
 
     shader_->SetFloat("texScale", TerrainConfig::TexScale);

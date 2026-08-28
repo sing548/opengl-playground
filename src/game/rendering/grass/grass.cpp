@@ -7,6 +7,7 @@
 #include "../../../engine/shaders/shader.h"
 #include "../../../engine/helpers/file-helper.h"
 #include "../../../engine/rendering/render-list.h"
+#include "../terrain/flat-worlds/terrain-config.h"
 
 #include "../../../engine/rendering/terrain/chunk-structs.h"
 
@@ -112,9 +113,10 @@ void Grass::Render(const FrameGlobals& globals)
     }
     shader_->SetInt("numPointLights", static_cast<int>(n));
 
-    shader_->SetFloat("fogStart", 100.0f);
-    shader_->SetFloat("fogEnd", 500.0f);
-    shader_->SetVec3("fogColor", glm::vec3(0.1f, 0.1f, 0.1f));
+    shader_->SetFloat("fogStart", TerrainConfig::FogStart);
+    shader_->SetFloat("fogEnd", TerrainConfig::FogEnd);
+    shader_->SetFloat("fogMax", TerrainConfig::FogMax);
+    shader_->SetVec3("fogColor", glm::vec3(TerrainConfig::FogColor, TerrainConfig::FogColor, TerrainConfig::FogColor));
 
     glBindVertexArray(vao_);
     glDrawElementsInstanced(GL_TRIANGLES, indexCount_, GL_UNSIGNED_INT, 0, instanceCount_);

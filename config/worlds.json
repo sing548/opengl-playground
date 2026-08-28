@@ -12,4 +12,19 @@
     "faceB": {
         "type": "GENERATED"
     }
+},
+{
+    "origin": [0.0, -5500.0, 0.0],
+    "orientation": [1.0, 0.0, 0.0, 0.0],
+    "radius": 1600.0,
+    "edge": 80,
+    "thickness": 200.0,
+    "faceA": {
+        "type": "BAKED",
+        "tilePath": "234626787",
+        "originTile": "ci8_cj-33"
+    },
+    "faceB": {
+        "type": "GENERATED"
+    }
 }]

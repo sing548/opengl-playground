@@ -36,6 +36,7 @@ uniform PointLight pointLights[MAX_POINT_LIGHTS];
 uniform int numPointLights;
 uniform float fogStart;
 uniform float fogEnd;
+uniform float fogMax;
 uniform vec3 fogColor;
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
@@ -55,7 +56,7 @@ void main()
 	result += CalcEmissiveLight();
 
 	float dist = length(viewPos - FragPos);
-	float fogStrength = smoothstep(fogStart, fogEnd, dist);
+	float fogStrength = smoothstep(fogStart, fogEnd, dist) * fogMax;
 	result = mix(result, fogColor, fogStrength);
 
 	FragColor = vec4(result, 1.0);

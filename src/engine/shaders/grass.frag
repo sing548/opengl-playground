@@ -38,6 +38,7 @@ uniform PointLight pointLights[MAX_POINT_LIGHTS];
 uniform int numPointLights;
 uniform float fogStart;
 uniform float fogEnd;
+uniform float fogMax;
 uniform vec3 fogColor;
 
 const float shininess = 32.0;
@@ -62,7 +63,7 @@ void main()
         result += CalcPointLight(pointLights[i], N, FragPos, viewDir, color, HeightPercent);
 
 	float dist = length(viewPos - FragPos);
-	float fogStrength = smoothstep(fogStart, fogEnd, dist);
+	float fogStrength = smoothstep(fogStart, fogEnd, dist) * fogMax;
 	result = mix(result, fogColor, fogStrength);
 
     FragColor   = vec4(result, 1.0);
