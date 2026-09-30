@@ -44,7 +44,6 @@ void CameraSystem::Update(SystemsContext& ctx)
         cam.SetBasis(cameraPos, front, up);
     } else {
         auto& camera = ctx.window.GetCamera();
-        auto currentPosition = camera.GetPosition();
         float minHeight = 20.0f;
         float maxHeight = 100.0f;
 

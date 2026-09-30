@@ -115,6 +115,7 @@ void Grass::Render(const FrameGlobals& globals)
 
     shader_->SetFloat("fogStart", TerrainConfig::FogStart);
     shader_->SetFloat("fogEnd", TerrainConfig::FogEnd);
+    shader_->SetFloat("fogFarEnd", TerrainConfig::FogFarEnd);
     shader_->SetFloat("fogMax", TerrainConfig::FogMax);
     shader_->SetVec3("fogColor", glm::vec3(TerrainConfig::FogColor, TerrainConfig::FogColor, TerrainConfig::FogColor));
 

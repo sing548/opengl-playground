@@ -22,13 +22,15 @@ void ReplayDriver::Run(const SystemsContext& originalCtx, const std::map<uint32_
         true,
         0.0f,
         originalCtx.settings,
-        originalCtx.debugStats
+        originalCtx.debugStats,
+        originalCtx.currentTick
     };
     
     for (auto& [tick, state] : statesToReplay)
     {
         ctx.previous[ctx.localPlayerId] = ctx.current[ctx.localPlayerId];
         ctx.current[ctx.localPlayerId] = state;
+        ctx.currentTick = tick;
 
         for (auto& system : systems_)
         {

@@ -68,6 +68,8 @@ void DrivePlume::Render(const FrameGlobals& globals)
 
     for (auto& [id, _] : world_.GetPlayerData())
     {
+        if (!world_.GetScene().ModelExists(id)) continue;
+        
         auto& model = world_.GetScene().GetModelByReference(id);
 
         glm::vec3 nozzle = model.GetPosition() - model.GetForward() * 0.5f;
@@ -78,6 +80,8 @@ void DrivePlume::Render(const FrameGlobals& globals)
 
     for (auto& [id, _] : world_.GetNpcData())
     {
+        if (!world_.GetScene().ModelExists(id)) continue;
+
         auto& model = world_.GetScene().GetModelByReference(id);
         const auto& interpolatedPi = model.GetInterpolatedInfo();
 

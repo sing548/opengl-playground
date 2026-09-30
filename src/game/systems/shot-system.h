@@ -13,6 +13,8 @@ public:
     void Update(SystemsContext& ctx) override;
     GameplayPhase GetPhase() const override { return GameplayPhase::Simulation; }
     int GetOrder() const override { return static_cast<int>(SystemOrder::ShotSystem); }
+private:
+    const float SHOT_LIFETIME = 12.0f;
 };
 
 #endif

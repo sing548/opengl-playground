@@ -11,7 +11,7 @@ void NetworkPollSystem::Update(SystemsContext& ctx)
 
     ctx.world.ClearKilledPlayers();
 
-    ctx.bridge.PollEvents(ctx.world, ctx.assMan);
+    ctx.bridge.PollEvents(ctx.world, ctx.assMan, ctx.currentTick);
     auto playerId = ctx.bridge.GetPlayerId();
 
     if (playerId != 0)

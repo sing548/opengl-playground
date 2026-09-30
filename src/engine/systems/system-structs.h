@@ -30,6 +30,7 @@ struct SystemsContext
     float alpha;
     Settings&  settings;
     DebugStats& debugStats;
+    uint32_t currentTick;
 };
 
 enum class GameplayPhase

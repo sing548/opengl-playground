@@ -2,14 +2,15 @@
 
 #include "../../engine/systems/system-structs.h"
 
+#include "../game-world/game-world.h"
+
 void ShotSystem::Update(SystemsContext& ctx)
 {
-    /*for (auto& [id, data] : ctx.world.GetShotData())
+    for (auto& [id, data] : ctx.world.GetShotData())
     {
-        if (data.lifes > 0)
-            data.lifes--;
+        data.age += ctx.dT;
 
-        if (data.lifes == 0)
-            ctx.world.RemoveEntity(id);
-    }*/
+        if (ctx.authoritative && data.age > SHOT_LIFETIME)
+            ctx.world.MarkEntityForDelete(id);
+    }
 }

@@ -81,7 +81,6 @@ void NpcSystem::Update(SystemsContext& context)
             auto forward = npc.GetForward();
             auto newVelo = oldVelo + forward * 0.06f * context.dT;
             npc.SetVelocity(newVelo);
-            auto test = npc.GetVelocity();
         }
 
 
@@ -90,10 +89,10 @@ void NpcSystem::Update(SystemsContext& context)
             PhysicalInfo pi         = PhysicalInfo();
 		    pi.position_		    = npc.GetPosition();
 		    pi.rotation_		    = npc.GetRotation();
-		    pi.angularVelocity_	    = npc.GetRotationSpeed();
+		    pi.angularVelocity_	    = glm::vec3(0.0f);
 		    pi.scale_			    = npc.GetScale();
 		    pi.velocity_			= npc.GetVelocity();
-            spawner::SpawnShot(context.world, context.assMan, pi, npcId); 
+            spawner::SpawnShot(context.world, context.assMan, pi, npcId, context.currentTick, 0); 
 
             npcData.lastShot = 1.0f;
         }

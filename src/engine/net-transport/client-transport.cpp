@@ -189,7 +189,7 @@ std::vector<ClientTransport::Event> ClientTransport::PollEvents()
     return impl_->PollEvents();
 }
 
-void ClientTransport::SetFakeNetwork(int lagMs, float pkgLossPct, float pkgJitterPct)
+void ClientTransport::SetFakeNetwork(int lagMs, float pkgLossPct, float /*pkgJitterPct*/)
 {
     auto* utils = SteamNetworkingUtils();
 

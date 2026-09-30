@@ -46,6 +46,7 @@ public:
 private:
     // FixedDelta = Logic / s
     static constexpr float FIXED_DELTA = 1.0f / 60.0f;
+    uint32_t logicTick_ = 1;
 
     const unsigned int WIDTH = 1920;
     const unsigned int HEIGHT = 1080;

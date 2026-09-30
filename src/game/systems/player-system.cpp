@@ -131,13 +131,13 @@ void PlayerSystem::Shoot(GameWorld& gameWorld,
     PhysicalInfo pi         = PhysicalInfo();
 	pi.position_		    = shooter.GetPosition();
 	pi.rotation_		    = shooter.GetRotation();
-	pi.angularVelocity_	    = shooter.GetRotationSpeed();
+	pi.angularVelocity_	    = glm::vec3(0.0f);
 	pi.scale_			    = shooter.GetScale();
 	pi.velocity_    		= shooter.GetVelocity();
-    auto id = spawner::SpawnShot(gameWorld, assMan, pi, playerId, predicted ? localPredCounter++ : 0, predicted, current.at(playerId).tick);
+    auto id = spawner::SpawnShot(gameWorld, assMan, pi, playerId, current.at(playerId).tick, predicted ? localPredCounter++ : 0);
 
     if (predicted)
-        bridge.AddPredictedShot(id);
+        bridge.AddPredictedShot(id, current.at(playerId).tick);
 }
 
 void PlayerSystem::UpdatePlayerData(float dT, GameWorld& gameWorld)

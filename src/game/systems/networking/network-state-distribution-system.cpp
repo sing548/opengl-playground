@@ -7,6 +7,8 @@
 
 void NetworkStateDistributionSystem::Update(SystemsContext& ctx)
 {
+    bool ticked = ctx.bridge.IsBroadcastTick(ctx.currentTick);
+
     if (ctx.bridge.GetRole() == NetworkBridge::Role::Server)
-        ctx.bridge.ManageGameStateDistribution(ctx.world, ctx.dT);
+        ctx.bridge.ManageGameStateDistribution(ctx.world, ticked, ctx.currentTick);
 }

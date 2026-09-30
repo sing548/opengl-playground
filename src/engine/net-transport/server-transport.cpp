@@ -111,8 +111,6 @@ struct ServerTransport::Impl{
 
     void Broadcast(std::span<const std::byte> bytes, bool reliable, bool noNagle)
     {
-        auto flag = (reliable ? k_nSteamNetworkingSend_Reliable : k_nSteamNetworkingSend_Unreliable)
-                    | (noNagle  ? k_nSteamNetworkingSend_NoNagle  : 0);
         for (auto& conn : mapClients_)
         {
             SendPackageToClient(conn.first, bytes, reliable, noNagle);
@@ -262,7 +260,7 @@ std::vector<ServerTransport::Event> ServerTransport::PollEvents()
     return impl_->PollEvents();
 }
 
-void ServerTransport::SetFakeNetwork(int lagMs, float pkgLossPct, float pkgJitterPct)
+void ServerTransport::SetFakeNetwork(int lagMs, float pkgLossPct, float /*pkgJitterPct*/)
 {
     auto* utils = SteamNetworkingUtils();
 

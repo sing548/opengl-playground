@@ -12,7 +12,7 @@ void NetworkInputConsumeSystem::Update(SystemsContext& ctx)
 
     ctx.world.ClearKilledPlayers();
 
-    ctx.bridge.PollEvents(ctx.world, ctx.assMan);
+    ctx.bridge.PollEvents(ctx.world, ctx.assMan, ctx.currentTick);
     auto inputStates = ctx.bridge.ConsumeOldestInputStates();
 
     for (const auto [id, state] : inputStates)

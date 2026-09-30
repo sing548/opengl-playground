@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <cstddef>
+#include <algorithm>
 #include <filesystem>
 
 #include "../../../engine/shaders/shader.h"
@@ -106,28 +107,31 @@ void ConTrail::Render(const FrameGlobals& globals)
 void ConTrail::BuildTrails()
 {
     std::vector<uint32_t> updatedIds;
+    updatedIds.reserve(world_.GetPlayerData().size() + world_.GetNpcData().size());
     
     for (auto& [id, _] : world_.GetPlayerData())
     {
+        if (!world_.GetScene().ModelExists(id)) continue;
+
         ExtendDeque(id);
         updatedIds.push_back(id);
     }
 
     for (auto& [id, _] : world_.GetNpcData())
     {
+        if (!world_.GetScene().ModelExists(id)) continue;
+
         ExtendDeque(id);
         updatedIds.push_back(id);
     }
 
-    if (updatedIds.size() != trails_.size())
-        // ToDo: Add check if updatedIds or trails_ grow in size to instead use unordered_set for performance
-        for (auto it = trails_.begin(); it != trails_.end();)
-        {
-            if (!std::binary_search(updatedIds.begin(), updatedIds.end(), it->first))
-                it = trails_.erase(it);
-            else
-                ++it;
-        }
+    for (auto it = trails_.begin(); it != trails_.end();)
+    {
+        if (std::ranges::find(updatedIds, it->first) == updatedIds.end())
+            it = trails_.erase(it);
+        else
+            ++it;
+    }
 }
 
 void ConTrail::ExtendDeque(uint32_t id)

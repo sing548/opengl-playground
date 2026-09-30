@@ -6,6 +6,8 @@
 #include <glm/vec3.hpp>
 #include <glm/ext/quaternion_float.hpp>
 
+constexpr uint32_t PREDICTED_ID_BASE = 0x8000000;
+
 struct InputState {
     uint32_t  id        = 0;
     float pitch         = 0.0f;

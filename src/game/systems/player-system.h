@@ -20,7 +20,7 @@ public:
     int GetOrder() const override { return static_cast<int>(SystemOrder::PlayerSystem); }
     bool CanReplay() override { return true; }
 private:
-    uint32_t localPredCounter = 0x8000000;
+    uint32_t localPredCounter = PREDICTED_ID_BASE;
     void ExecuteInput(SystemsContext& ctx);
     void UpdatePlayerData(float dT, GameWorld& gameWorld);
     void RotateModel(uint32_t id, Scene& scene, const glm::quat& change, SystemsContext& ctx);

@@ -67,23 +67,18 @@ void BakedMapGenerator::ReadMapConfig(std::filesystem::path path)
     std::ifstream heightmapFile;
     path = path / "heightmap.json";
 
-    try 
-    {
-        heightmapFile.open(path.string());
 
-        std::stringstream ss;
+    heightmapFile.open(path.string());
 
-        ss << heightmapFile.rdbuf();
-        heightmapFile.close();
+    if (!heightmapFile)
+        throw std::runtime_error("heightmap.json not read: " + path.string());
 
-        heightmapCode = ss.str();
-    }
-    catch (std::ifstream::failure& e)
-    {
-        std::cerr << "Loading heightmap: " << path << std::endl;
-        std::cerr << "ERROR::TERRAIN::FILE_NOT_SUCCESULLY_READ: " << e.what() << std::endl;
-        throw std::runtime_error("Heightmap file read failed");
-    }
+    std::stringstream ss;
+
+    ss << heightmapFile.rdbuf();
+    heightmapFile.close();
+
+    heightmapCode = ss.str();
 
     picojson::value v;
     std::string err = picojson::parse(v, heightmapCode);

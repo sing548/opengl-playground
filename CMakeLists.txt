@@ -209,3 +209,19 @@ add_custom_target(copy_config ALL
     COMMENT "Copying config to output directory"
 )
 add_dependencies(copy_config OpenGLPlayground)
+
+# assets/various holds small text data (gamecontrollerdb.txt) that gets edited
+# far more often than it gets relinked, so it needs the always-run cadence the
+# rest of assets/ doesn't. The POST_BUILD copy above already covers it, but only
+# when the exe relinks -- a mapping added without touching any source would
+# silently never reach the build dir. Destination must stay under assets/, since
+# RawInputManager resolves it as GetAssetsDir() / "various".
+# (models/skybox/textures/worlds stay on POST_BUILD -- re-checking multi-MB
+# trees every build is the cost that path exists to avoid.)
+add_custom_target(copy_various ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/various"
+        "$<TARGET_FILE_DIR:OpenGLPlayground>/assets/various"
+    COMMENT "Copying assets/various to output directory"
+)
+add_dependencies(copy_various OpenGLPlayground)

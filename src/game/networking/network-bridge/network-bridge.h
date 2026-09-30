@@ -27,23 +27,24 @@ class NetworkBridge
 public:
     enum class Role { Server, Client, Offline };
 
-    NetworkBridge(Role role, const std::string& serverAddr, int port, DebugStats& debugStats);
+    NetworkBridge(Role role, const std::string& serverAddr, int port, DebugStats& debugStats, float logicTickRate);
     ~NetworkBridge();
     // ToDo: Before anything more than closed testing, some thought should be put in to "input"-sanitization
     // so that this is not an open attack surface
-    void PollEvents(GameWorld& world, AssetManager& assMan);
+    void PollEvents(GameWorld& world, AssetManager& assMan, uint32_t tick);
     Role GetRole() const { return role_; };
+
+    bool IsBroadcastTick(uint32_t tick);
 
 #pragma region network-debug
     int GetPendingStateSize() { return pendingStates_.size(); }
 #pragma endregion
 
 #pragma region Server
-    void ManageGameStateDistribution(GameWorld& gameWorld, float dT);
+    void ManageGameStateDistribution(GameWorld& gameWorld, bool tickPassed, uint32_t tick);
 
     // ToDo: Think about adding bool if guessed (empty queue)
     std::unordered_map<uint32_t, InputState> ConsumeOldestInputStates();
-    uint32_t GetCurrentTick() const { return currentTick_; };
     void RespawnPlayers(GameWorld& world, AssetManager& assMan);
 #pragma endregion    
 
@@ -52,7 +53,7 @@ public:
     void SendInputState(InputState& state);
     void MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& assMan, bool predictiveClient);
     std::map<uint32_t, InputState>& ResetPlayerToLastInputState(GameWorld& world);
-    void AddPredictedShot(uint32_t id) { pendingShotCreations.emplace(currentTick_, id); };
+    void AddPredictedShot(uint32_t id, uint32_t tick) { pendingShotCreations.emplace(tick, id); };
     float GetRenderDelay() { return renderDelay_; }
     void SetRenderDelay(float renderDelay) { renderDelay_ = renderDelay; }
     float GetTimeDilation() const { return role_ == Role::Client ? timeDilation_ : 0.0f; } 
@@ -64,12 +65,8 @@ private:
     std::unique_ptr<ClientTransport> client_;
     std::unique_ptr<ServerTransport> server_;
 
-    const float tickRate_ = 1.0f / 30.0f;
-
-    float tickTimer_ = 0.0f;
-
-    // ticks start at 1 in order for queue logic to work.
-    uint32_t currentTick_ = 1;
+    static constexpr int broadcastRatio_ = 2;
+    const float logicTickRate_;
 
     DebugStats& debugStats_;
 
@@ -86,9 +83,9 @@ private:
     std::unordered_map<uint32_t, uint8_t> minQueueDepthSinceSend_;
 
 
-    void PollInternalServer(GameWorld& world, AssetManager& assMan);
-    std::tuple<msgpack::sbuffer, msgpack::sbuffer> BuildAndPackGameState(const GameWorld& gameWorld, bool fullState = false);
-    std::tuple<GameState, GameState> BuildGameState(const GameWorld& gameWorld, bool fullState = false);
+    void PollInternalServer(GameWorld& world, AssetManager& assMan, uint32_t tick);
+    std::tuple<msgpack::sbuffer, msgpack::sbuffer> BuildAndPackGameState(const GameWorld& gameWorld, uint32_t tick, bool fullState = false);
+    std::tuple<GameState, GameState> BuildGameState(const GameWorld& gameWorld, uint32_t tick, bool fullState = false);
     float CalculateRenderTime();
 #pragma endregion
 
@@ -129,6 +126,7 @@ private:
     Interpolator inter_;
 
     void PollInternalClient();
+    void ExpirePredictedShots(GameWorld& world);
     
 #pragma endregion
 };

@@ -12,8 +12,8 @@
 #include <glm/glm.hpp>
 
 
-NetworkBridge::NetworkBridge(Role role, const std::string& serverAddr, int port, DebugStats& debugStats) 
-                            : role_(role), debugStats_(debugStats), inter_(tickRate_, debugStats_)
+NetworkBridge::NetworkBridge(Role role, const std::string& serverAddr, int port, DebugStats& debugStats, float logicTickRate) 
+                            : role_(role), logicTickRate_(logicTickRate), debugStats_(debugStats), inter_(logicTickRate, debugStats_)
 {
     if (role == NetworkBridge::Role::Client)
     {
@@ -27,7 +27,12 @@ NetworkBridge::NetworkBridge(Role role, const std::string& serverAddr, int port,
 
 NetworkBridge::~NetworkBridge() = default;
 
-void NetworkBridge::ManageGameStateDistribution(GameWorld& gameWorld, float dT)
+bool NetworkBridge::IsBroadcastTick(uint32_t tick)
+{
+    return (tick % broadcastRatio_) == 0;
+}
+
+void NetworkBridge::ManageGameStateDistribution(GameWorld& gameWorld, bool tickPassed, uint32_t tick)
 {
     auto& scene = gameWorld.GetScene();
 
@@ -43,15 +48,9 @@ void NetworkBridge::ManageGameStateDistribution(GameWorld& gameWorld, float dT)
             pendingAdded_.push_back(id);
     }
 
-	tickTimer_ += dT;
-
-
-	if (tickTimer_ >= tickRate_)
+	if (tickPassed)
 	{
-		currentTick_++;
-		tickTimer_ -= tickRate_;
-
-        auto [defBuffer, tranBuffer] = BuildAndPackGameState(gameWorld);
+        auto [defBuffer, tranBuffer] = BuildAndPackGameState(gameWorld, tick);
 
         if (defBuffer.size() > 0)
         {
@@ -84,7 +83,7 @@ void NetworkBridge::RespawnPlayers(GameWorld& world, AssetManager& assMan)
         pi.rotation_ = glm::quat(1, 0, 0, 0);
         pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
 
-        uint32_t playerId = spawner::SpawnPlayer(world, assMan, pi);
+        uint32_t playerId = spawner::SpawnPlayer(world, assMan, pi, spawner::ALLOCATE_ID);
 
         msgpack::sbuffer buffer;
 		msgpack::packer<msgpack::sbuffer> pk(buffer);
@@ -103,17 +102,17 @@ void NetworkBridge::RespawnPlayers(GameWorld& world, AssetManager& assMan)
     }
 }
 
-void NetworkBridge::PollEvents(GameWorld& world, AssetManager& assMan)
+void NetworkBridge::PollEvents(GameWorld& world, AssetManager& assMan, uint32_t tick)
 {
     if (role_ == Role::Server)
-        PollInternalServer(world, assMan);
+        PollInternalServer(world, assMan, tick);
     else
         PollInternalClient();
 }
 
-std::tuple<msgpack::sbuffer, msgpack::sbuffer> NetworkBridge::BuildAndPackGameState(const GameWorld& gameWorld, bool fullState)
+std::tuple<msgpack::sbuffer, msgpack::sbuffer> NetworkBridge::BuildAndPackGameState(const GameWorld& gameWorld, uint32_t tick, bool fullState)
 {
-    auto [definitiveState, transientState] = BuildGameState(gameWorld, fullState);
+    auto [definitiveState, transientState] = BuildGameState(gameWorld, tick, fullState);
 
     msgpack::sbuffer definitiveBuffer;
 
@@ -134,14 +133,14 @@ std::tuple<msgpack::sbuffer, msgpack::sbuffer> NetworkBridge::BuildAndPackGameSt
     return std::tuple(std::move(definitiveBuffer), std::move(transientBuffer));
 }
 
-std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const GameWorld& gameWorld, bool fullState)
+std::tuple<GameState, GameState> NetworkBridge::BuildGameState(const GameWorld& gameWorld, uint32_t tick, bool fullState)
 {
     GameState transientState;
     GameState definitiveState;
     const auto& scene = gameWorld.GetScene();
 
-    transientState.tick = currentTick_;
-    definitiveState.tick = currentTick_;
+    transientState.tick = tick;
+    definitiveState.tick = tick;
 
     auto& out = definitiveState.playerToLastProcessedInputAndQueueDepth;
 
@@ -284,7 +283,7 @@ std::unordered_map<uint32_t, InputState> NetworkBridge::ConsumeOldestInputStates
     return states;
 }
 
-void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
+void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan, uint32_t tick)
 {
     auto events = server_->PollEvents();
 
@@ -303,7 +302,7 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
                 pi.rotation_ = glm::quat(1, 0, 0, 0);
                 pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
 
-                uint32_t playerId = spawner::SpawnPlayer(world, assMan, pi);
+                uint32_t playerId = spawner::SpawnPlayer(world, assMan, pi, spawner::ALLOCATE_ID);
 
                 msgpack::sbuffer buffer;
 			    msgpack::packer<msgpack::sbuffer> pk(buffer);
@@ -322,13 +321,14 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
 
                 // Send complete state of Scene to this client only - one-time setup.
                 // Possible ToDo: If this ever grows, maybe add second method so I don't throw a completely packed object away
-                auto [gsBuffer, _] = BuildAndPackGameState(world, true);
+                auto [gsBuffer, _] = BuildAndPackGameState(world, tick, true);
 
                 std::span<const std::byte> gsBytes {
                     reinterpret_cast<const std::byte*>(gsBuffer.data()),
                     gsBuffer.size()
                 };
-                server_->Send(ev.conn, gsBytes, true);
+                if (gsBuffer.size() > 0)
+                    server_->Send(ev.conn, gsBytes, true);
 
                 break;
             }
@@ -408,8 +408,6 @@ void NetworkBridge::PollInternalServer(GameWorld& world, AssetManager& assMan)
 
 void NetworkBridge::SendInputState(InputState& state)
 {
-    state.tick = currentTick_++;
-    
     sentInputStates_.emplace(state.tick, state);
 
     constexpr std::size_t stateCount = 3;
@@ -488,8 +486,10 @@ void NetworkBridge::PollInternalClient()
                         const bool fresh = newTick > previousTick_;
                         const bool stale = previousTick_ != 0 && newTick < previousTick_;
 
-                        if (previousTick_ != 0 && fresh && newTick - previousTick_ != 1)
-                            debugStats_["net.tick_gaps"].Add(static_cast<float>(newTick - previousTick_ - 1));
+                        const int missed = static_cast<int>(newTick - previousTick_) / broadcastRatio_ - 1;
+
+                        if (previousTick_ != 0 && fresh && missed > 0)
+                            debugStats_["net.tick_gaps"].Add(missed);
 
                         if (stale)
                         {
@@ -591,20 +591,17 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
 
                         if (match != pendingShotCreations.end())
                         {
-                            gameWorld.GetScene().ReassignId(match->second, entity.id);
-                            gameWorld.ReassignShotId(match->second, entity.id);
+                            if (match->second >= PREDICTED_ID_BASE && gameWorld.IsShot(match->second))
+                            {
+                                gameWorld.GetScene().ReassignId(match->second, entity.id);
+                                gameWorld.ReassignShotId(match->second, entity.id);
+                            }
                             pendingShotCreations.erase(match);
-                        }
-                        else
-                        {
-                            // ToDo: Maybe revisit, a bit "hacky" right now
-                            if (pendingShotCreations.size() > 0 && pendingShotCreations.begin()->first > entity.sourceTick + 50)
-                                pendingShotCreations.erase(pendingShotCreations.begin());
                         }
                     }
                     else
                     {
-                        float shotAge = std::max(0.0f, (serverClock_ + renderDelay_) - gs.tick * tickRate_);
+                        float shotAge = std::max(0.0f, (serverClock_ + renderDelay_) - gs.tick * logicTickRate_);
                         spawner::SpawnShotFromNetwork(gameWorld, assMan, pi, entity.ownerId, entity.id, shotAge);
                     }
             }
@@ -615,7 +612,7 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
     {
         const auto& first = pendingStates_.front();
 
-        if (first.tick * tickRate_ > renderTime) break;
+        if (first.tick * logicTickRate_> renderTime) break;
         if (first.tick == 0) 
         {
             pendingStates_.pop_front();
@@ -663,8 +660,11 @@ void NetworkBridge::MergeClientWithNetwork(GameWorld& gameWorld, AssetManager& a
 
 std::map<uint32_t, InputState>& NetworkBridge::ResetPlayerToLastInputState(GameWorld& world)
 {
+    ExpirePredictedShots(world);
+
     if (!latestStateValid_ || playerId_ == 0 || !world.GetScene().ModelExists(playerId_))
         return emptyStates_;
+
 
     auto& playerModel = world.GetScene().GetModelByReference(playerId_);
 
@@ -679,6 +679,21 @@ std::map<uint32_t, InputState>& NetworkBridge::ResetPlayerToLastInputState(GameW
     return sentInputStates_;
 }
 
+void NetworkBridge::ExpirePredictedShots(GameWorld& world)
+{
+    const int rawBuffer = static_cast<uint32_t>(renderDelay_ / logicTickRate_) - static_cast<uint32_t>(broadcastRatio_);
+    const uint32_t bufferTicks = static_cast<uint32_t>(std::max(0, rawBuffer));
+
+    if (latestAckTick_ <= bufferTicks) return;
+
+    const auto expired = pendingShotCreations.upper_bound(latestAckTick_ - bufferTicks);
+
+    for (auto it = pendingShotCreations.begin(); it != expired; ++it)
+        world.MarkEntityForDelete(it->second);
+
+    pendingShotCreations.erase(pendingShotCreations.begin(), expired);
+}
+
 float NetworkBridge::CalculateRenderTime()
 {
     float k = 0.75;
@@ -688,7 +703,7 @@ float NetworkBridge::CalculateRenderTime()
     float timeSinceLastTick = std::chrono::duration<float>(
         now - timeAtLastTick_
     ).count();
-    float target = previousTick_ * tickRate_ + timeSinceLastTick;
+    float target = previousTick_ * logicTickRate_ + timeSinceLastTick;
 
     if (!serverClockInit_)
     {
@@ -724,13 +739,13 @@ void NetworkBridge::UpdateTimeDilateion(uint8_t queueDepth)
 
     if (std::abs(discrepancy) <= DEPTH_DEVIATION)
     {
-        timeDilation_ -= timeDilation_ * NUDGE_RATE * (1.0f / 30.0f);
+        timeDilation_ -= timeDilation_ * NUDGE_RATE * logicTickRate_ * broadcastRatio_;
         
         if (std::abs(timeDilation_) < 0.0001f)
             timeDilation_ = 0.0f;
     }
     else
-        timeDilation_ += discrepancy * DILATION_GAIN * (1.0f / 30.0f); 
+        timeDilation_ += discrepancy * DILATION_GAIN * logicTickRate_ * broadcastRatio_; 
 
     timeDilation_ = std::clamp(timeDilation_, -MAX_DILATION, MAX_DILATION);
     debugStats_["net.dilation"].Add(timeDilation_);

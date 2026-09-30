@@ -12,6 +12,7 @@ struct ShotData
     uint32_t id;
     uint32_t ownerId;
     uint32_t creationTick;
+    float age = 0.0f;
 };
 
 struct PlayerData
@@ -71,7 +72,7 @@ public:
 
     uint32_t AddPlayer(uint32_t id, PlayerData playerData);
     uint32_t AddNpc(uint32_t id);
-    uint32_t AddShot(uint32_t id, uint32_t shooterId, bool predicted = false, uint32_t creationTick = 0);
+    uint32_t AddShot(uint32_t id, uint32_t shooterId, uint32_t creationTick = 0, float age = 0.0f);
     void     RemoveEntity(uint32_t id);
 
     void ReassignShotId(uint32_t oldId, uint32_t newId);

@@ -38,8 +38,8 @@ private:
     std::vector<std::future<PendingAsyncChunk>> asyncChunks_;
 
     void EnqueueChunks(World& world, const glm::ivec2 area, int worldIdx);
-    void DrainQueue(std::chrono::microseconds budget);
     void DrainQueueAsync(std::chrono::microseconds budget);
+    bool ChunkWanted(const World& world, const glm::ivec2& chunk, const glm::ivec2& area) const;
     void CullChunks(World& world, const glm::ivec2& area);
 };
 

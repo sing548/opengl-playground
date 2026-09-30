@@ -63,19 +63,19 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
             pi.rotation_ = glm::quat(1, 0, 0, 0);
             pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
 
-            playerId_ = spawner::SpawnPlayer(gameWorld_, *assMan_, pi);
+            playerId_ = spawner::SpawnPlayer(gameWorld_, *assMan_, pi, spawner::ALLOCATE_ID);
 
-            auto state = InputState { playerId_, false, false, false, false, false, false  };
+            auto state = InputState { playerId_, false, false, false, false, false };
             currentInputStates_.try_emplace(playerId_, state);
             previousInputStates_.try_emplace(playerId_, state);
 
         }
     
         if (m_bServer)
-            netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Server, serverAddr, port, debugStats_);
+            netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Server, serverAddr, port, debugStats_, FIXED_DELTA);
         else
         {
-            netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Client, serverAddr, port, debugStats_);
+            netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Client, serverAddr, port, debugStats_, FIXED_DELTA);
         }
 
     }
@@ -83,11 +83,11 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
     {
         BasicLevel();
         
-        auto state = InputState { playerId_, false, false, false, false, false, false  };
+        auto state = InputState { playerId_, false, false, false, false, false, false };
         currentInputStates_.try_emplace(playerId_, state);
         previousInputStates_.try_emplace(playerId_, state);
         
-        netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Offline, "", 0, debugStats_);
+        netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Offline, "", 0, debugStats_, FIXED_DELTA);
     }
     
     HandleImGui(0);
@@ -114,14 +114,14 @@ void Engine::BasicLevel()
     pi.rotation_ = glm::quat(1, 0, 0, 0);
     pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
 
-    playerId_ = spawner::SpawnPlayer(gameWorld_, *assMan_, pi);
+    playerId_ = spawner::SpawnPlayer(gameWorld_, *assMan_, pi, spawner::ALLOCATE_ID);
 
     PhysicalInfo pi2 = PhysicalInfo();
     pi2.position_ = glm::vec3(-20.0f, 0.0f, 0.0f);
     pi2.rotation_ = glm::angleAxis(glm::radians(180.0f), glm::vec3(0,1,0));
     pi2.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
 
-    spawner::SpawnNpc(gameWorld_, *assMan_, pi2);
+    spawner::SpawnNpc(gameWorld_, *assMan_, pi2, spawner::ALLOCATE_ID);
 }
 
 void Engine::Run()
@@ -169,6 +169,7 @@ void Engine::Run()
             accTime -= step;
             ExecuteSystems(GameplayPhase::PostSimulation, FIXED_DELTA);
             gameWorld_.GetScene().ClearAddedModels();
+            ++logicTick_;
             ++stepsThisFrame;
             ++j;
         }
@@ -240,7 +241,8 @@ void Engine::ExecuteSystems(GameplayPhase phase, float dT, float alpha)
         false,
         alpha,
         settings_,
-        debugStats_
+        debugStats_,
+        logicTick_
     };
 
     for (auto& system : systems_)
@@ -310,9 +312,9 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int /*scancode*/, int acti
                 pi.rotation_ = glm::quat(1, 0, 0, 0);
                 pi.scale_ = glm::vec3(0.2f, 0.2f, 0.2f);
 
-                engine->playerId_ = spawner::SpawnPlayer(engine->gameWorld_, *engine->assMan_, pi);
+                engine->playerId_ = spawner::SpawnPlayer(engine->gameWorld_, *engine->assMan_, pi, spawner::ALLOCATE_ID);
 
-                auto state = InputState { engine->playerId_, false, false, false, false, false, false  };
+                auto state = InputState { engine->playerId_, false, false, false, false, false, false, engine->logicTick_ };
                 engine->currentInputStates_.try_emplace(engine->playerId_, state);
                 engine->previousInputStates_.try_emplace(engine->playerId_, state);
             }
@@ -338,7 +340,7 @@ void Engine::KeyCallback(GLFWwindow* window, int key, int /*scancode*/, int acti
 
 std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 {
-    glm::mat4 projection = glm::perspective(glm::radians(window_->GetCamera().GetZoom()), (float)window_->GetSize().width / (float)window_->GetSize().height, 1.0f, 6000.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(window_->GetCamera().GetZoom()), (float)window_->GetSize().width / (float)window_->GetSize().height, 1.0f, 10000.0f);
 	glm::mat4 view = window_->GetCamera().GetViewMatrix();
 	auto& models = gameWorld_.GetScene().GetModels();
 

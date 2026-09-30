@@ -34,10 +34,6 @@ void PhysicsSystem::MoveModels(SystemsContext& ctx)
     for (auto& [id, model] : ctx.world.GetScene().GetModels())
     {
         MoveModel(ctx, id);
-
-        auto position = model.GetPosition();
-        if ((abs(position.x) > 80 || abs(position.z) > 80) && !ctx.world.IsPlayer(id))
-            ctx.world.MarkEntityForDelete(id);
     }
 
     else
