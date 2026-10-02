@@ -364,7 +364,8 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 	}
 
 	RenderList rl;
-    uint16_t hbm;
+    Material* hitboxMat = GetMaterial(static_cast<uint16_t>(MaterialId::HitboxDefault));
+
 	for (auto& [id, model] : models)
 	{
 		glm::mat4 modelProjection = glm::mat4(1.0f);
@@ -384,9 +385,6 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			dc.renderPass = settings_.debugView ? RenderPass::Debug : RenderPass::Opaque;
             
 			rl.commands.push_back(dc);
-
-            // ToDo: Update when refactoring BuildRenderList. Clean enough for now
-            hbm = mesh->GetHitboxMaterialId();
 		}
 
 		if (settings_.hitboxes)
@@ -394,7 +392,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			DrawCommand dc;
 
 			dc.mesh = model.GetHitboxMesh();
-			dc.material = GetMaterial(hbm);
+			dc.material = hitboxMat;
 			
 			glm::mat4 modelMat = glm::mat4(1.0f);
     		modelMat = glm::translate(modelMat, model.GetInterpolatedPosition());
@@ -416,7 +414,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 			
 			DrawCommand dc;
 			dc.mesh = model.GetHitboxMesh();
-			dc.material = GetMaterial(hbm);
+			dc.material = hitboxMat;
 
 			glm::mat4 modelMat = glm::mat4(1.0f);
     		modelMat = glm::translate(modelMat, model.GetInterpolatedPosition());
@@ -438,7 +436,7 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
 
 			DrawCommand dc;
 			dc.mesh = model.GetHitboxMesh();
-			dc.material = GetMaterial(hbm);
+			dc.material = hitboxMat;
 
 			glm::mat4 modelMat = glm::mat4(1.0f);
     		modelMat = glm::translate(modelMat, model.GetInterpolatedPosition());
