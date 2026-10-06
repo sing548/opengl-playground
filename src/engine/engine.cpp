@@ -17,14 +17,14 @@
 #include "../game/spawner/spawner.h"
 #include "../game/networking/network-bridge/network-bridge.h"
 
-Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
+Engine::Engine(EngineConfig config) : config_(config)
 {
-    if (config == EngineMode::Server)
+    if (config.config == EngineMode::Server)
     {
         m_bNetworking = true;
         m_bServer = true;
     }
-    else if (config == EngineMode::Client)
+    else if (config.config == EngineMode::Client)
     {
         m_bNetworking = true;
     }
@@ -72,12 +72,19 @@ Engine::Engine(EngineMode config, const std::string& serverAddr, int port)
         }
     
         if (m_bServer)
-            netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Server, serverAddr, port, debugStats_, FIXED_DELTA);
+            netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Server, config.serverUrl, config.port, debugStats_, FIXED_DELTA);
         else
         {
-            netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Client, serverAddr, port, debugStats_, FIXED_DELTA);
+            netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Client, config.serverUrl, config.port, debugStats_, FIXED_DELTA);
         }
 
+    }
+    else if (config.sandbox)
+    {
+        netwBridg_ = std::make_unique<NetworkBridge>(NetworkBridge::Role::Offline, "", 0, debugStats_, FIXED_DELTA);
+        settings_.skyBox = false;
+        settings_.thirdPerson = false;
+        settings_.adjustCamera = false;
     }
     else
     {
@@ -354,106 +361,110 @@ std::tuple<RenderList, FrameGlobals> Engine::BuildRenderList()
     fg.skyBox = settings_.skyBox;
     fg.grass = settings_.grass;
 
-	for (auto& [id, model] : models)
-	{
-		if (gameWorld_.IsShot(id)) {
-			PointLight pl;
-			pl.position = model.GetInterpolatedPosition();
-			fg.pointLights.push_back(pl);
-		}
-	}
+    RenderList rl;
 
-	RenderList rl;
-    Material* hitboxMat = GetMaterial(static_cast<uint16_t>(MaterialId::HitboxDefault));
-
-	for (auto& [id, model] : models)
-	{
-		glm::mat4 modelProjection = glm::mat4(1.0f);
-		modelProjection = glm::translate(modelProjection, model.GetInterpolatedPosition());
-		modelProjection *=  glm::mat4_cast(glm::quat(model.GetInterpolatedRotation()));
-		modelProjection = glm::scale(modelProjection, model.GetScale());
-
-        
-		for (auto& mesh : model.GetMeshes())
-		{
-			DrawCommand dc;
-
-			dc.mesh = mesh.get();
-			dc.material = GetMaterial(mesh->GetMaterialId());
-			dc.transform = modelProjection;
-			dc.tint = {1,1,1,1};
-			dc.renderPass = settings_.debugView ? RenderPass::Debug : RenderPass::Opaque;
+    if (!config_.sandbox)
+    {
+        for (auto& [id, model] : models)
+        {
+            if (gameWorld_.IsShot(id)) {
+                PointLight pl;
+                pl.position = model.GetInterpolatedPosition();
+                fg.pointLights.push_back(pl);
+            }
+        }
+    
+        Material* hitboxMat = GetMaterial(static_cast<uint16_t>(MaterialId::HitboxDefault));
+    
+        for (auto& [id, model] : models)
+        {
+            glm::mat4 modelProjection = glm::mat4(1.0f);
+            modelProjection = glm::translate(modelProjection, model.GetInterpolatedPosition());
+            modelProjection *=  glm::mat4_cast(glm::quat(model.GetInterpolatedRotation()));
+            modelProjection = glm::scale(modelProjection, model.GetScale());
+    
             
-			rl.commands.push_back(dc);
-		}
-
-		if (settings_.hitboxes)
-		{
-			DrawCommand dc;
-
-			dc.mesh = model.GetHitboxMesh();
-			dc.material = hitboxMat;
-			
-			glm::mat4 modelMat = glm::mat4(1.0f);
-    		modelMat = glm::translate(modelMat, model.GetInterpolatedPosition());
-    		modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
-
-			dc.transform = modelMat;
-			dc.tint = {1,1,1,1};
-			dc.renderPass = RenderPass::Debug;
-
-			rl.commands.push_back(dc);
-		}
-	}
-
-	for (auto& [id, playerData] : gameWorld_.GetPlayerData())
-	{
-		if (playerData.lastHit > 0)
-		{
-			auto& model = gameWorld_.GetScene().GetModelByReference(id);
-			
-			DrawCommand dc;
-			dc.mesh = model.GetHitboxMesh();
-			dc.material = hitboxMat;
-
-			glm::mat4 modelMat = glm::mat4(1.0f);
-    		modelMat = glm::translate(modelMat, model.GetInterpolatedPosition());
-    		modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
-
-			dc.transform = modelMat;
-			dc.tint = {1,1,1,1};
-			dc.renderPass = RenderPass::Opaque;
-
-			rl.commands.push_back(dc);
-		}
-	}
-
-    for (auto& [id, npcData] : gameWorld_.GetNpcData())
-    {
-        if (npcData.lastHit > 0)
-		{
-			auto& model = gameWorld_.GetScene().GetModelByReference(id);
-
-			DrawCommand dc;
-			dc.mesh = model.GetHitboxMesh();
-			dc.material = hitboxMat;
-
-			glm::mat4 modelMat = glm::mat4(1.0f);
-    		modelMat = glm::translate(modelMat, model.GetInterpolatedPosition());
-    		modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
-
-			dc.transform = modelMat;
-			dc.tint = {1,1,1,1};
-			dc.renderPass = RenderPass::Opaque;
-
-			rl.commands.push_back(dc);
-		}
-    }
-
-    if (settings_.terrain)
-    {
-        std::vector<DrawCommand> dcs = terrainHandler_->BuildDrawCommands(settings_.debugView ? RenderPass::Debug : RenderPass::Opaque);
-        rl.commands.append_range(dcs);
+            for (auto& mesh : model.GetMeshes())
+            {
+                DrawCommand dc;
+    
+                dc.mesh = mesh.get();
+                dc.material = GetMaterial(mesh->GetMaterialId());
+                dc.transform = modelProjection;
+                dc.tint = {1,1,1,1};
+                dc.renderPass = settings_.debugView ? RenderPass::Debug : RenderPass::Opaque;
+                
+                rl.commands.push_back(dc);
+            }
+    
+            if (settings_.hitboxes)
+            {
+                DrawCommand dc;
+    
+                dc.mesh = model.GetHitboxMesh();
+                dc.material = hitboxMat;
+                
+                glm::mat4 modelMat = glm::mat4(1.0f);
+                modelMat = glm::translate(modelMat, model.GetInterpolatedPosition());
+                modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
+    
+                dc.transform = modelMat;
+                dc.tint = {1,1,1,1};
+                dc.renderPass = RenderPass::Debug;
+    
+                rl.commands.push_back(dc);
+            }
+        }
+    
+        for (auto& [id, playerData] : gameWorld_.GetPlayerData())
+        {
+            if (playerData.lastHit > 0)
+            {
+                auto& model = gameWorld_.GetScene().GetModelByReference(id);
+                
+                DrawCommand dc;
+                dc.mesh = model.GetHitboxMesh();
+                dc.material = hitboxMat;
+    
+                glm::mat4 modelMat = glm::mat4(1.0f);
+                modelMat = glm::translate(modelMat, model.GetInterpolatedPosition());
+                modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
+    
+                dc.transform = modelMat;
+                dc.tint = {1,1,1,1};
+                dc.renderPass = RenderPass::Opaque;
+    
+                rl.commands.push_back(dc);
+            }
+        }
+    
+        for (auto& [id, npcData] : gameWorld_.GetNpcData())
+        {
+            if (npcData.lastHit > 0)
+            {
+                auto& model = gameWorld_.GetScene().GetModelByReference(id);
+    
+                DrawCommand dc;
+                dc.mesh = model.GetHitboxMesh();
+                dc.material = hitboxMat;
+    
+                glm::mat4 modelMat = glm::mat4(1.0f);
+                modelMat = glm::translate(modelMat, model.GetInterpolatedPosition());
+                modelMat = glm::scale(modelMat, glm::vec3(model.GetRadius()));
+    
+                dc.transform = modelMat;
+                dc.tint = {1,1,1,1};
+                dc.renderPass = RenderPass::Opaque;
+    
+                rl.commands.push_back(dc);
+            }
+        }
+    
+        if (settings_.terrain)
+        {
+            std::vector<DrawCommand> dcs = terrainHandler_->BuildDrawCommands(settings_.debugView ? RenderPass::Debug : RenderPass::Opaque);
+            rl.commands.append_range(dcs);
+        }
     }
 
     return std::tuple(rl, fg);
@@ -544,6 +555,21 @@ void Engine::HandleImGui(int step)
                     ImGui::PlotLines(("##" + name).c_str(), ring.samples.data(), ring.count, ring.Offset(),
                                      overlay, 0.0f, ring.scaleMax, ImVec2(0, 60));
                 }
+            }
+
+            if (config_.sandbox && ImGui::CollapsingHeader("Sandbox"))
+            {
+                ImGui::Checkbox("Run simulation", &settings_.sandbox.runSimulation);
+                ImGui::SliderInt("Particle count", &settings_.sandbox.particleCount, 0, 10000);
+                ImGui::SliderFloat("Particle size", &settings_.sandbox.particleSize, 0.1f, 2.0f);
+                ImGui::SliderFloat("Particle spacing", &settings_.sandbox.particleSpacing, 0.5f, 3.0f);
+                ImGui::SliderFloat("Gravity", &settings_.sandbox.gravity, 0.0f, 50.0f);
+                ImGui::SliderFloat("Restitution", &settings_.sandbox.restitution, 0.0f, 1.0f);
+                ImGui::SliderFloat("Smoothing radius", &settings_.sandbox.smoothingRadius, 1.0f, 30.0f);
+                ImGui::SliderFloat("Target density", &settings_.sandbox.targetDensity, 0.0f, 10.0f);
+                ImGui::SliderFloat("Viscocity", &settings_.sandbox.viscosityStrength, 0.0f, 1.0f);
+                ImGui::SliderFloat("Pressure multiplier", &settings_.sandbox.pressureMultiplier, 1.0f, 1000.0f);
+                ImGui::SliderFloat("Near pressure multiplier", &settings_.sandbox.nearPressureMultiplier, 0.0f, 10.0f);
             }
 
             ImGui::End();

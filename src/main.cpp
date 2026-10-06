@@ -11,7 +11,10 @@
 #include "engine/shaders/shader.h"
 #include "engine/rendering/renderer.h"
 #include "engine/helpers/file-helper.h"
+#include "engine/simulation/fluid/fluid-data.h"
+#include "engine/rendering/terrain/terrain-handler-stud.h"
 
+#include "engine/simulation/fluid/fluid-system.h"
 #include "game/systems/input/input-system.h"
 #include "game/systems/networking/network-input-consume-system.h"
 #include "game/systems/networking/network-input-distribution-system.h"
@@ -28,6 +31,7 @@
 #include "game/systems/shot-system.h"
 #include "game/systems/terrain-system.h"
 
+#include "engine/simulation/fluid/fluid-renderer.h"
 #include "engine/rendering/sky/sky.h"
 #include "game/rendering/grass/grass.h"
 #include "game/rendering/flight/con-trail.h"
@@ -46,6 +50,7 @@ int main(int argc, const char *argv[]) {
 
     bool bServer = false;
 	bool bClient = false;
+    bool bSandbox = false;
 	int nPort = 5001;
     std::string serverUrl;
 
@@ -53,6 +58,14 @@ int main(int argc, const char *argv[]) {
 
 	for ( int i = 1 ; i < argc ; ++i )
 	{
+        if ( !strcmp( argv[i], "sandbox"))
+        {
+            bSandbox = true;
+            bServer = false;
+            bClient = false;
+            break;
+        }
+
 		if ( !bClient && !bServer )
 		{
 			if ( !strcmp( argv[i], "client" ) )
@@ -101,13 +114,13 @@ int main(int argc, const char *argv[]) {
 
     try {
         if (bServer)
-            engine = std::make_unique<Engine>(EngineMode::Server, "", nPort);
+            engine = std::make_unique<Engine>(EngineConfig{ .config = EngineMode::Server, .port = nPort });
         else if (bClient)
-            engine = std::make_unique<Engine>(EngineMode::Client, serverUrl);
+            engine = std::make_unique<Engine>(EngineConfig{ .config = EngineMode::Client, .serverUrl = serverUrl });
+        else if (bSandbox)
+            engine = std::make_unique<Engine>(EngineConfig{ .config = EngineMode::Standalone, .sandbox = true });
         else 
-        {
-            engine = std::make_unique<Engine>(EngineMode::Standalone);
-        }
+            engine = std::make_unique<Engine>(EngineConfig{ .config = EngineMode::Standalone });
     }
     catch (const std::runtime_error& e)
     {
@@ -200,26 +213,39 @@ int main(int argc, const char *argv[]) {
     auto hitboxMat = std::make_unique<HitboxMaterial>(std::move(hitboxShader));
     engine->AddMaterial(static_cast<uint16_t>(GameMaterial::Hitbox), std::move(hitboxMat));
 
-    std::vector<World> worlds;
-
-    std::vector<DiskWorldInfo> wis = LoadDiskWorldInfos((std::filesystem::path(FileHelper::GetConfigDir()) / "worlds.json"));
-
-    for (auto& wi : wis)
+    if (!bSandbox)
     {
-        for (const auto& info : wi.ToWorlds())
-        {
-            auto terrainShader = std::make_unique<Shader>(terrainVert.c_str(), terrainFrag.c_str());
+        std::vector<World> worlds;
     
-            World w;
-            w.info              = info;
-            w.generator         = std::make_unique<DiskWorldGenerator>(w.info);
-            w.material          = std::make_unique<TerrainMaterial>(std::move(terrainShader), engine->GetAssMan(),
-                                                                    w.generator->MinHeight(), w.generator->MaxHeight());
-            worlds.push_back(std::move(w));
+        std::vector<DiskWorldInfo> wis = LoadDiskWorldInfos((std::filesystem::path(FileHelper::GetConfigDir()) / "worlds.json"));
+    
+        for (auto& wi : wis)
+        {
+            for (const auto& info : wi.ToWorlds())
+            {
+                auto terrainShader = std::make_unique<Shader>(terrainVert.c_str(), terrainFrag.c_str());
+        
+                World w;
+                w.info              = info;
+                w.generator         = std::make_unique<DiskWorldGenerator>(w.info);
+                w.material          = std::make_unique<TerrainMaterial>(std::move(terrainShader), engine->GetAssMan(),
+                                                                        w.generator->MinHeight(), w.generator->MaxHeight());
+                worlds.push_back(std::move(w));
+            }
         }
+    
+        engine->AddTerrainHandler(std::make_unique<TerrainHandler>(std::move(worlds)));
     }
+    else
+    {
+        auto fluS = std::make_unique<FluidSystem>();
+        std::unique_ptr<FluidRenderer> fluR = std::make_unique<FluidRenderer>(fluS->GetFluid());
 
-    engine->AddTerrainHandler(std::make_unique<TerrainHandler>(std::move(worlds)));
+        engine->AddGameplaySystem(std::move(fluS));
+        engine->AddSceneRenderable(std::move(fluR));
+        
+        engine->AddTerrainHandler(std::make_unique<TerrainHandlerStud>());
+    }
 
     engine->Run();
 

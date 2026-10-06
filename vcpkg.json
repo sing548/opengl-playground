@@ -7,6 +7,7 @@
     "assimp",
     "openssl",
     "msgpack",
-    "protobuf"
+    "protobuf",
+    "tbb"
   ]
 }

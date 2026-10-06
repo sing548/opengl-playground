@@ -20,6 +20,13 @@
 
 enum class EngineMode { Standalone, Server, Client };
 
+struct EngineConfig {
+    EngineMode config;
+    std::string serverUrl = "";
+    int port = -1;
+    bool sandbox = false;
+};
+
 class ReplayDriver;
 class NetworkBridge;
 class RawInputManager;
@@ -28,7 +35,7 @@ class ITerrainHandler;
 class Engine {
 public:
 
-    Engine(EngineMode config, const std::string& serverUrl = "", int port = -1);
+    Engine(EngineConfig config);
     ~Engine();
     void BasicLevel();
     void Run();
@@ -44,6 +51,9 @@ public:
     ReplayDriver& GetReplayDriver() { return *replayDriver_; }
     RawInputManager& GetRawMan() { return *rawMan_; }
 private:
+
+    EngineConfig config_;
+    
     // FixedDelta = Logic / s
     static constexpr float FIXED_DELTA = 1.0f / 60.0f;
     uint32_t logicTick_ = 1;

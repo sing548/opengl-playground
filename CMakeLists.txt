@@ -21,6 +21,7 @@ find_package(OpenGL REQUIRED)
 find_package(assimp CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(msgpack-cxx CONFIG REQUIRED)
+find_package(TBB CONFIG REQUIRED)
 # Note: msgpack-cxx's CMake config does a transitive find_dependency(Boost),
 # so Boost is resolved automatically — we don't use Boost directly.
 
@@ -53,6 +54,8 @@ add_executable(OpenGLPlayground
     src/engine/rendering/sky/sky.cpp
     src/engine/rendering/renderer.cpp
     src/engine/rendering/terrain/chunk-handler.cpp
+    src/engine/simulation/fluid/fluid-renderer.cpp
+    src/engine/simulation/fluid/fluid-system.cpp
     src/engine/systems/replay/replay-driver.cpp
     src/engine/engine.cpp
     src/game/game-world/game-world.cpp
@@ -120,6 +123,7 @@ target_link_libraries(OpenGLPlayground PRIVATE
     OpenSSL::SSL
     msgpack-cxx
     GameNetworkingSockets
+    TBB::tbb
 )
 
 # Make the binary relocatable on Linux: search for bundled .so files (e.g. the
