@@ -1,5 +1,6 @@
 #include "fluid-system.h"
 
+#include <chrono>
 #include <cstdint>
 #include <numbers>
 #include <utility>
@@ -7,6 +8,7 @@
 
 #include "fluid-data.h"
 #include "../../systems/system-structs.h"
+#include "../../metrics/debug-stats.h"
 
 FluidSystem::FluidSystem()
 {
@@ -25,20 +27,20 @@ void FluidSystem::Update(SystemsContext& ctx)
 
 // -------- Settings --------
 
+    if (ctx.settings.sandbox.stepsPerTick != stepsPerTick_)
+        stepsPerTick_ = ctx.settings.sandbox.stepsPerTick;
+
     if (ctx.settings.sandbox.particleCount != fluid_->GetParticleCount())
         fluid_->SetParticleCount(ctx.settings.sandbox.particleCount);
 
-    if (ctx.settings.sandbox.particleSize != fluid_->GetParticleSize())
-        fluid_->SetParticleSize(ctx.settings.sandbox.particleSize);
+    if (ctx.settings.sandbox.particleSizeee != fluid_->GetParticleSize())
+        fluid_->SetParticleSize(ctx.settings.sandbox.particleSizeee);
     
     if (ctx.settings.sandbox.particleSpacing != fluid_->GetParticleSpacing())
         fluid_->SetParticleSpacing(ctx.settings.sandbox.particleSpacing);
     
     if (ctx.settings.sandbox.smoothingRadius != smoothingRadius_)
-    {
-        smoothingRadius_ = ctx.settings.sandbox.smoothingRadius;
-        sqrSmoothingRadius_ = smoothingRadius_ * smoothingRadius_;
-    }
+        SetSmoothingRadius(ctx.settings.sandbox.smoothingRadius);
 
     if (ctx.settings.sandbox.targetDensity != targetDensity_)
         targetDensity_ = ctx.settings.sandbox.targetDensity;
@@ -52,45 +54,67 @@ void FluidSystem::Update(SystemsContext& ctx)
     if (ctx.settings.sandbox.nearPressureMultiplier != nearPressureMultiplier_)
         nearPressureMultiplier_ = ctx.settings.sandbox.nearPressureMultiplier;
 
+    if (ctx.settings.sandbox.boxWidth != boundingBox_.x)
+        boundingBox_.x = ctx.settings.sandbox.boxWidth;
+
+    if (ctx.settings.sandbox.boxHeight != boundingBox_.z)
+        boundingBox_.z = ctx.settings.sandbox.boxHeight;
+
+    if (ctx.settings.sandbox.boxDepth != boundingBox_.y)
+        boundingBox_.y = ctx.settings.sandbox.boxDepth;
+
     if (!ctx.settings.sandbox.runSimulation)
         return;
 
+    auto start = std::chrono::steady_clock::now();
+    
+    for (int i = 0; i < ctx.settings.sandbox.stepsPerTick; ++i)
+        RunSimulation(ctx.dT / ctx.settings.sandbox.stepsPerTick, ctx.settings.sandbox.gravity, ctx.settings.sandbox.restitution);
+
+    auto t = std::chrono::steady_clock::now() - start;
+    ctx.debugStats["fluid.sim_ms"].Add(std::chrono::duration<float, std::milli>(t).count());
+}
+
+void FluidSystem::RunSimulation(float dT, float gravity, float restitution)
+{
 // -------- Calculation --------
 
     for (auto& particle : fluid_->GetParticles())
     {
-        if (ctx.settings.sandbox.gravity != 0.0f)
-            particle.velocity.z -= ctx.settings.sandbox.gravity * ctx.dT;
+        if (gravity != 0.0f)
+            particle.velocity.z -= gravity * dT;
         
-        particle.predictedPosition = particle.position + particle.velocity * ctx.dT;
+        particle.predictedPosition = particle.position + particle.velocity * dT;
     }
 
     UpdateLookup(fluid_->GetParticles());
 
     densities_.resize(fluid_->GetParticleCount());
     nearDensities_.resize(fluid_->GetParticleCount());
+    pressureTerms_.resize(fluid_->GetParticleCount());
 
     auto& particles = fluid_->GetParticles();
 
     std::for_each(std::execution::par, particles.begin(), particles.end(), [&](ParticleData& particle) {
-        densities_[particle.id] = CalcDensity(particle.predictedPosition);
-        nearDensities_[particle.id] = CalcNearDensity(particle.predictedPosition);
+        auto [density, nearDensity] = CalcDensities(particle.predictedPosition);
+        densities_[particle.id] = density;
+        nearDensities_[particle.id] = nearDensity;
+        pressureTerms_[particle.id] = DensityToPressure(density) / (density * density);
     });
 
     accelerations_.resize(fluid_->GetParticleCount());
 
     std::for_each(std::execution::par, particles.begin(), particles.end(), [&](ParticleData& particle) {
         glm::vec3 acc = CalcPressure(particle);
-        acc += CalcViscosity(particle);
         accelerations_[particle.id] = acc;
     });
 
 // -------- Eggsecution --------
 
     std::for_each(std::execution::par, particles.begin(), particles.end(), [&](ParticleData& particle) {
-        particle.velocity += accelerations_[particle.id] * ctx.dT;
-        particle.position += particle.velocity * ctx.dT;
-        CheckCollision(particle, ctx.settings.sandbox.restitution);
+        particle.velocity += accelerations_[particle.id] * dT;
+        particle.position += particle.velocity * dT;
+        CheckCollision(particle, restitution);
     });
 }
 
@@ -109,73 +133,58 @@ void FluidSystem::CheckCollision(ParticleData& particle, float restitution)
     }
 }
 
-float FluidSystem::SmoothingFunction(float distance)
+float FluidSystem::SmoothingFunction(float distance) const
 {
     if (distance >= smoothingRadius_) return 0.0f;
 
     float val = std::max(0.0f, smoothingRadius_ - distance);
-    float vol = std::numbers::pi * std::pow(smoothingRadius_, 5) / 10;
-    return std::pow(val, 3) / vol;
+    return val * val * val * spikyScale_;
 }
 
-float FluidSystem::SmoothingDer(float distance)
+float FluidSystem::SmoothingDer(float distance) const
 {
     if (distance >= smoothingRadius_) return 0.0f;
 
     float val = std::max(0.0f, smoothingRadius_ - distance);
-    float vol = std::numbers::pi * std::pow(smoothingRadius_, 5) / 10;
-    return -3.0f * std::pow(val, 2) / vol;
+    return -3.0f * val * val * spikyScale_;
 }
 
-float FluidSystem::CalcDensity(glm::vec3 samplePos)
+std::tuple<float, float> FluidSystem::CalcDensities(glm::vec3 samplePos)
 {
     float density = 0.0f;
-    const auto& particles = fluid_->GetParticles();
+    float nearDensity = 0.0f;
 
-    GetPositionsInReach(samplePos, [&](uint32_t j) {
-        float dist = glm::length(particles[j].predictedPosition - samplePos);
-        density += mass_ * SmoothingFunction(dist);
+    GetPositionsInReach(samplePos, [&](uint32_t, const glm::vec3&, float d2) {
+        float dist = std::sqrt(d2);
+        density     += mass_ * SmoothingFunction(dist);
+        nearDensity += mass_ * SmoothingFunctionNear(dist);
     });
 
-    return density;
+    return std::tuple<float, float>(density, nearDensity);
 }
 
-float FluidSystem::SmoothingFunctionNear(float distance)
+float FluidSystem::SmoothingFunctionNear(float distance) const
 {
     if (distance >= smoothingRadius_) return 0.0f;
 
     float val = std::max(0.0f, smoothingRadius_ - distance);
-    float vol = std::numbers::pi * std::pow(smoothingRadius_, 6) / 15;
-    return std::pow(val, 4) / vol;
+    return val * val * val * val * nearScale_;
 }
 
-float FluidSystem::SmoothingDerNear(float distance)
+float FluidSystem::SmoothingDerNear(float distance) const
 {
     if (distance >= smoothingRadius_) return 0.0f;
 
     float val = std::max(0.0f, smoothingRadius_ - distance);
-    float vol = std::numbers::pi * std::pow(smoothingRadius_, 6) / 15;
-    return -4.0f * std::pow(val, 3) / vol;
+    return -4.0f * val * val * val * nearScale_;
 }
 
-float FluidSystem::CalcNearDensity(glm::vec3 samplePos)
-{
-    float density = 0.0f;
-    const auto& particles = fluid_->GetParticles();
-
-    GetPositionsInReach(samplePos, [&](uint32_t j) {
-        float dist = glm::length(particles[j].predictedPosition - samplePos);
-        density += mass_ * SmoothingFunctionNear(dist);
-    });
-
-    return density;
-}
-
-float FluidSystem::ViscositySmoothing(float distance)
+float FluidSystem::ViscositySmoothing(float distance) const
 {
     if (distance >= smoothingRadius_) return 0.0f;
 
-    return 4 / (std::numbers::pi * std::pow(smoothingRadius_, 8)) * std::pow(std::pow(smoothingRadius_, 2) - std::pow(distance, 2), 3);
+    float t = sqrSmoothingRadius_ - distance * distance;
+    return t * t * t * viscScale_;
 }
 
 float FluidSystem::DensityToPressure(float density)
@@ -187,21 +196,22 @@ float FluidSystem::DensityToPressure(float density)
 
 glm::vec3 FluidSystem::CalcPressure(const ParticleData& pD)
 {
-    glm::vec3 gradient(0.0f);
-    const float selfDensity = densities_.at(pD.id);
-    const float selfNear    = nearDensities_.at(pD.id);
+    glm::vec3 acc(0.0f);
+    const float selfTerm    = pressureTerms_[pD.id];
+    const float selfNear    = nearDensities_[pD.id];
+    const auto& particles   = fluid_->GetParticles();
 
-    GetPositionsInReach(pD.predictedPosition, [&](uint32_t j) {
+    GetPositionsInReach(pD.predictedPosition, [&](uint32_t j, const glm::vec3& d, float d2) {
         if (j == pD.id) return;
         
-        const auto& particle = fluid_->GetParticleById(j);
-        float dist = glm::length(particle.predictedPosition - pD.predictedPosition);
+        const auto& particle = particles[j];
+        float dist = std::sqrt(d2);
 
         glm::vec3 dir;
         if (dist < 1e-3f)
         {
             auto min = std::min(pD.id, particle.id);
-            auto max = std::min(pD.id, particle.id);
+            auto max = std::max(pD.id, particle.id);
 
             uint32_t hash = min * 2654435761u ^ max;
             hash ^= hash >> 13;
@@ -213,37 +223,21 @@ glm::vec3 FluidSystem::CalcPressure(const ParticleData& pD)
             if (pD.id < particle.id) dir = -dir;
         }
         else
-            dir = (particle.predictedPosition - pD.predictedPosition) / dist;
+            dir = d / dist;
             
-        float density = densities_.at(particle.id);
-        float nearDensity = nearDensities_.at(particle.id);
+        float nearDensity = nearDensities_[particle.id];
 
-        float t = DensityToPressure(density) / (density * density)
-                  + DensityToPressure(selfDensity) / (selfDensity * selfDensity);
-        gradient += dir * SmoothingDer(dist) * mass_ * t * 0.5f;
+        float t = pressureTerms_[j] + selfTerm;
+        acc += dir * SmoothingDer(dist) * mass_ * t * 0.5f;
         
         float sharedNearPressure = (nearDensity + selfNear) * 0.5f * nearPressureMultiplier_;
-        gradient += sharedNearPressure * dir * SmoothingDerNear(dist) * mass_;
+        acc += sharedNearPressure * dir * SmoothingDerNear(dist) * mass_;
+
+        float influence = ViscositySmoothing(std::sqrt(d2));
+        acc += (particle.velocity - pD.velocity) * influence * viscosityStrength_;
     });
 
-    return gradient;
-}
-
-glm::vec3 FluidSystem::CalcViscosity(const ParticleData& pD)
-{
-    glm::vec3 viscosity(0.0f);
-    
-    GetPositionsInReach(pD.predictedPosition, [&](uint32_t j) {
-        if (j != pD.id)
-        {
-            const ParticleData& otherParticle = fluid_->GetParticleById(j);
-            float distance = glm::length(pD.predictedPosition - otherParticle.predictedPosition);
-            float influence = ViscositySmoothing(distance);
-            viscosity += (otherParticle.velocity - pD.velocity) * influence;
-        }
-    });
-
-    return viscosity * viscosityStrength_;
+    return acc;
 }
 
 void FluidSystem::UpdateLookup(std::vector<ParticleData>& particles)
@@ -259,36 +253,37 @@ void FluidSystem::UpdateLookup(std::vector<ParticleData>& particles)
         posInLookup_[pD.id] = UINT32_MAX;
     });
 
-    std::sort(lookupVector_.begin(), lookupVector_.end(),
+    std::sort(std::execution::par, lookupVector_.begin(), lookupVector_.end(),
         [](const auto& a, const auto& b) {
             return a.key < b.key;
         });
 
     std::for_each(std::execution::par, particles.begin(), particles.end(), [&](ParticleData& pD) {
-        uint32_t key = lookupVector_.at(pD.id).key;
-        uint32_t prevKey = pD.id == 0 ? UINT32_MAX : lookupVector_.at(pD.id - 1).key;
+        uint32_t key = lookupVector_[pD.id].key;
+        uint32_t prevKey = pD.id == 0 ? UINT32_MAX : lookupVector_[pD.id - 1].key;
 
         if (key != prevKey)
             posInLookup_[key] = pD.id;
     });
 }
 
-glm::ivec3 FluidSystem::CellFromPosition(glm::vec3 pos)
+glm::ivec3 FluidSystem::CellFromPosition(glm::vec3 pos) const
 {
-    return glm::ivec3((int)(pos.x / smoothingRadius_), (int)(pos.y / smoothingRadius_), (int)(pos.z / smoothingRadius_));
+    return glm::ivec3(std::floor((pos.x / smoothingRadius_)), std::floor((pos.y / smoothingRadius_)), std::floor((pos.z / smoothingRadius_)));
 }
 
-uint32_t FluidSystem::HashCell(glm::ivec3 cell)
+uint32_t FluidSystem::HashCell(glm::ivec3 cell) const
 {
     return (uint32_t)cell.x * 28579 + (uint32_t)cell.y * 58229 + (uint32_t)cell.z * 82759;
 }
 
-uint32_t FluidSystem::GetKey(uint32_t hash)
+uint32_t FluidSystem::GetKey(uint32_t hash) const 
 {
     return hash % (uint32_t)lookupVector_.size();
 }
 
-void FluidSystem::GetPositionsInReach(glm::vec3 samplePos, std::function<void(uint32_t)> callback)
+template <typename Fn>
+void FluidSystem::GetPositionsInReach(glm::vec3 samplePos, Fn&& fn) const
 {
     constexpr uint32_t empty = UINT32_MAX;
 
@@ -312,9 +307,23 @@ void FluidSystem::GetPositionsInReach(glm::vec3 samplePos, std::function<void(ui
             
             uint32_t index = entry.index;
             const glm::vec3 d = particles[index].predictedPosition - samplePos;
+            const float d2 = glm::dot(d, d);
 
-            if (glm::dot(d, d) < sqrSmoothingRadius_)
-                callback(index);
+            if (d2 < sqrSmoothingRadius_)
+                fn(index, d, d2);
         }
     }
+}
+
+void FluidSystem::SetSmoothingRadius(float h)
+{
+    const float h2 = h * h;
+    const float h5 = h2 * h2 * h;
+
+    smoothingRadius_ = h;
+    sqrSmoothingRadius_ = h2;
+
+    spikyScale_ = 10.0f / (std::numbers::pi_v<float> * h5);
+    nearScale_  = 15.0f / (std::numbers::pi_v<float> * h5 * h);
+    viscScale_  = 10.0f / (std::numbers::pi_v<float> * h5 * h2 * h);
 }

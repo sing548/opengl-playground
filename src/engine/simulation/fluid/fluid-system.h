@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <vector>
-#include <functional>
 
 #include <glm/glm.hpp>
 
@@ -26,13 +25,18 @@ public:
 
     const FluidData& GetFluid() const { return *fluid_; };
 private:
-    const float mass_ = 1.0f;
-    float targetDensity_ = 0.0f;
-    float smoothingRadius_ = 0.0f;
-    float viscosityStrength_ = 0.0f;
-    float sqrSmoothingRadius_ = 0.0f;
-    float pressureMultiplier_ = 0.0f;
+    const float mass_             = 1.0f;
+    int stepsPerTick_             = 0;
+    float targetDensity_          = 0.0f;
+    float smoothingRadius_        = 0.0f;
+    float viscosityStrength_      = 0.0f;
+    float sqrSmoothingRadius_     = 0.0f;
+    float pressureMultiplier_     = 0.0f;
     float nearPressureMultiplier_ = 0.0f;
+
+    float spikyScale_   = 0.0f;
+    float nearScale_    = 0.0f;
+    float viscScale_    = 0.0f;
 
     std::vector<glm::ivec3> offsets_;
 
@@ -47,30 +51,38 @@ private:
 
     std::vector<float> densities_;
     std::vector<float> nearDensities_;
+    std::vector<float> pressureTerms_;
     std::vector<glm::vec3> accelerations_;
 
     glm::vec3 boundingBox_ = { 20.0f, 10.0f, 15.0f };
 
     std::unique_ptr<FluidData> fluid_;
+
+    void RunSimulation(float dT, float gravity, float restitution);
+
     void CheckCollision(ParticleData& particle, float restitution);
 
-    float SmoothingFunction(float distance);
-    float SmoothingDer(float distance);
-    float CalcDensity(glm::vec3 samplePos);
+    float SmoothingFunction(float distance) const;
+    float SmoothingDer(float distance) const;
+    
+    float SmoothingFunctionNear(float distance) const;
+    float SmoothingDerNear(float distance) const;
+    
+    std::tuple<float, float> CalcDensities(glm::vec3 samplePos);
 
-    float SmoothingFunctionNear(float distance);
-    float SmoothingDerNear(float distance);
-    float CalcNearDensity(glm::vec3 samplePos);
-
-    float ViscositySmoothing(float distance);
+    float ViscositySmoothing(float distance) const;
     
     float DensityToPressure(float density);
     glm::vec3 CalcPressure(const ParticleData& pD);
-    glm::vec3 CalcViscosity(const ParticleData& pD);
 
     void UpdateLookup(std::vector<ParticleData>& positions);
-    glm::ivec3 CellFromPosition(glm::vec3 pos);
-    uint32_t HashCell(glm::ivec3 cell);
-    uint32_t GetKey(uint32_t hash);
-    void GetPositionsInReach(glm::vec3 samplePos, std::function<void(uint32_t)> callback);
+    glm::ivec3 CellFromPosition(glm::vec3 pos) const;
+    uint32_t HashCell(glm::ivec3 cell) const;
+    uint32_t GetKey(uint32_t hash) const;
+    //void GetPositionsInReach(glm::vec3 samplePos, std::function<void(uint32_t)> callback);
+
+    template <typename Fn>
+    void GetPositionsInReach(glm::vec3 samplePos, Fn&& fn) const;
+
+    void SetSmoothingRadius(float h);
 };

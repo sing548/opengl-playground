@@ -37,10 +37,13 @@ uniform int numPointLights;
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 baseColor);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 baseColor);
+vec3 SpeedToColor(float t);
 
 void main()
 {
-    vec3 color = vec3(0.0, 0.0, 1.0);
+    
+	float heat = clamp((intensity - 5.0) / (20.0 - 5.0), 0.0, 1.0);
+	vec3 color = (heat <= 0.0) ? vec3(0.0, 0.0, 1.0) : SpeedToColor(heat);
 
     vec2 point = uv * 2.0;
     float r2 = dot(point, point);
@@ -89,4 +92,33 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, v
 	diffuse *= attenuation;
 
 	return (ambient + diffuse);
+}
+
+vec3 SpeedToColor(float t)
+{
+	t = clamp(t, 0.0, 1.0);
+
+    // Fully saturated key colors
+    vec3 blue    = vec3(0.0, 0.0, 1.0);
+    vec3 cyan    = vec3(0.0, 1.0, 1.0);
+    vec3 yellow  = vec3(1.0, 1.0, 0.0);
+    vec3 orange  = vec3(1.0, 0.45, 0.0);
+    vec3 red     = vec3(1.0, 0.0, 0.0);
+    vec3 deepRed = vec3(0.55, 0.0, 0.0);
+
+    if (t < 0.25)      return mix(blue,   cyan,   t / 0.25);
+    else if (t < 0.45) return mix(cyan,   yellow, (t - 0.25) / 0.20);
+    else if (t < 0.65) return mix(yellow, orange, (t - 0.45) / 0.20);
+    else if (t < 0.85) return mix(orange, red,    (t - 0.65) / 0.20);
+    else               return mix(red,     deepRed, (t - 0.85) / 0.15);
+/*
+	vec3 cold	= vec3(0.1, 0.2, 1.0);
+	vec3 mid	= vec3(1.0, 1.0, 1.0);
+	vec3 hot	= vec3(1.0, 0.3, 0.05);
+
+	vec3 col = (t < 0.8)
+			? mix(cold, mid, t * 2.0)
+			: mix(mid, hot, (t - 0.5) * 2.0);
+
+	return col;*/
 }

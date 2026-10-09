@@ -560,15 +560,19 @@ void Engine::HandleImGui(int step)
             if (config_.sandbox && ImGui::CollapsingHeader("Sandbox"))
             {
                 ImGui::Checkbox("Run simulation", &settings_.sandbox.runSimulation);
-                ImGui::SliderInt("Particle count", &settings_.sandbox.particleCount, 0, 10000);
-                ImGui::SliderFloat("Particle size", &settings_.sandbox.particleSize, 0.1f, 2.0f);
+                ImGui::SliderInt("Steps per tick", &settings_.sandbox.stepsPerTick, 0, 8);
+                ImGui::SliderInt("Particle count", &settings_.sandbox.particleCount, 0, 50000);
+                ImGui::SliderFloat("Particle size", &settings_.sandbox.particleSizeee, 0.1f, 2.0f);
                 ImGui::SliderFloat("Particle spacing", &settings_.sandbox.particleSpacing, 0.5f, 3.0f);
+                ImGui::SliderFloat("Box width", &settings_.sandbox.boxWidth, 1.0f, 60.0f);
+                ImGui::SliderFloat("Box height", &settings_.sandbox.boxHeight, 1.0f, 60.0f);
+                ImGui::SliderFloat("Box depth", &settings_.sandbox.boxDepth, 1.0f, 60.0f);
                 ImGui::SliderFloat("Gravity", &settings_.sandbox.gravity, 0.0f, 50.0f);
                 ImGui::SliderFloat("Restitution", &settings_.sandbox.restitution, 0.0f, 1.0f);
                 ImGui::SliderFloat("Smoothing radius", &settings_.sandbox.smoothingRadius, 1.0f, 30.0f);
                 ImGui::SliderFloat("Target density", &settings_.sandbox.targetDensity, 0.0f, 10.0f);
                 ImGui::SliderFloat("Viscocity", &settings_.sandbox.viscosityStrength, 0.0f, 1.0f);
-                ImGui::SliderFloat("Pressure multiplier", &settings_.sandbox.pressureMultiplier, 1.0f, 1000.0f);
+                ImGui::SliderFloat("Pressure multiplier", &settings_.sandbox.pressureMultiplier, 1.0f, 150000.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
                 ImGui::SliderFloat("Near pressure multiplier", &settings_.sandbox.nearPressureMultiplier, 0.0f, 10.0f);
             }
 
