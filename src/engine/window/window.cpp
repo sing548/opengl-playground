@@ -3,8 +3,8 @@
 #include <iostream>
 
 static void APIENTRY GLDebugCallback(GLenum source, GLenum type, GLuint id,
-									 GLenum severity, GLsizei length,
-									 const GLchar* message, const void* param)
+									 GLenum severity, GLsizei /*length*/,
+									 const GLchar* message, const void* /*param*/)
 {
 	if (severity == GL_DEBUG_SEVERITY_NOTIFICATION) return;
 
@@ -53,10 +53,6 @@ Window::Window(unsigned int width, unsigned int height, std::unique_ptr<Camera> 
 	size_.width = width;
 	size_.height = height;
 	
-	float lastX = width / 2.0f;
-	float lastY = height / 2.0f;
-	bool firstMouse = true;
-	
     if (!glfwInit()) {
 		throw std::runtime_error("Failed to initialize GLFW");
     }
@@ -85,7 +81,7 @@ Window::Window(unsigned int width, unsigned int height, std::unique_ptr<Camera> 
 	GLint flags = 0;
 	glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
 
-	if (false && flags & GL_CONTEXT_FLAG_DEBUG_BIT)
+	if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
 	{
 		glEnable(GL_DEBUG_OUTPUT);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -125,7 +121,7 @@ void Window::ResizeWindow(unsigned int width, unsigned int height)
 	windowResized_ = true;
 }
 
-void Window::HandleInput(float deltaTime)
+void Window::HandleInput(float /*deltaTime*/)
 {
 	if (glfwGetKey(window_, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
             glfwSetWindowShouldClose(window_, true);

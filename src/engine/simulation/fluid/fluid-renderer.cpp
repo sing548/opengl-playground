@@ -1,7 +1,7 @@
 #include "fluid-renderer.h"
 
 #include "fluid-data.h"
-#include "../../shaders/shader.h"
+#include "../../gpu/shader.h"
 #include "../../helpers/file-helper.h"
 #include "../../rendering/render-list.h"
 

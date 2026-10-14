@@ -198,7 +198,7 @@ add_custom_command(TARGET OpenGLPlayground POST_BUILD
 # skyboxes every build would be wasted I/O, and they rarely change.)
 add_custom_target(copy_shaders ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders"
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders"
         "$<TARGET_FILE_DIR:OpenGLPlayground>/shaders"
     COMMENT "Copying shaders to output directory"
 )

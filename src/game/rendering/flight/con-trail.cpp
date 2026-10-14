@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <filesystem>
 
-#include "../../../engine/shaders/shader.h"
+#include "../../../engine/gpu/shader.h"
 #include "../../../engine/helpers/file-helper.h"
 #include "../../../engine/rendering/render-list.h"
 

@@ -6,7 +6,7 @@
 #include <memory>
 
 #include "../../rendering/render-list.h"
-#include "../../shaders/shader.h"
+#include "../../gpu/shader.h"
 
 class Material
 {

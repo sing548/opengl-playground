@@ -11,7 +11,7 @@
 #include "../render-list.h"
 #include "../i-scene-rendererable.h"
 
-#include "../../shaders/shader.h"
+#include "../../gpu/shader.h"
 
 class Sky : public ISceneRenderable
 {

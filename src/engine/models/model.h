@@ -12,7 +12,7 @@
 
 #include "mesh.h"
 #include "asset-manager.h"
-#include "../shaders/shader.h"
+#include "../gpu/shader.h"
 
 
 struct PhysicalInfo {

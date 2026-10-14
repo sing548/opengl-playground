@@ -25,13 +25,15 @@ public:
 private:
 	static constexpr float DEFAULT_ZOOM = 45.0f;
 
-	float zoom_;
-
+	
     glm::vec3 position_;
+	glm::vec3 worldUp_;
 	glm::vec3 front_;
+
+	float zoom_;
+	
 	glm::vec3 up_;
 	glm::vec3 right_;
-	glm::vec3 worldUp_;
 };
 
 #endif

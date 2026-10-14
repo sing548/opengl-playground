@@ -8,7 +8,7 @@
 #include "engine/models/scene.h"
 #include "engine/models/model.h"
 #include "engine/window/window.h"
-#include "engine/shaders/shader.h"
+#include "engine/gpu/shader.h"
 #include "engine/rendering/renderer.h"
 #include "engine/helpers/file-helper.h"
 #include "engine/simulation/fluid/fluid-data.h"
