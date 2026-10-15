@@ -2,13 +2,15 @@
 
 #include <glm/glm.hpp>
 
+#include "../../gpu/gpu-buffer.h"
+#include <iostream>
+
 struct ParticleData {
     uint32_t id;
     glm::vec3 position;
     glm::vec3 predictedPosition;
     glm::vec3 velocity;
 };
-
 
 class FluidData
 {
@@ -55,6 +57,101 @@ private:
                                  .velocity = glm::vec3(0.0f) };
                 particles_.push_back(p);
                 ++id;
+            }
+        }
+
+        UploadToGPU();
+    }
+
+//------------- GPU -------------
+public:
+    void UploadToGPU()
+    {
+        std::vector<glm::vec4> positions;
+        std::vector<glm::vec4> velocities;
+
+        positions.reserve(particles_.size());
+        velocities.reserve(particles_.size());
+
+        for (auto& el : particles_)
+        {
+            positions.push_back(glm::vec4(el.position, 0.0f));
+            velocities.push_back(glm::vec4(el.velocity, 0.0f));
+        }
+
+        positionsBuffer_.Upload(positions);
+        velocitiesBuffer_.Upload(velocities);
+
+        #ifndef NDEBUG
+            VerifyUpload();
+        #endif
+    }
+
+    bool OnGPU() const { return onGPU_; }
+    void SetOnGPU(bool b) 
+    { 
+        bool reset = b != onGPU_;
+
+        onGPU_ = b;
+        
+        if (reset)
+            ResetParticles();
+    }
+
+    GPUBuffer& GetPositionsBuffer() { return positionsBuffer_; }
+    const GPUBuffer& GetPositionsBuffer() const { return positionsBuffer_; }
+    GPUBuffer& GetVelocitiesBuffer() { return velocitiesBuffer_; }
+    const GPUBuffer& GetVelocitiesBuffer() const { return velocitiesBuffer_; }
+private:
+    bool onGPU_ = false;
+    GPUBuffer positionsBuffer_;
+    GPUBuffer velocitiesBuffer_;
+
+    void VerifyUpload() const
+    {
+        std::vector<glm::vec4> gpu;
+        positionsBuffer_.ReadData(gpu);
+
+        if (gpu.size() != particles_.size())
+        {
+            std::cout << "Error reading GPU particle positions - read amount: " << gpu.size()
+                << ", real amount: " << particles_.size() << std::endl;
+            return;
+        }
+
+        for (size_t i = 0; i < gpu.size(); ++i)
+        {
+            if (glm::vec3(gpu[i]) != particles_[i].position || gpu[i].w != 0.0f)
+            {
+                auto& part = particles_[i].position;
+                std::cout << "Error reading GPU particle position - read value - i: " << i
+                    << "[" << gpu[i].x << ", " << gpu[i].y << ", " << gpu[i].z << ", " << gpu[i].w << "]"
+                    << ", real value: " << "[" << part.x << ", " << part.y << ", " << part.z << "]"
+                    << std::endl;
+                return;
+            }
+        }
+
+        gpu.clear();
+        velocitiesBuffer_.ReadData(gpu);
+
+        if (gpu.size() != particles_.size())
+        {
+            std::cout << "Error reading GPU particle velocities - read amount: " << gpu.size()
+                << ", real amount: " << particles_.size() << std::endl;
+            return;
+        }
+
+        for (size_t i = 0; i < gpu.size(); ++i)
+        {
+            if (glm::vec3(gpu[i]) != particles_[i].velocity || gpu[i].w != 0.0f)
+            {
+                auto& part = particles_[i].velocity;
+                std::cout << "Error reading GPU particle velocity - read value - i: " << i
+                    << "[" << gpu[i].x << ", " << gpu[i].y << ", " << gpu[i].z << ", " << gpu[i].w << "]"
+                    << ", real value: " << "[" << part.x << ", " << part.y << ", " << part.z << "]"
+                    << std::endl;
+                return;
             }
         }
     }

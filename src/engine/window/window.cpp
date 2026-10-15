@@ -13,10 +13,10 @@ static void APIENTRY GLDebugCallback(GLenum source, GLenum type, GLuint id,
 	switch (source)
 	{
 		case GL_DEBUG_SOURCE_API:				src = "API"; break;
-		case GL_DEBUG_SOURCE_SHADER_COMPILER:	src = "API"; break;
-		case GL_DEBUG_SOURCE_WINDOW_SYSTEM:		src = "API"; break;
-		case GL_DEBUG_SOURCE_THIRD_PARTY:		src = "API"; break;
-		case GL_DEBUG_SOURCE_APPLICATION:		src = "API"; break;
+		case GL_DEBUG_SOURCE_SHADER_COMPILER:	src = "Shader compiler"; break;
+		case GL_DEBUG_SOURCE_WINDOW_SYSTEM:		src = "Window system"; break;
+		case GL_DEBUG_SOURCE_THIRD_PARTY:		src = "Third party"; break;
+		case GL_DEBUG_SOURCE_APPLICATION:		src = "Application"; break;
 	}
 
 	const char* tpye = "Other";
@@ -24,10 +24,13 @@ static void APIENTRY GLDebugCallback(GLenum source, GLenum type, GLuint id,
 	switch (type)
 	{
 		case GL_DEBUG_TYPE_ERROR:				tpye = "Error"; break;
-		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:	tpye = "Error"; break;
-		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:	tpye = "Error"; break;
-		case GL_DEBUG_TYPE_PORTABILITY:			tpye = "Error"; break;
-		case GL_DEBUG_TYPE_PERFORMANCE:			tpye = "Error"; break;
+		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:	tpye = "Deprecated"; break;
+		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:	tpye = "Undefined behaviour"; break;
+		case GL_DEBUG_TYPE_PORTABILITY:			tpye = "Portability"; break;
+		case GL_DEBUG_TYPE_PERFORMANCE:			tpye = "Performance"; break;
+		case GL_DEBUG_TYPE_MARKER:				tpye = "Marker"; break;
+		case GL_DEBUG_TYPE_PUSH_GROUP:			tpye = "Push group"; break;
+		case GL_DEBUG_TYPE_POP_GROUP:			tpye = "Pop group"; break;
 	}
 
 	const char* sever = "INFO";
@@ -35,8 +38,8 @@ static void APIENTRY GLDebugCallback(GLenum source, GLenum type, GLuint id,
 	switch (severity)
 	{
 		case GL_DEBUG_SEVERITY_HIGH:		sever = "HIGH"; break;
-		case GL_DEBUG_SEVERITY_MEDIUM:		sever = "HIGH"; break;
-		case GL_DEBUG_SEVERITY_LOW:			sever = "HIGH"; break;
+		case GL_DEBUG_SEVERITY_MEDIUM:		sever = "MEDIUM"; break;
+		case GL_DEBUG_SEVERITY_LOW:			sever = "LOW"; break;
 	}
 
 	std::cerr << "GL - " << sever << "-" << src << "/" << tpye << "; id: " << id << "MSG: " << message << std::endl;

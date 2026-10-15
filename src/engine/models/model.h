@@ -92,7 +92,7 @@ public:
 private:
 
     static const std::array<std::filesystem::path, static_cast<size_t>(ModelType::Count)> ModelPaths;
-
+    
     glm::vec3 baseUp_;
     glm::vec3 baseRight_;
     glm::vec3 baseOrientation_;

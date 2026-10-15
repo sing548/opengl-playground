@@ -19,38 +19,30 @@ public:
 	Shader(const std::filesystem::path vertexPath, const std::filesystem::path fragmentPath)
 	{
 		std::string vertexCode = ReadShaderFile(vertexPath);
-		const char* vShaderCode = vertexCode.c_str();
-		std::string fragmentCode = ReadShaderFile(fragmentPath); 
-		const char* fShaderCode = fragmentCode.c_str();
+		std::string fragmentCode = ReadShaderFile(fragmentPath);
 
-		unsigned int vertex, fragment = 0;
+		GLuint vertex = CompileStage(GL_VERTEX_SHADER, vertexCode, "VERTEX");
+		GLuint fragment = 0;
 
-		try {
-
-			vertex = glCreateShader(GL_VERTEX_SHADER);
-			glShaderSource(vertex, 1, &vShaderCode, NULL);
-			glCompileShader(vertex);
-			CheckCompileErrors(vertex, "VERTEX");
+		try
+		{
+			fragment = CompileStage(GL_FRAGMENT_SHADER, fragmentCode, "FRAGMENT");
 		}
 		catch (std::exception& e)
 		{
-			std::cout << "Exception" << e.what() << std::endl;
+			glDeleteShader(vertex);
+			throw;
 		}
-
-		fragment = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(fragment, 1, &fShaderCode, NULL);
-		glCompileShader(fragment);
-		CheckCompileErrors(fragment, "FRAGMENT");
 
 		ID = glCreateProgram();
 		glAttachShader(ID, vertex);
 		glAttachShader(ID, fragment);
 		glLinkProgram(ID);
 
-		CheckCompileErrors(ID, "PROGRAM");
-
 		glDeleteShader(vertex);
 		glDeleteShader(fragment);
+
+		CheckCompileErrors(ID, "PROGRAM");
 	}
 };
 

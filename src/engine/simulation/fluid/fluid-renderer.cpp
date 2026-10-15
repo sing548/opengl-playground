@@ -2,6 +2,9 @@
 
 #include "fluid-data.h"
 #include "../../gpu/shader.h"
+#include "../../gpu/gpu-timer.h"
+#include "../../gpu/gpu-buffer.h"
+#include "../../gpu/compute-shader.h"
 #include "../../helpers/file-helper.h"
 #include "../../rendering/render-list.h"
 
@@ -42,6 +45,35 @@ FluidRenderer::FluidRenderer(const FluidData& fluid) : fluid_(fluid)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
     glBindVertexArray(0);
+
+    // Run Compute Shader test here for lack of... caring enough to build a proper test env...
+
+    constexpr uint32_t n = 1000;
+
+    ComputeShader cs(std::filesystem::path(FileHelper::GetShaderDir()) / "game" / "compute" / "test-iota.comp");
+
+    GPUTimer gTimer;
+    GPUBuffer gBuf(std::vector<uint32_t>(n, 0xFFFFFFFFu), GL_DYNAMIC_READ);
+
+    gBuf.BindBase(0);
+    cs.SetUInt("count", n);
+
+    gTimer.StartTimer();
+    cs.DispatchFor(n);
+    gTimer.StopTimer();
+
+    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    
+    std::vector<uint32_t> res;
+    gBuf.ReadData(res);
+
+    for (uint32_t i = 0; i < res.size(); ++i)
+    {
+        if (res[i] != i)
+            throw std::runtime_error("DOES NOT COMPUTE!");
+    }
+
+    std::cout << "Time for compute: " << gTimer.GetResultMS() << "ms\n";
 }
 
 FluidRenderer::~FluidRenderer()
