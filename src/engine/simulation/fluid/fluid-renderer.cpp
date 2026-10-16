@@ -115,22 +115,31 @@ void FluidRenderer::Render(const FrameGlobals& globals)
 
     shader_->SetFloat("particleSize", fluid_.GetParticleSize());
 
-    std::vector<glm::vec4> particleData;
-    int nInst = 0;
+    instanceCount_ = fluid_.GetParticleCount();
 
-    auto& particles = fluid_.GetParticles();
-
-    for (auto& particle : particles)
+    if (fluid_.OnGPU())
     {
-        glm::vec4 data = glm::vec4(particle.position, glm::length(particle.velocity));
-        particleData.push_back(data);
-        ++nInst;
+        glMemoryBarrier(GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+        auto& gPart = fluid_.GetPositionsBuffer();
+        glVertexArrayVertexBuffer(vao_, 1, gPart.Id(), 0, sizeof(glm::vec4));
     }
+    else
+    {
+        glVertexArrayVertexBuffer(vao_, 1, instanceVBO_, 0, sizeof(glm::vec4));
+        
+        auto& particles = fluid_.GetParticles();
+        std::vector<glm::vec4> particleData;
 
-    instanceCount_ = nInst;
+        for (auto& particle : particles)
+        {
+            glm::vec4 data = glm::vec4(particle.position, glm::length(particle.velocity));
+            particleData.push_back(data);
+        }
 
-    glBindBuffer(GL_ARRAY_BUFFER, instanceVBO_);
-    glBufferData(GL_ARRAY_BUFFER, particleData.size()*sizeof(glm::vec4), particleData.data(), GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO_);
+        glBufferData(GL_ARRAY_BUFFER, particleData.size()*sizeof(glm::vec4), particleData.data(), GL_DYNAMIC_DRAW);
+    }
+    
     glBindVertexArray(vao_);
     glDrawElementsInstanced(GL_TRIANGLES, indexCount_, GL_UNSIGNED_INT, 0, instanceCount_);
     glBindVertexArray(0);

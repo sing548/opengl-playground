@@ -560,6 +560,8 @@ void Engine::HandleImGui(int step)
             if (config_.sandbox && ImGui::CollapsingHeader("Sandbox"))
             {
                 ImGui::Checkbox("Run simulation", &settings_.sandbox.runSimulation);
+                ImGui::Checkbox("Run on GPU", &settings_.sandbox.gpuSimulation);
+                ImGui::Checkbox("Single Step", &settings_.sandbox.singleStep);
                 ImGui::SliderInt("Steps per tick", &settings_.sandbox.stepsPerTick, 0, 8);
                 ImGui::SliderInt("Particle count", &settings_.sandbox.particleCount, 0, 50000);
                 ImGui::SliderFloat("Particle size", &settings_.sandbox.particleSizeee, 0.1f, 2.0f);

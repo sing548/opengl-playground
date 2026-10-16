@@ -17,6 +17,8 @@ class FluidData
 public:
     FluidData(uint32_t particleCount, float particleSize, float particleSpacing) : particleSize_(particleSize), particleSpacing_(particleSpacing)
     {
+        positionsBuffer_.SetUsage(GL_DYNAMIC_COPY);
+        velocitiesBuffer_.SetUsage(GL_DYNAMIC_COPY);
         SetupParticles(particleCount);
     }
     ParticleData& GetParticleById(uint32_t id) { return particles_.at(id); };
@@ -25,7 +27,7 @@ public:
     void SetParticleCount(uint32_t count) { SetupParticles(count); };
     void SetParticleSize(float particleSize) { particleSize_ = particleSize; ResetParticles(); };
     void SetParticleSpacing(float particleSpacing) { particleSpacing_ = particleSpacing; ResetParticles(); };
-    int GetParticleCount() const { return particles_.size(); };
+    uint32_t GetParticleCount() const { return static_cast<uint32_t>(particles_.size()); };
     float GetParticleSize() const { return particleSize_; };
     float GetParticleSpacing() const { return particleSpacing_; };
     void ResetParticles() { SetupParticles(particles_.size()); };
@@ -93,7 +95,7 @@ public:
         bool reset = b != onGPU_;
 
         onGPU_ = b;
-        
+
         if (reset)
             ResetParticles();
     }

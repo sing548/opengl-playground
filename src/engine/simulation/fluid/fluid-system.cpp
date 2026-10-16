@@ -7,12 +7,21 @@
 #include <execution>
 
 #include "fluid-data.h"
-#include "../../systems/system-structs.h"
+#include "../../helpers/file-helper.h"
 #include "../../metrics/debug-stats.h"
+#include "../../systems/system-structs.h"
 
-FluidSystem::FluidSystem()
+FluidSystem::FluidSystem() :
+    predictionShader_(std::filesystem::path(FileHelper::GetShaderDir()) / "game" / "compute" / "fluid-prediction.comp"),
+    densityShader_(std::filesystem::path(FileHelper::GetShaderDir()) / "game" / "compute" / "fluid-densities.comp"),
+    forcesShader_(std::filesystem::path(FileHelper::GetShaderDir()) / "game" / "compute" / "fluid-forces.comp"),
+    integrationShader_(std::filesystem::path(FileHelper::GetShaderDir()) / "game" / "compute" / "fluid-integration.comp")
 {
     fluid_ = std::make_unique<FluidData>(25, 0.5f, 1.0f);
+
+    gPredicted_.SetUsage(GL_DYNAMIC_COPY);
+    gDensities_.SetUsage(GL_DYNAMIC_COPY);
+    gAccelerations_.SetUsage(GL_DYNAMIC_COPY);
 
     for (int x = -1; x <= 1; ++x)
     for (int y = -1; y <= 1; ++y)
@@ -30,8 +39,8 @@ void FluidSystem::Update(SystemsContext& ctx)
     if (ctx.settings.sandbox.stepsPerTick != stepsPerTick_)
         stepsPerTick_ = ctx.settings.sandbox.stepsPerTick;
 
-    if (ctx.settings.sandbox.particleCount != fluid_->GetParticleCount())
-        fluid_->SetParticleCount(ctx.settings.sandbox.particleCount);
+    if (static_cast<uint32_t>(ctx.settings.sandbox.particleCount) != fluid_->GetParticleCount())
+        fluid_->SetParticleCount(static_cast<uint32_t>(ctx.settings.sandbox.particleCount));
 
     if (ctx.settings.sandbox.particleSizeee != fluid_->GetParticleSize())
         fluid_->SetParticleSize(ctx.settings.sandbox.particleSizeee);
@@ -62,14 +71,27 @@ void FluidSystem::Update(SystemsContext& ctx)
 
     if (ctx.settings.sandbox.boxDepth != boundingBox_.y)
         boundingBox_.y = ctx.settings.sandbox.boxDepth;
+    
+    if (ctx.settings.sandbox.gpuSimulation != fluid_->OnGPU())
+        fluid_->SetOnGPU(ctx.settings.sandbox.gpuSimulation);
 
-    if (!ctx.settings.sandbox.runSimulation)
+    if (!ctx.settings.sandbox.runSimulation && !ctx.settings.sandbox.singleStep)
         return;
 
     auto start = std::chrono::steady_clock::now();
     
     for (int i = 0; i < ctx.settings.sandbox.stepsPerTick; ++i)
-        RunSimulation(ctx.dT / ctx.settings.sandbox.stepsPerTick, ctx.settings.sandbox.gravity, ctx.settings.sandbox.restitution);
+    {
+        !fluid_->OnGPU() ?
+            RunSimulation(ctx.dT / ctx.settings.sandbox.stepsPerTick, ctx.settings.sandbox.gravity, ctx.settings.sandbox.restitution) :
+            RunSimulationGPU(ctx.dT / ctx.settings.sandbox.stepsPerTick, ctx.settings.sandbox.gravity, ctx.settings.sandbox.restitution);
+        
+        if (!ctx.settings.sandbox.runSimulation && ctx.settings.sandbox.singleStep)
+        {
+            ctx.settings.sandbox.singleStep = false;
+            break;
+        }
+    }
 
     auto t = std::chrono::steady_clock::now() - start;
     ctx.debugStats["fluid.sim_ms"].Add(std::chrono::duration<float, std::milli>(t).count());
@@ -116,6 +138,66 @@ void FluidSystem::RunSimulation(float dT, float gravity, float restitution)
         particle.position += particle.velocity * dT;
         CheckCollision(particle, restitution);
     });
+}
+
+void FluidSystem::RunSimulationGPU(float dT, float gravity, float restitution)
+{
+    uint32_t count = fluid_->GetParticleCount();
+
+    gPredicted_.Resize(fluid_->GetPositionsBuffer().Size());
+    gDensities_.Resize(fluid_->GetPositionsBuffer().Size());
+    gAccelerations_.Resize(fluid_->GetPositionsBuffer().Size());
+
+    fluid_->GetPositionsBuffer().BindBase(0);
+    fluid_->GetVelocitiesBuffer().BindBase(1);
+    gPredicted_.BindBase(2);
+    
+    predictionShader_.SetFloat("dT", dT);
+    predictionShader_.SetFloat("gravity", gravity);
+    predictionShader_.SetUInt("count", count);
+    
+    predictionShader_.DispatchFor(count);
+    
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    
+    gDensities_.BindBase(3);
+    
+    densityShader_.SetUInt("count", count);
+    densityShader_.SetFloat("mass", mass_);
+    densityShader_.SetFloat("nearScale", nearScale_);
+    densityShader_.SetFloat("spikyScale", spikyScale_);
+    densityShader_.SetFloat("targetDensity", targetDensity_);
+    densityShader_.SetFloat("smoothingRadius", smoothingRadius_);
+    densityShader_.SetFloat("pressureMultiplier", pressureMultiplier_);
+
+    densityShader_.DispatchFor(count);
+    
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    gAccelerations_.BindBase(4);
+
+    forcesShader_.SetUInt("count", count);
+    forcesShader_.SetFloat("mass", mass_);
+    forcesShader_.SetFloat("nearScale", nearScale_);
+    forcesShader_.SetFloat("viscScale", viscScale_);
+    forcesShader_.SetFloat("spikyScale", spikyScale_);
+    forcesShader_.SetFloat("smoothingRadius", smoothingRadius_);
+    forcesShader_.SetFloat("viscoscityStrength", viscosityStrength_);
+    forcesShader_.SetFloat("sqrSmoothingRadius", sqrSmoothingRadius_);
+    forcesShader_.SetFloat("nearPressureMultiplier", nearPressureMultiplier_);
+
+    forcesShader_.DispatchFor(count);
+
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    
+    integrationShader_.SetFloat("dT", dT);
+    integrationShader_.SetFloat("restitution", restitution);
+    integrationShader_.SetUInt("count", count);
+    integrationShader_.SetVec3("boundingBox", boundingBox_);
+    
+    integrationShader_.DispatchFor(count);
+
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void FluidSystem::CheckCollision(ParticleData& particle, float restitution)
@@ -233,7 +315,7 @@ glm::vec3 FluidSystem::CalcPressure(const ParticleData& pD)
         float sharedNearPressure = (nearDensity + selfNear) * 0.5f * nearPressureMultiplier_;
         acc += sharedNearPressure * dir * SmoothingDerNear(dist) * mass_;
 
-        float influence = ViscositySmoothing(std::sqrt(d2));
+        float influence = ViscositySmoothing(dist);
         acc += (particle.velocity - pD.velocity) * influence * viscosityStrength_;
     });
 

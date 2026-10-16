@@ -87,6 +87,8 @@ public:
         out.resize(size_ / sizeof(T));
         glGetNamedBufferSubData(id_, 0, static_cast<GLsizeiptr>(out.size() * sizeof(T)), out.data());
     }
+
+    void SetUsage(GLenum usage) { usage_ = usage; }
 private:
     GLuint id_      = 0;
     size_t size_    = 0;
@@ -98,6 +100,7 @@ private:
             glCreateBuffers(1, &id_);
 
         glNamedBufferData(id_, static_cast<GLsizeiptr>(bytes), data, usage_);
+        //glNamedBufferStorage(id_, bytes, data, GL_DYNAMIC_STORAGE_BIT);
         size_ = bytes;
     }
 };

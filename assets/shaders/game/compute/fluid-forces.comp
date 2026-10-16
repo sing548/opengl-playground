@@ -1,0 +1,96 @@
+#version 460 core
+layout(local_size_x = 256) in;
+
+layout(std430, binding = 1) buffer Velocities   { vec4 velocities[]; };
+layout(std430, binding = 2) buffer Predictions  { vec4 predictions[]; };
+layout(std430, binding = 3) buffer Densities    { vec4 densities[]; };
+layout(std430, binding = 4) buffer Forces       { vec4 forces[]; };
+
+uniform uint count;
+uniform float mass;
+uniform float nearScale;
+uniform float viscScale;
+uniform float spikyScale;
+uniform float smoothingRadius;
+uniform float sqrSmoothingRadius;
+uniform float viscoscityStrength;
+uniform float nearPressureMultiplier;
+
+float SmoothingDer(float distance);
+float SmoothingDerNear(float distance);
+float ViscocitySmoothing(float distance);
+
+void main()
+{
+    uint i = gl_GlobalInvocationID.x;
+    
+    if (i >= count) return;
+
+    vec3 acc = vec3(0.0);
+    
+    const float selfNearDensity  = densities[i].y;
+    const float selfPressureTerm = densities[i].z;
+
+    for (uint j = 0; j < count; ++j)
+    {
+        if (j == i) continue;
+
+        vec3 dir = (predictions[j] - predictions[i]).xyz;
+        float distance = length(dir);
+
+        if (distance < 1e-3f)
+        {
+            uint mn = min(i, j);
+            uint mx = max(i, j);
+
+            uint hash = mn * 2654435761u ^ mx;
+            hash ^= hash >> 13;
+            dir = normalize(vec3(
+                float(hash & 0xFFFF) / 32768.0f - 1.0f,
+                0.0f,//float((hash >> 16) & 0xFF) / 128.0f - 1.0f,
+                float(hash % 977) / 488.5f - 1.0f)
+            );
+            
+            if (i < j) dir = -dir;
+        }
+        else
+            dir = dir / distance;
+
+        float nearDensity = densities[j].y;
+
+        float t = densities[j].z + selfPressureTerm;
+        acc += dir * SmoothingDer(distance) * mass * t * 0.5;
+
+        float sharedNearPressure = (nearDensity + selfNearDensity) * 0.5 * nearPressureMultiplier;
+        acc += sharedNearPressure * dir * SmoothingDerNear(distance) * mass;
+
+        float influence = ViscocitySmoothing(distance);
+        acc += (velocities[j] - velocities[i]).xyz * influence * viscoscityStrength;
+    }
+
+    forces[i] = vec4(acc, 0.0);
+}
+
+float SmoothingDer(float distance)
+{
+    if (distance >= smoothingRadius) return 0.0;
+
+    float val = max(0.0, smoothingRadius - distance);
+    return -3.0 * val * val * spikyScale;
+}
+
+float SmoothingDerNear(float distance)
+{
+    if (distance >= smoothingRadius) return 0.0;
+
+    float val = max(0.0, smoothingRadius - distance);
+    return -4.0 * val * val * val * nearScale;
+}
+
+float ViscocitySmoothing(float distance)
+{
+    if (distance >= smoothingRadius) return 0.0;
+
+    float t = sqrSmoothingRadius - distance * distance;
+    return t * t * t * viscScale;
+}

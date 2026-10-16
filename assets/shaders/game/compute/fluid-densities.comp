@@ -1,0 +1,62 @@
+#version 460 core
+layout(local_size_x = 256) in;
+
+layout(std430, binding = 2) buffer Predictions  { vec4 predictions[]; };
+// x: Density, y: NearDensity, z: PressureTerms, w: empty
+layout(std430, binding = 3) buffer Densities    { vec4 densities[]; };
+
+uniform uint count;
+uniform float spikyScale;
+uniform float nearScale;
+uniform float smoothingRadius;
+uniform float mass;
+uniform float targetDensity;
+uniform float pressureMultiplier;
+
+float SmoothingFunction(float distance);
+float SmoothingFunctionNear(float distance);
+float DensityToPressure(float density);
+
+void main()
+{
+    uint i = gl_GlobalInvocationID.x;
+    
+    if (i >= count) return;
+
+    float density = 0.0;
+    float nearDensity = 0.0;
+
+    for (uint j = 0; j < count; ++j)
+    {
+        float distance = length(predictions[j].xyz - predictions[i].xyz);
+        density += mass * SmoothingFunction(distance);
+        nearDensity += mass * SmoothingFunctionNear(distance);
+    }
+
+    densities[i].x = density;
+    densities[i].y = nearDensity;
+    densities[i].z = DensityToPressure(density) / (density * density);
+}
+
+float SmoothingFunction(float distance)
+{
+    if (distance >= smoothingRadius) return 0.0f;
+
+    float val = max(0.0f, smoothingRadius - distance);
+    return val * val * val * spikyScale;
+}
+
+float SmoothingFunctionNear(float distance)
+{
+    if (distance >= smoothingRadius) return 0.0f;
+
+    float val = max(0.0f, smoothingRadius - distance);
+    return val * val * val * val * nearScale;
+}
+
+float DensityToPressure(float density)
+{
+    float dE = density - targetDensity;
+    float pressure = dE * pressureMultiplier;
+    return pressure;
+}

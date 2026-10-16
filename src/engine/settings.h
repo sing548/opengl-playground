@@ -2,6 +2,8 @@
 
 struct Sandbox {
     bool runSimulation = false;
+    bool gpuSimulation = false;
+    bool singleStep = false;
     int stepsPerTick = 1;
     int particleCount = 702;
     float boxWidth = 20.0f;

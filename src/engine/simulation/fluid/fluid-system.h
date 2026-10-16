@@ -5,6 +5,10 @@
 
 #include <glm/glm.hpp>
 
+#include "../../gpu/gpu-timer.h"
+#include "../../gpu/gpu-buffer.h"
+#include "../../gpu/compute-shader.h"
+
 #include "../../systems/i-gameplay-system.h"
 
 #include "../../../game/systems/system-order.h"
@@ -59,6 +63,7 @@ private:
     std::unique_ptr<FluidData> fluid_;
 
     void RunSimulation(float dT, float gravity, float restitution);
+    void RunSimulationGPU(float dT, float gravity, float restitution);
 
     void CheckCollision(ParticleData& particle, float restitution);
 
@@ -85,4 +90,13 @@ private:
     void GetPositionsInReach(glm::vec3 samplePos, Fn&& fn) const;
 
     void SetSmoothingRadius(float h);
+
+//------------- GPU -------------
+    GPUBuffer gPredicted_;
+    GPUBuffer gDensities_;
+    GPUBuffer gAccelerations_;
+    ComputeShader predictionShader_;
+    ComputeShader densityShader_;
+    ComputeShader forcesShader_;
+    ComputeShader integrationShader_;
 };
