@@ -31,37 +31,45 @@ public:
     float GetParticleSize() const { return particleSize_; };
     float GetParticleSpacing() const { return particleSpacing_; };
     void ResetParticles() { SetupParticles(particles_.size()); };
+    bool GetIsFlat() const { return flat_; };
+    void SetIsFlat(bool isFlat) { flat_ = isFlat; SetupParticles(particles_.size()); }
 private:
+    bool flat_ = true;
     float particleSize_, particleSpacing_;
     std::vector<ParticleData> particles_;
     void SetupParticles(uint32_t particleCount)
     {
         particles_.clear();
+        particles_.reserve(particleCount);
 
-        auto sq = std::sqrt(particleCount);
-        int max = (int)sq;
-
-        float xOffset = (max - 1) * particleSpacing_ * particleSize_ / 2;
-
-        if (sq > max)
-            ++max;
-
-        float zOffset = (max - 1) * particleSpacing_ * particleSize_ / 2;
-
-        uint32_t id = 0;
-        for (int i = 0; i < (int)max; ++i)
+        uint32_t n = 0;
+        while ((flat_ ? n * n : n * n * n) < particleCount)
         {
-            for (int j = 0; j < (int)max && particles_.size() < particleCount; ++j)
-            {
-                ParticleData p { .id = id,
-                                 .position = glm::vec3((float)(particleSpacing_ * j * particleSize_) - xOffset, 0.0f, (float)(particleSpacing_ * i * particleSize_) - zOffset),
-                                 .predictedPosition = glm::vec3((float)(particleSpacing_ * j * particleSize_) - xOffset, 0.0f, (float)(particleSpacing_ * i * particleSize_) - zOffset),
-                                 .velocity = glm::vec3(0.0f) };
-                particles_.push_back(p);
-                ++id;
-            }
+            ++n;
         }
 
+        const uint32_t layers = flat_ ? 1 : n;
+        const float step = particleSize_ * particleSpacing_;
+        const float offset = (n - 1) * step / 2;
+        const float yOffset = flat_ ? 0.0f : offset;
+
+        uint32_t id = 0;
+
+        for (uint32_t i = 0; i < n; ++i)
+        for (uint32_t j = 0; j < layers; ++j)
+        for (uint32_t k = 0; k < n; ++k)
+        {
+            if (particles_.size() >= particleCount) break;
+
+            glm::vec3 pos(k * step - offset, j * step - yOffset, i * step - offset);
+            particles_.push_back({ .id = id,
+                .position = pos,
+                .predictedPosition = pos,
+                .velocity = glm::vec3(0.0f) 
+            });
+            ++id;
+        }
+                
         UploadToGPU();
     }
 

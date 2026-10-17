@@ -1,0 +1,22 @@
+#version 460 core
+layout(local_size_x = 256) in;
+
+layout(std430, binding = 2) readonly   buffer Predictions  { vec4 predictions[]; };
+layout(std430, binding = 5) writeonly  buffer Hashes       { uint hashes[]; };
+layout(std430, binding = 6)            buffer Counts       { uint counts[]; };
+
+uniform uint count;
+uniform uint tableSize;
+uniform float inversCellSize;
+
+void main()
+{
+    uint i = gl_GlobalInvocationID.x;
+    
+    if (i >= count) return;
+
+    ivec3 cell = ivec3(floor(predictions[i].xyz * inversCellSize));
+    uint hash = uint(cell.x) * 28579u + uint(cell.y) * 58229u + uint(cell.z) * 82759u;
+    hashes[i] = hash;
+    atomicAdd(counts[hash % tableSize], 1u);
+}

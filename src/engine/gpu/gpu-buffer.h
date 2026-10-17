@@ -88,6 +88,12 @@ public:
         glGetNamedBufferSubData(id_, 0, static_cast<GLsizeiptr>(out.size() * sizeof(T)), out.data());
     }
 
+    void Clear()
+    {
+        // Why GL_RED_INTEGER?
+        glClearNamedBufferData(id_, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+    }
+
     void SetUsage(GLenum usage) { usage_ = usage; }
 private:
     GLuint id_      = 0;

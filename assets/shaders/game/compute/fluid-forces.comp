@@ -1,21 +1,27 @@
 #version 460 core
 layout(local_size_x = 256) in;
 
-layout(std430, binding = 1) buffer Velocities   { vec4 velocities[]; };
-layout(std430, binding = 2) buffer Predictions  { vec4 predictions[]; };
-layout(std430, binding = 3) buffer Densities    { vec4 densities[]; };
-layout(std430, binding = 4) buffer Forces       { vec4 forces[]; };
+layout(std430, binding = 1) readonly buffer Velocities   { vec4 velocities[]; };
+layout(std430, binding = 2) readonly buffer Predictions  { vec4 predictions[]; };
+layout(std430, binding = 3)          buffer Densities    { vec4 densities[]; };
+layout(std430, binding = 4)          buffer Forces       { vec4 forces[]; };
+layout(std430, binding = 5) readonly buffer Hashes       { uint hashes[]; };
+layout(std430, binding = 7) readonly buffer Starts       { uint starts[]; };
 
 uniform uint count;
+uniform uint tableSize;
+uniform bool isFlat;
 uniform float mass;
 uniform float nearScale;
 uniform float viscScale;
 uniform float spikyScale;
+uniform float inversCellSize;
 uniform float smoothingRadius;
 uniform float sqrSmoothingRadius;
 uniform float viscoscityStrength;
 uniform float nearPressureMultiplier;
 
+uint HashCell(ivec3 c);
 float SmoothingDer(float distance);
 float SmoothingDerNear(float distance);
 float ViscocitySmoothing(float distance);
@@ -26,46 +32,59 @@ void main()
     
     if (i >= count) return;
 
+    vec3 position = predictions[i].xyz;
+    ivec3 cell = ivec3(floor(position * inversCellSize));
+
     vec3 acc = vec3(0.0);
     
     const float selfNearDensity  = densities[i].y;
     const float selfPressureTerm = densities[i].z;
 
-    for (uint j = 0; j < count; ++j)
+    for (int dx = -1; dx <= 1; ++dx)
+    for (int dy = -1; dy <= 1; ++dy)
+    for (int dz = -1; dz <= 1; ++dz)
     {
-        if (j == i) continue;
+        uint cellHash = HashCell(cell + ivec3(dx, dy, dz));
+        uint key = cellHash % tableSize;
 
-        vec3 dir = (predictions[j] - predictions[i]).xyz;
-        float distance = length(dir);
+        uint end = starts[key + 1u];
+        
+        for (uint j = starts[key]; j < end; ++j) {
+            if (hashes[j] != cellHash) continue;
+            if (j == i) continue;
 
-        if (distance < 1e-3f)
-        {
-            uint mn = min(i, j);
-            uint mx = max(i, j);
+            vec3 dir = (predictions[j] - predictions[i]).xyz;
+            float distance = length(dir);
 
-            uint hash = mn * 2654435761u ^ mx;
-            hash ^= hash >> 13;
-            dir = normalize(vec3(
-                float(hash & 0xFFFF) / 32768.0f - 1.0f,
-                0.0f,//float((hash >> 16) & 0xFF) / 128.0f - 1.0f,
-                float(hash % 977) / 488.5f - 1.0f)
-            );
-            
-            if (i < j) dir = -dir;
+            if (distance < 1e-3f)
+            {
+                uint mn = min(i, j);
+                uint mx = max(i, j);
+
+                uint hash = mn * 2654435761u ^ mx;
+                hash ^= hash >> 13;
+                dir = normalize(vec3(
+                    float(hash & 0xFFFF) / 32768.0 - 1.0,
+                    isFlat ? 0 : float((hash >> 16) & 0xFF) / 128.0 - 1.0,
+                    float(hash % 977) / 488.5 - 1.0)
+                );
+
+                if (i < j) dir = -dir;
+            }
+            else
+                dir = dir / distance;
+
+            float nearDensity = densities[j].y;
+
+            float t = densities[j].z + selfPressureTerm;
+            acc += dir * SmoothingDer(distance) * mass * t * 0.5;
+
+            float sharedNearPressure = (nearDensity + selfNearDensity) * 0.5 * nearPressureMultiplier;
+            acc += sharedNearPressure * dir * SmoothingDerNear(distance) * mass;
+
+            float influence = ViscocitySmoothing(distance);
+            acc += (velocities[j] - velocities[i]).xyz * influence * viscoscityStrength;
         }
-        else
-            dir = dir / distance;
-
-        float nearDensity = densities[j].y;
-
-        float t = densities[j].z + selfPressureTerm;
-        acc += dir * SmoothingDer(distance) * mass * t * 0.5;
-
-        float sharedNearPressure = (nearDensity + selfNearDensity) * 0.5 * nearPressureMultiplier;
-        acc += sharedNearPressure * dir * SmoothingDerNear(distance) * mass;
-
-        float influence = ViscocitySmoothing(distance);
-        acc += (velocities[j] - velocities[i]).xyz * influence * viscoscityStrength;
     }
 
     forces[i] = vec4(acc, 0.0);
@@ -93,4 +112,9 @@ float ViscocitySmoothing(float distance)
 
     float t = sqrSmoothingRadius - distance * distance;
     return t * t * t * viscScale;
+}
+
+uint HashCell(ivec3 cell)
+{
+    return uint(cell.x) * 28579u + uint(cell.y) * 58229u + uint(cell.z) * 82759u;
 }

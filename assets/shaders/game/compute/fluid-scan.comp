@@ -1,0 +1,47 @@
+#version 460 core
+layout(local_size_x = 1024) in;
+
+layout(std430, binding = 6) buffer Counts { uint counts[]; };
+layout(std430, binding = 7) buffer Starts { uint starts[]; };
+layout(std430, binding = 8) buffer Cursor { uint cursor[]; };
+
+uniform uint tableSize;
+
+shared uint sums[1024];
+
+void main()
+{
+    uint t   = gl_LocalInvocationID.x;
+    uint per = (tableSize + 1023u) / 1024u;
+    uint begin = min(t * per, tableSize);
+    uint end   = min(begin + per, tableSize);
+
+    uint local = 0u;
+
+    for (uint k = begin; k < end; ++k)
+        local += counts[k];
+
+    sums[t] = local;
+
+    memoryBarrierShared(); barrier();
+    
+    for (uint offset = 1u; offset < 1024; offset *= 2)
+    {
+        uint val = (t >= offset) ? sums[t - offset] : 0u;
+        memoryBarrierShared(); barrier();
+        sums[t] += val;
+        memoryBarrierShared(); barrier();
+    }
+
+    uint runnin = sums[t] - local;
+
+    for (uint k = begin; k < end; ++k)
+    {
+        starts[k] = runnin;
+        cursor[k] = runnin;
+        runnin += counts[k];
+    }
+
+    if (t == 0u)
+        starts[tableSize] = sums[1023];
+}

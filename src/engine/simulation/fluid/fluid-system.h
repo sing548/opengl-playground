@@ -90,12 +90,25 @@ private:
     void GetPositionsInReach(glm::vec3 samplePos, Fn&& fn) const;
 
     void SetSmoothingRadius(float h);
+    void SetDefaultValues(SystemsContext& ctx);
 
 //------------- GPU -------------
     GPUBuffer gPredicted_;
     GPUBuffer gDensities_;
     GPUBuffer gAccelerations_;
+    GPUBuffer gHashes_;
+    GPUBuffer gCounts_;
+    GPUBuffer gStarts_;
+    GPUBuffer gCursor_;
+    GPUBuffer gPositionsSpare_;
+    GPUBuffer gVelocitiesSpare_;
+    GPUBuffer gPredictedSpare_;
+    GPUBuffer gHashesSpare_;
+
     ComputeShader predictionShader_;
+    ComputeShader countShader_;
+    ComputeShader scanShader_;
+    ComputeShader scatterShader_;
     ComputeShader densityShader_;
     ComputeShader forcesShader_;
     ComputeShader integrationShader_;

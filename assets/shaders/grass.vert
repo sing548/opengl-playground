@@ -95,10 +95,6 @@ mat3 RotateY(float angle)
     );
 }
 
-
-
-
-
 //
 // Description : Array and textureless GLSL 2D simplex noise function.
 //      Author : Ian McEwan, Ashima Arts.

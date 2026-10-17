@@ -1,18 +1,23 @@
 #version 460 core
 layout(local_size_x = 256) in;
 
-layout(std430, binding = 2) buffer Predictions  { vec4 predictions[]; };
+layout(std430, binding = 2)          buffer Predictions { vec4 predictions[]; };
 // x: Density, y: NearDensity, z: PressureTerms, w: empty
-layout(std430, binding = 3) buffer Densities    { vec4 densities[]; };
+layout(std430, binding = 3)          buffer Densities   { vec4 densities[]; };
+layout(std430, binding = 5) readonly buffer Hashes      { uint hashes[]; };
+layout(std430, binding = 7) readonly buffer Starts      { uint starts[]; };
 
 uniform uint count;
-uniform float spikyScale;
-uniform float nearScale;
-uniform float smoothingRadius;
+uniform uint tableSize;
 uniform float mass;
+uniform float nearScale;
+uniform float spikyScale;
 uniform float targetDensity;
+uniform float inversCellSize;
+uniform float smoothingRadius;
 uniform float pressureMultiplier;
 
+uint HashCell(ivec3 c);
 float SmoothingFunction(float distance);
 float SmoothingFunctionNear(float distance);
 float DensityToPressure(float density);
@@ -23,19 +28,31 @@ void main()
     
     if (i >= count) return;
 
+    vec3 position = predictions[i].xyz;
+    ivec3 cell = ivec3(floor(position * inversCellSize));
+
     float density = 0.0;
     float nearDensity = 0.0;
 
-    for (uint j = 0; j < count; ++j)
+    for (int dx = -1; dx <= 1; ++dx)
+    for (int dy = -1; dy <= 1; ++dy)
+    for (int dz = -1; dz <= 1; ++dz)
     {
-        float distance = length(predictions[j].xyz - predictions[i].xyz);
-        density += mass * SmoothingFunction(distance);
-        nearDensity += mass * SmoothingFunctionNear(distance);
+        uint cellHash = HashCell(cell + ivec3(dx, dy, dz));
+        uint key = cellHash % tableSize;
+
+        uint end = starts[key + 1u];
+        
+        for (uint j = starts[key]; j < end; ++j) {
+            if (hashes[j] != cellHash) continue;
+
+            float distance = length(predictions[j].xyz - predictions[i].xyz);
+            density += mass * SmoothingFunction(distance);
+            nearDensity += mass * SmoothingFunctionNear(distance);
+        }
     }
 
-    densities[i].x = density;
-    densities[i].y = nearDensity;
-    densities[i].z = DensityToPressure(density) / (density * density);
+    densities[i] = vec4(density, nearDensity, DensityToPressure(density) / (density * density), 0.0);
 }
 
 float SmoothingFunction(float distance)
@@ -59,4 +76,9 @@ float DensityToPressure(float density)
     float dE = density - targetDensity;
     float pressure = dE * pressureMultiplier;
     return pressure;
+}
+
+uint HashCell(ivec3 cell)
+{
+    return uint(cell.x) * 28579u + uint(cell.y) * 58229u + uint(cell.z) * 82759u;
 }

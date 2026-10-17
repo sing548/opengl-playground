@@ -576,6 +576,7 @@ void Engine::HandleImGui(int step)
                 ImGui::SliderFloat("Viscocity", &settings_.sandbox.viscosityStrength, 0.0f, 1.0f);
                 ImGui::SliderFloat("Pressure multiplier", &settings_.sandbox.pressureMultiplier, 1.0f, 150000.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
                 ImGui::SliderFloat("Near pressure multiplier", &settings_.sandbox.nearPressureMultiplier, 0.0f, 10.0f);
+                ImGui::Checkbox("FSM", &settings_.sandbox.flatSimulation);
             }
 
             ImGui::End();

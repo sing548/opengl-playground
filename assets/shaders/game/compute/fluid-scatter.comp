@@ -1,0 +1,32 @@
+#version 460 core
+layout(local_size_x = 256) in;
+
+layout(std430, binding = 0)  readonly    buffer Positions            { vec4 positions[]; };
+layout(std430, binding = 1)  readonly    buffer Velocities           { vec4 velocities[]; };
+layout(std430, binding = 2)  readonly    buffer Predictions          { vec4 predictions[]; };
+layout(std430, binding = 5)  readonly    buffer Hashes               { uint hashes[]; };
+layout(std430, binding = 8)              buffer Cursor               { uint cursor[]; };
+layout(std430, binding = 9)  writeonly   buffer SortedPositions      { vec4 sortedPositions[]; };
+layout(std430, binding = 10) writeonly   buffer SortedVelocities     { vec4 sortedvelocities[]; };
+layout(std430, binding = 11) writeonly   buffer SortedPredictions    { vec4 sortedPredictions[]; };
+layout(std430, binding = 12) writeonly   buffer SortedHashes         { uint sortedHashes[]; };
+
+uniform uint count;
+uniform uint tableSize;
+
+void main()
+{
+    uint i = gl_GlobalInvocationID.x;
+    
+    if (i >= count) return;
+
+    uint hash = hashes[i];
+    uint key = hash % tableSize;
+    
+    uint dst = atomicAdd(cursor[key], 1u);
+
+    sortedPositions[dst] = positions[i];
+    sortedvelocities[dst] = velocities[i];
+    sortedPredictions[dst] = predictions[i];
+    sortedHashes[dst] = hash;
+}

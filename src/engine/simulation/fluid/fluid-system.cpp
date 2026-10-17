@@ -13,6 +13,9 @@
 
 FluidSystem::FluidSystem() :
     predictionShader_(std::filesystem::path(FileHelper::GetShaderDir()) / "game" / "compute" / "fluid-prediction.comp"),
+    countShader_(std::filesystem::path(FileHelper::GetShaderDir()) / "game" / "compute" / "fluid-count.comp"),
+    scanShader_(std::filesystem::path(FileHelper::GetShaderDir()) / "game" / "compute" / "fluid-scan.comp"),
+    scatterShader_(std::filesystem::path(FileHelper::GetShaderDir()) / "game" / "compute" / "fluid-scatter.comp"),
     densityShader_(std::filesystem::path(FileHelper::GetShaderDir()) / "game" / "compute" / "fluid-densities.comp"),
     forcesShader_(std::filesystem::path(FileHelper::GetShaderDir()) / "game" / "compute" / "fluid-forces.comp"),
     integrationShader_(std::filesystem::path(FileHelper::GetShaderDir()) / "game" / "compute" / "fluid-integration.comp")
@@ -22,6 +25,14 @@ FluidSystem::FluidSystem() :
     gPredicted_.SetUsage(GL_DYNAMIC_COPY);
     gDensities_.SetUsage(GL_DYNAMIC_COPY);
     gAccelerations_.SetUsage(GL_DYNAMIC_COPY);
+    gHashes_.SetUsage(GL_DYNAMIC_COPY);
+    gCounts_.SetUsage(GL_DYNAMIC_COPY);
+    gStarts_.SetUsage(GL_DYNAMIC_COPY);
+    gCursor_.SetUsage(GL_DYNAMIC_COPY);
+    gPositionsSpare_.SetUsage(GL_DYNAMIC_COPY); 
+    gVelocitiesSpare_.SetUsage(GL_DYNAMIC_COPY);
+    gPredictedSpare_.SetUsage(GL_DYNAMIC_COPY);     
+    gHashesSpare_.SetUsage(GL_DYNAMIC_COPY);    
 
     for (int x = -1; x <= 1; ++x)
     for (int y = -1; y <= 1; ++y)
@@ -75,6 +86,13 @@ void FluidSystem::Update(SystemsContext& ctx)
     if (ctx.settings.sandbox.gpuSimulation != fluid_->OnGPU())
         fluid_->SetOnGPU(ctx.settings.sandbox.gpuSimulation);
 
+    if (ctx.settings.sandbox.flatSimulation != fluid_->GetIsFlat())
+    {
+        fluid_->SetIsFlat(ctx.settings.sandbox.flatSimulation);
+        SetSmoothingRadius(smoothingRadius_);
+        SetDefaultValues(ctx);
+    }
+
     if (!ctx.settings.sandbox.runSimulation && !ctx.settings.sandbox.singleStep)
         return;
 
@@ -95,6 +113,40 @@ void FluidSystem::Update(SystemsContext& ctx)
 
     auto t = std::chrono::steady_clock::now() - start;
     ctx.debugStats["fluid.sim_ms"].Add(std::chrono::duration<float, std::milli>(t).count());
+}
+
+void FluidSystem::SetDefaultValues(SystemsContext& ctx)
+{
+    if (fluid_->GetIsFlat())
+    {
+        ctx.settings.sandbox.boxWidth = 25.0f;
+        ctx.settings.sandbox.boxDepth = 20.0f;
+        ctx.settings.sandbox.boxHeight = 15.0f;
+        ctx.settings.sandbox.particleCount = 3000;
+        ctx.settings.sandbox.smoothingRadius = 1.5f;
+        ctx.settings.sandbox.targetDensity = 6.5f;
+        ctx.settings.sandbox.pressureMultiplier = 6000.0f;
+        ctx.settings.sandbox.nearPressureMultiplier = 3.0f;
+        ctx.settings.sandbox.viscosityStrength = 0.1f;
+        ctx.settings.sandbox.stepsPerTick = 3;
+        ctx.settings.sandbox.gravity = 0.0f;
+        ctx.settings.sandbox.restitution = 0.2f;
+    }
+    else
+    {
+        ctx.settings.sandbox.boxWidth = 8.0f;
+        ctx.settings.sandbox.boxDepth = 6.0f;
+        ctx.settings.sandbox.boxHeight = 5.0f;
+        ctx.settings.sandbox.particleCount = 8000;
+        ctx.settings.sandbox.smoothingRadius = 1.0f;
+        ctx.settings.sandbox.targetDensity = 17.1f;
+        ctx.settings.sandbox.pressureMultiplier = 3000.0f;
+        ctx.settings.sandbox.nearPressureMultiplier = 0.2f;
+        ctx.settings.sandbox.viscosityStrength = 0.1f;
+        ctx.settings.sandbox.stepsPerTick = 3;
+        ctx.settings.sandbox.gravity = 0.0f;
+        ctx.settings.sandbox.restitution = 0.2f;
+    }
 }
 
 void FluidSystem::RunSimulation(float dT, float gravity, float restitution)
@@ -144,14 +196,35 @@ void FluidSystem::RunSimulationGPU(float dT, float gravity, float restitution)
 {
     uint32_t count = fluid_->GetParticleCount();
 
-    gPredicted_.Resize(fluid_->GetPositionsBuffer().Size());
-    gDensities_.Resize(fluid_->GetPositionsBuffer().Size());
-    gAccelerations_.Resize(fluid_->GetPositionsBuffer().Size());
+    uint32_t tableSize = 2 * count;
+
+    gPredicted_.Resize(count * sizeof(glm::vec4));
+    gHashes_.Resize(count * sizeof(uint32_t));
+    gCounts_.Resize(tableSize * sizeof(uint32_t));
+    gCursor_.Resize(tableSize * sizeof(uint32_t));
+    gStarts_.Resize((tableSize + 1) * sizeof(uint32_t));
+    gDensities_.Resize(count * sizeof(glm::vec4));
+    gAccelerations_.Resize(count * sizeof(glm::vec4));
+    gPositionsSpare_.Resize(count * sizeof(glm::vec4)); 
+    gVelocitiesSpare_.Resize(count * sizeof(glm::vec4));
+    gPredictedSpare_.Resize(count * sizeof(glm::vec4)); 
+    gHashesSpare_.Resize(count * sizeof(uint32_t));    
 
     fluid_->GetPositionsBuffer().BindBase(0);
     fluid_->GetVelocitiesBuffer().BindBase(1);
     gPredicted_.BindBase(2);
-    
+    gDensities_.BindBase(3);
+    gAccelerations_.BindBase(4);
+    gHashes_.BindBase(5);
+    gCounts_.BindBase(6);
+    gStarts_.BindBase(7);
+    gCursor_.BindBase(8);
+    gPositionsSpare_.BindBase(9); 
+    gVelocitiesSpare_.BindBase(10);
+    gPredictedSpare_.BindBase(11); 
+    gHashesSpare_.BindBase(12);    
+
+    // -------- Prediction -------- //
     predictionShader_.SetFloat("dT", dT);
     predictionShader_.SetFloat("gravity", gravity);
     predictionShader_.SetUInt("count", count);
@@ -159,29 +232,70 @@ void FluidSystem::RunSimulationGPU(float dT, float gravity, float restitution)
     predictionShader_.DispatchFor(count);
     
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    // -------- Count -------- //
+    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    gCounts_.Clear();
+
+    countShader_.SetUInt("count", count);
+    countShader_.SetUInt("tableSize", tableSize);
+    countShader_.SetFloat("inversCellSize", 1 / smoothingRadius_);
+
+    countShader_.DispatchFor(count);
+
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    // -------- Count --------
+    scanShader_.SetUInt("tableSize", tableSize);
+
+    scanShader_.Dispatch(1);
+
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    // -------- Scatter --------
+    scatterShader_.SetUInt("count", count);
+    scatterShader_.SetUInt("tableSize", tableSize);
+
+    scatterShader_.DispatchFor(count);
+
+    std::swap(fluid_->GetPositionsBuffer(), gPositionsSpare_);
+    std::swap(fluid_->GetVelocitiesBuffer(), gVelocitiesSpare_);
+    std::swap(gPredicted_, gPredictedSpare_);
+    std::swap(gHashes_, gHashesSpare_);
+
+    fluid_->GetPositionsBuffer().BindBase(0);
+    fluid_->GetVelocitiesBuffer().BindBase(1);
+    gPredicted_.BindBase(2);
+    gHashes_.BindBase(5);
+
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     
-    gDensities_.BindBase(3);
-    
+    // -------- Density -------- //
     densityShader_.SetUInt("count", count);
+    densityShader_.SetUInt("tableSize", tableSize);
     densityShader_.SetFloat("mass", mass_);
     densityShader_.SetFloat("nearScale", nearScale_);
     densityShader_.SetFloat("spikyScale", spikyScale_);
     densityShader_.SetFloat("targetDensity", targetDensity_);
     densityShader_.SetFloat("smoothingRadius", smoothingRadius_);
+    densityShader_.SetFloat("inversCellSize", 1 / smoothingRadius_);
     densityShader_.SetFloat("pressureMultiplier", pressureMultiplier_);
+
 
     densityShader_.DispatchFor(count);
     
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-    gAccelerations_.BindBase(4);
-
+    // -------- Forces -------- //
     forcesShader_.SetUInt("count", count);
+    forcesShader_.SetBool("isFlat", fluid_->GetIsFlat());
+    forcesShader_.SetUInt("tableSize", tableSize);
     forcesShader_.SetFloat("mass", mass_);
     forcesShader_.SetFloat("nearScale", nearScale_);
     forcesShader_.SetFloat("viscScale", viscScale_);
     forcesShader_.SetFloat("spikyScale", spikyScale_);
     forcesShader_.SetFloat("smoothingRadius", smoothingRadius_);
+    forcesShader_.SetFloat("inversCellSize", 1 / smoothingRadius_);
     forcesShader_.SetFloat("viscoscityStrength", viscosityStrength_);
     forcesShader_.SetFloat("sqrSmoothingRadius", sqrSmoothingRadius_);
     forcesShader_.SetFloat("nearPressureMultiplier", nearPressureMultiplier_);
@@ -190,6 +304,7 @@ void FluidSystem::RunSimulationGPU(float dT, float gravity, float restitution)
 
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     
+    // -------- Eggsecution -------- //
     integrationShader_.SetFloat("dT", dT);
     integrationShader_.SetFloat("restitution", restitution);
     integrationShader_.SetUInt("count", count);
@@ -206,6 +321,12 @@ void FluidSystem::CheckCollision(ParticleData& particle, float restitution)
     {
         particle.velocity.x *= -restitution;
         particle.position.x = glm::clamp(particle.position.x, -boundingBox_.x, boundingBox_.x);
+    }
+
+    if (std::abs(particle.position.y) > boundingBox_.y)
+    {
+        particle.velocity.y *= -restitution;
+        particle.position.y = glm::clamp(particle.position.y, -boundingBox_.y, boundingBox_.y);
     }
 
     if (std::abs(particle.position.z) > boundingBox_.z)
@@ -299,7 +420,7 @@ glm::vec3 FluidSystem::CalcPressure(const ParticleData& pD)
             hash ^= hash >> 13;
             dir = glm::normalize(glm::vec3(
                 float(hash & 0xFFFF) / 32768.0f - 1.0f,
-                0.0f,//float((hash >> 16) & 0xFF) / 128.0f - 1.0f,
+                fluid_->GetIsFlat() ? 0.0f : float((hash >> 16) & 0xFF) / 128.0f - 1.0f,
                 float(hash % 977) / 488.5f - 1.0f));
             
             if (pD.id < particle.id) dir = -dir;
@@ -401,11 +522,23 @@ void FluidSystem::SetSmoothingRadius(float h)
 {
     const float h2 = h * h;
     const float h5 = h2 * h2 * h;
+    const float h6 = h2 * h2 * h2;
+    const float h7 = h6 * h;
+    const float h9 = h7 * h2;
 
     smoothingRadius_ = h;
     sqrSmoothingRadius_ = h2;
 
-    spikyScale_ = 10.0f / (std::numbers::pi_v<float> * h5);
-    nearScale_  = 15.0f / (std::numbers::pi_v<float> * h5 * h);
-    viscScale_  = 10.0f / (std::numbers::pi_v<float> * h5 * h2 * h);
+    if (fluid_->GetIsFlat())
+    {
+        spikyScale_ = 10.0f / (std::numbers::pi_v<float> * h5);
+        nearScale_  = 15.0f / (std::numbers::pi_v<float> * h5 * h);
+        viscScale_  = 10.0f / (std::numbers::pi_v<float> * h5 * h2 * h);
+    }
+    else 
+    {
+        spikyScale_ = 15.0f  / (std::numbers::pi_v<float> * h6);
+        nearScale_  = 105.0f / (4 * std::numbers::pi_v<float> * h7);
+        viscScale_  = 315.0f  / (64 * std::numbers::pi_v<float> * h9);
+    }
 }
