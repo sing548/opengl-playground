@@ -57,6 +57,7 @@ add_executable(OpenGLPlayground
     src/engine/simulation/fluid/fluid-renderer.cpp
     src/engine/simulation/fluid/fluid-system.cpp
     src/engine/systems/replay/replay-driver.cpp
+    src/engine/systems/free-camera-system.cpp
     src/engine/engine.cpp
     src/game/game-world/game-world.cpp
     src/game/networking/interpolator/interpolator.cpp

@@ -20,8 +20,11 @@ public:
 	void SetBasis(glm::vec3 pos, glm::vec3 front, glm::vec3 up);
 
 	float GetZoom() const { return zoom_; };
-	const glm::vec3 GetPosition() const { return position_; };
-	const glm::vec3 GetWorldUp() const { return worldUp_; };
+	const glm::vec3& GetPosition() const { return position_; };
+	const glm::vec3& GetWorldUp() const { return worldUp_; };
+	const glm::vec3& GetCameraUp() const { return up_; };
+	const glm::vec3& GetCameraRight() const { return right_; };
+	glm::vec3& GetCameraRight() { return right_; };
 private:
 	static constexpr float DEFAULT_ZOOM = 45.0f;
 

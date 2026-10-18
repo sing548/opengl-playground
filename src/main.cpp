@@ -11,6 +11,7 @@
 #include "engine/gpu/shader.h"
 #include "engine/rendering/renderer.h"
 #include "engine/helpers/file-helper.h"
+#include "engine/systems/free-camera-system.h"
 #include "engine/simulation/fluid/fluid-data.h"
 #include "engine/rendering/terrain/terrain-handler-stud.h"
 
@@ -165,10 +166,13 @@ int main(int argc, const char *argv[]) {
     engine->AddGameplaySystem(std::move(shot));
 
     auto terr = std::make_unique<TerrainSystem>();
-    engine->AddGameplaySystem(std::move(terr));
+    engine->AddGameplaySystem(std::move(terr));     
 
     auto cam = std::make_unique<CameraSystem>();
     engine->AddGameplaySystem(std::move(cam));
+
+    auto freeCam = std::make_unique<FreeCameraSystem>(engine->GetRawMan());
+    engine->AddGameplaySystem(std::move(freeCam));
 
     auto hist = std::make_unique<PiHistorySystem>();
     engine->AddGameplaySystem(std::move(hist));

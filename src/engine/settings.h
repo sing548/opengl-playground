@@ -24,6 +24,7 @@ struct Sandbox {
 struct Settings {
     bool adjustCamera = true;
     bool thirdPerson = true;
+    bool freeCamera = false;
     bool skyBox = true;
     bool debugView = false;
     bool hitboxes = false;

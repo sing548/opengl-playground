@@ -5,6 +5,8 @@
 
 void CameraSystem::Update(SystemsContext& ctx)
 {
+    if (ctx.settings.freeCamera) return;
+    
     bool adjust = ctx.settings.adjustCamera;
 
     if (thirdPersonActive_ != ctx.settings.thirdPerson)

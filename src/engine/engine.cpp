@@ -85,6 +85,7 @@ Engine::Engine(EngineConfig config) : config_(config)
         settings_.skyBox = false;
         settings_.thirdPerson = false;
         settings_.adjustCamera = false;
+        settings_.freeCamera = true;
     }
     else
     {

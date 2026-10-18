@@ -12,7 +12,7 @@
 class RawInputManager 
 {
 public:
-    RawInputManager(GLFWwindow* window) : window_(window) 
+    RawInputManager(GLFWwindow* window) : window_(window)
     {
         auto path = std::filesystem::path(FileHelper::GetAssetsDir()) / "various" / "gamecontrollerdb.txt";
 
@@ -30,6 +30,8 @@ public:
 
         if (glfwUpdateGamepadMappings(map.c_str()) == GLFW_FALSE)
             std::cerr << "glfwUpdateGamepadMappings error" << std::endl;
+        
+        glfwSetScrollCallback(window_, MouseScrollCallback);
     };
 
     bool KeyDown(int key) 
@@ -63,10 +65,39 @@ public:
         return gamepadConnected_;
     }
 
+    std::tuple<double, double> GetMousePos()
+    {
+        double xpos, ypos = 0.0f;
+        glfwGetCursorPos(window_, &xpos, &ypos);
+        return std::tuple<double, double>(xpos, ypos);
+    }
+
+    bool GetMouseDown(int button)
+    {
+        return glfwGetMouseButton(window_, button);
+    }
+
+    double GetScroll()
+    {
+        double scroll = scrollY_;
+        scrollY_ = 0.0f;
+        return scroll;
+    }
+
 private:
     GLFWwindow* window_;
     GLFWgamepadstate gs_;
     bool gamepadConnected_ = false;
+    
+    bool firstMouse_ = true;
+
+    inline static double scrollX_ = 0.0f, scrollY_ = 0.0f;
+
+    static void MouseScrollCallback(GLFWwindow*/*window*/, double xoffset, double yoffset)
+    {
+        scrollX_ = xoffset;
+        scrollY_ = yoffset;
+    }
 };
 
 /*

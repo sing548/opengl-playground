@@ -17,6 +17,7 @@ enum class SystemOrder : int {
     NpcSystem = 420,
     ShotSystem = 430,
     TerrainSystem = 440,
+    //ToDo: Correct game<->engine break with Fluid System
     FluidSystem = 450,
 
 // ----- region PostSimulation -----
@@ -29,6 +30,8 @@ enum class SystemOrder : int {
 
 // ----- region PreRender -----
     BlendingSystem = 700,
+    //ToDo: Correct game<->engine break with Free Camera System
+    FreeCameraSystem = 705,
     CameraSystem = 710,
 
 // ----- region PostRender -----
