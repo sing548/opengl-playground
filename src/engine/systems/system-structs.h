@@ -9,7 +9,7 @@
 class Window;
 class GameWorld;
 class DebugStats;
-class InputState;
+struct InputState;
 class AssetManager;
 class NetworkBridge;
 class ITerrainHandler;
