@@ -6,20 +6,18 @@
 TerrainMaterial::TerrainMaterial(std::unique_ptr<Shader> shader, AssetManager& assMan, float bandMin, float bandMax) 
                 : Material(std::move(shader)), bandMin_(bandMin), bandMax_(bandMax)
 {
-    grass_ = assMan.LoadTexture(std::filesystem::path(
-                    FileHelper::GetAssetsDir()) / "textures" / "rocky_terrain_02_1k" / "rocky_terrain_02_diff_1k.jpg", true);
-    gNorm_ = assMan.LoadTexture(std::filesystem::path(
-                    FileHelper::GetAssetsDir()) / "textures" / "rocky_terrain_02_1k" / "rocky_terrain_02_nor_gl_1k.jpg");
-    rock_ = assMan.LoadTexture(std::filesystem::path(
-                    FileHelper::GetAssetsDir()) / "textures" / "seaside_rock_1k" / "seaside_rock_diff_1k.jpg", true);
-    rNorm_ = assMan.LoadTexture(std::filesystem::path(
-                    FileHelper::GetAssetsDir()) / "textures" / "seaside_rock_1k" / "seaside_rock_nor_gl_1k.jpg");
-    snow_ = assMan.LoadTexture(std::filesystem::path(
-                    FileHelper::GetAssetsDir()) / "textures" / "snow_02_1k"/ "snow_02_diff_1k.jpg", true);
-    sNorm_ = assMan.LoadTexture(std::filesystem::path(
-                    FileHelper::GetAssetsDir()) / "textures" / "snow_02_1k" / "snow_02_nor_gl_1k.jpg");
-
-    
+    grass_ = assMan.LoadTexture((std::filesystem::path(
+                    FileHelper::GetAssetsDir()) / "textures" / "rocky_terrain_02_1k" / "rocky_terrain_02_diff_1k.jpg").string(), true);
+    gNorm_ = assMan.LoadTexture((std::filesystem::path(
+                    FileHelper::GetAssetsDir()) / "textures" / "rocky_terrain_02_1k" / "rocky_terrain_02_nor_gl_1k.jpg").string());
+    rock_ = assMan.LoadTexture((std::filesystem::path(
+                    FileHelper::GetAssetsDir()) / "textures" / "seaside_rock_1k" / "seaside_rock_diff_1k.jpg").string(), true);
+    rNorm_ = assMan.LoadTexture((std::filesystem::path(
+                    FileHelper::GetAssetsDir()) / "textures" / "seaside_rock_1k" / "seaside_rock_nor_gl_1k.jpg").string());
+    snow_ = assMan.LoadTexture((std::filesystem::path(
+                    FileHelper::GetAssetsDir()) / "textures" / "snow_02_1k"/ "snow_02_diff_1k.jpg").string(), true);
+    sNorm_ = assMan.LoadTexture((std::filesystem::path(
+                    FileHelper::GetAssetsDir()) / "textures" / "snow_02_1k" / "snow_02_nor_gl_1k.jpg").string());
 }
 
 void TerrainMaterial::ApplyFrame(const FrameGlobals& globals)
